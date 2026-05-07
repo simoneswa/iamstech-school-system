@@ -18,10 +18,14 @@ class User(db.Model, UserMixin):
     school_email = db.Column(db.String(120), unique=True)
     points = db.Column(db.Integer, default=0)
     must_change_password = db.Column(db.Boolean, default=True)
+    setup_token = db.Column(db.String(100), unique=True)
+    setup_token_expiration = db.Column(db.DateTime)
+    is_superadmin = db.Column(db.Boolean, default=False)
     
     # Relationships
     enrollments = db.relationship('Enrollment', backref='student', lazy=True)
     attendances = db.relationship('Attendance', backref='student', lazy=True)
+    admin_logs = db.relationship('AdminAuditLog', backref='admin', lazy=True)
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -91,3 +95,11 @@ class Developer(db.Model):
     role = db.Column(db.String(100), default="Senior Developer")
     image_path = db.Column(db.String(200))
     description = db.Column(db.Text)
+
+class AdminAuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(255), nullable=False)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text)

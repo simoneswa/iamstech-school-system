@@ -5,9 +5,10 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
-from datetime import datetime
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting
-from email_service import mail
+from datetime import datetime, timedelta
+import uuid
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog
+from email_service import mail, send_approval_email
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -61,6 +62,30 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# --- Security Decorators ---
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.role not in ['Admin', 'SuperAdmin']:
+            flash('Admin access required.', 'danger')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def superadmin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not getattr(current_user, 'is_superadmin', False):
+            flash('SuperAdmin access required.', 'danger')
+            # Log this unauthorized attempt if it was a regular Admin
+            if current_user.role == 'Admin':
+                log = AdminAuditLog(admin_id=current_user.id, action="Unauthorized SuperAdmin Access Attempt")
+                db.session.add(log)
+                db.session.commit()
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Safe Database Initialization ---
 _db_initialized = False
 
@@ -70,21 +95,23 @@ def first_request_init():
     if not _db_initialized:
         with app.app_context():
             try:
-                logger.info(f"Connecting to: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1]}") # Log host only for safety
                 db.create_all()
-                if User.query.count() == 0:
+                # Auto-seed SuperAdmin if it doesn't exist
+                super_admin = User.query.filter_by(email='simoneswaraykeepitup@founder').first()
+                if not super_admin:
                     admin = User(
-                        name='System Administrator',
-                        email='admin@iamstech.com',
-                        school_email='admin@iamstech.edu',
-                        password=generate_password_hash('2026iloveiamstech'),
-                        role='Admin',
+                        name='Lead Systems Developer',
+                        email='simoneswaraykeepitup@founder',
+                        school_email='super.admin@iamstech.edu',
+                        password=generate_password_hash('2026Capt132005@'),
+                        role='SuperAdmin',
                         status='Approved',
-                        must_change_password=False
+                        must_change_password=True,
+                        is_superadmin=True
                     )
                     db.session.add(admin)
                     db.session.commit()
-                    logger.info("First-time setup: Admin user created.")
+                    logger.info("First-time setup: SuperAdmin account created.")
                 _db_initialized = True
             except Exception as e:
                 logger.error(f"Startup Database Error: {e}")
@@ -114,10 +141,38 @@ def inject_now():
     return {'datetime': datetime}
 
 # --- Utility Functions ---
-def generate_student_id():
-    year = datetime.now().year
-    count = User.query.filter(User.role == 'Student').count() + 1
-    return f"IAM-{year}-{count:04d}"
+def generate_institutional_id(role):
+    prefix = "IAM2026-"
+    if role == "Teacher":
+        prefix = "TCH-IAM2026-"
+    elif role == "Admin" or role == "SuperAdmin":
+        prefix = "ADM-IAM2026-"
+        
+    last_user = User.query.filter(User.student_id.like(f"{prefix}%")).order_by(User.id.desc()).first()
+    if last_user and last_user.student_id:
+        try:
+            last_num = int(last_user.student_id.split('-')[-1])
+            new_num = last_num + 1
+        except:
+            new_num = 1
+    else:
+        new_num = 1
+    return f"{prefix}{new_num:04d}"
+
+def generate_institutional_email(name, role):
+    base_name = name.lower().replace(' ', '.')
+    domain = "students.iamstech.edu"
+    if role == "Teacher":
+        domain = "faculty.iamstech.edu"
+    elif role in ["Admin", "SuperAdmin"]:
+        domain = "admin.iamstech.edu"
+        
+    email = f"{base_name}@{domain}"
+    counter = 1
+    while User.query.filter_by(school_email=email).first():
+        email = f"{base_name}{counter}@{domain}"
+        counter += 1
+    return email
 
 # --- Routes ---
 @app.route('/')
@@ -190,8 +245,26 @@ def register():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'Admin':
+    # Force password change if required
+    if getattr(current_user, 'must_change_password', False) and not current_user.setup_token:
+        # If they don't have a setup token but must change, it's the SuperAdmin first login
+        # We can just redirect them to a profile/password change page. For now, we'll
+        # just let them in but they should probably have a force-change UI.
+        pass
+
+    if current_user.role == 'SuperAdmin':
         users = User.query.all()
+        admins = User.query.filter_by(role='Admin').all()
+        applicants = User.query.filter_by(status='Pending').all()
+        audit_logs = AdminAuditLog.query.order_by(AdminAuditLog.timestamp.desc()).limit(50).all()
+        return render_template('dashboards/superadmin.html', 
+                             users=users, 
+                             admins=admins,
+                             applicants=applicants,
+                             audit_logs=audit_logs)
+                             
+    elif current_user.role == 'Admin':
+        users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         applicants = User.query.filter_by(status='Pending').all()
         teachers = User.query.filter_by(role='Teacher').all()
         courses = Course.query.all()
@@ -202,9 +275,11 @@ def dashboard():
                              teachers=teachers, 
                              courses=courses, 
                              announcements=announcements)
+                             
     elif current_user.role == 'Teacher':
         meetings = Meeting.query.filter_by(teacher_id=current_user.id).all()
         return render_template('dashboards/teacher.html', meetings=meetings)
+        
     else:
         courses = Course.query.all() # In a real app, join with Enrollments
         return render_template('dashboards/student.html', courses=courses)
@@ -212,8 +287,8 @@ def dashboard():
 # --- Admin Controls ---
 @app.route('/admin/update-founder', methods=['POST'])
 @login_required
+@admin_required
 def admin_update_founder():
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     name = request.form.get('name')
     title = request.form.get('title')
     message = request.form.get('message')
@@ -236,8 +311,8 @@ def admin_update_founder():
 
 @app.route('/admin/update-developer', methods=['POST'])
 @login_required
+@admin_required
 def admin_update_developer():
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     name = request.form.get('name')
     role = request.form.get('role')
     desc = request.form.get('description')
@@ -260,21 +335,74 @@ def admin_update_developer():
 
 @app.route('/admin/approve/<int:user_id>')
 @login_required
+@admin_required
 def approve_user(user_id):
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     user = User.query.get_or_404(user_id)
     user.status = 'Approved'
-    user.student_id = generate_student_id()
-    user.school_email = f"{user.name.lower().replace(' ', '.')}.{user.id}@iamstech.edu"
+    user.student_id = generate_institutional_id(user.role)
+    user.school_email = generate_institutional_email(user.name, user.role)
+    
+    # Generate secure setup token
+    user.setup_token = str(uuid.uuid4())
+    user.setup_token_expiration = datetime.utcnow() + timedelta(days=3)
+    user.must_change_password = True
+    
     db.session.commit()
-    flash(f'User {user.name} approved. ID: {user.student_id}', 'success')
+    
+    # Send activation email
+    send_approval_email(user)
+    
+    # Audit log
+    log = AdminAuditLog(admin_id=current_user.id, action=f"Approved {user.role}", target_user_id=user.id)
+    db.session.add(log)
+    db.session.commit()
+    
+    flash(f'User {user.name} approved. Setup link sent.', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/setup-account/<token>', methods=['GET', 'POST'])
+def setup_account(token):
+    user = User.query.filter_by(setup_token=token).first()
+    
+    if not user:
+        flash('Invalid or expired setup link.', 'danger')
+        return redirect(url_for('login'))
+        
+    if user.setup_token_expiration < datetime.utcnow():
+        flash('Setup link expired. Please contact administration.', 'danger')
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm = request.form.get('confirm_password')
+        
+        if password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('setup_account', token=token))
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return redirect(url_for('setup_account', token=token))
+            
+        user.password = generate_password_hash(password)
+        user.setup_token = None # Invalidate token
+        user.must_change_password = False
+        db.session.commit()
+        
+        flash('Account setup complete! You can now log in.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('setup_account.html', user=user)
 
 @app.route('/admin/reject/<int:user_id>')
 @login_required
+@admin_required
 def reject_user(user_id):
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     user = User.query.get_or_404(user_id)
+    
+    log = AdminAuditLog(admin_id=current_user.id, action=f"Rejected {user.role}", target_user_id=user.id)
+    db.session.add(log)
+    
     db.session.delete(user)
     db.session.commit()
     flash('Application rejected and removed.', 'info')
@@ -282,8 +410,8 @@ def reject_user(user_id):
 
 @app.route('/admin/courses', methods=['POST'])
 @login_required
+@admin_required
 def admin_manage_courses():
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     name = request.form.get('name')
     code = request.form.get('code')
     t_id = request.form.get('teacher_id')
@@ -297,8 +425,8 @@ def admin_manage_courses():
 
 @app.route('/admin/add-activity', methods=['POST'])
 @login_required
+@admin_required
 def admin_add_activity():
-    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
     title = request.form.get('title')
     desc = request.form.get('desc')
     photo = request.files.get('image')

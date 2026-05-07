@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Setup Secure Account - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white text-center py-4 border-0">
+                    <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" alt="IAMSTECH Logo" class="brand-logo mb-3" style="height: 60px; filter: brightness(0) invert(1);">
+                    <h4 class="fw-bold mb-1">Account Setup</h4>
+                    <p class="mb-0 small text-white-50">Create your secure institutional password</p>
+                </div>
+                
+                <div class="card-body p-4 p-md-5 bg-white">
+                    <div class="text-center mb-4">
+                        <h6 class="fw-bold text-primary">Welcome, {{ user.name }}</h6>
+                        <span class="badge bg-light text-dark border">{{ user.role }}</span>
+                        <p class="small text-muted mt-2">Institutional ID: <strong>{{ user.student_id }}</strong></p>
+                        <p class="small text-muted">Email: <strong>{{ user.school_email }}</strong></p>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('setup_account', token=user.setup_token) }}">
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-bold small text-muted">New Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                                <input type="password" class="form-control bg-light border-start-0 ps-0" id="password" name="password" required minlength="8" placeholder="Minimum 8 characters">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label fw-bold small text-muted">Confirm Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-check-circle text-muted"></i></span>
+                                <input type="password" class="form-control bg-light border-start-0 ps-0" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Re-enter password">
+                            </div>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary py-2 fw-bold rounded-3">
+                                Complete Setup <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p class="small text-muted mb-0"><i class="fas fa-shield-alt text-success me-1"></i> Your password is securely hashed and protected.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

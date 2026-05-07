@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}SuperAdmin Center - IAMSTECH{% endblock %}
+
+{% block content %}
+<div style="background: var(--soft-gray); min-height: 100vh;">
+    <div class="d-flex" style="max-height: 100vh;">
+        <!-- Sidebar Navigation -->
+        <nav class="bg-dark text-white p-4 position-fixed start-0 top-0" style="width: 300px; height: 100vh; overflow-y: auto; z-index: 999; border-right: 2px solid #ff6f00;">
+            <div class="mb-4 pb-3 border-bottom border-secondary">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 50px; height: 50px; background: rgba(255, 111, 0, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-chess-king fa-lg text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-black mb-0 text-warning">SUPER ADMIN</h6>
+                        <small class="text-white-50">Infrastructure Control</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav flex-column gap-1">
+                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">System</h6>
+                <a href="#" class="nav-link-admin active" data-section="overview">
+                    <i class="fas fa-server me-2"></i>Infrastructure Overview
+                </a>
+                <a href="#" class="nav-link-admin" data-section="admins">
+                    <i class="fas fa-user-shield me-2"></i>Admin Management
+                </a>
+                <a href="#" class="nav-link-admin" data-section="audit">
+                    <i class="fas fa-list-alt me-2"></i>Audit Logs
+                </a>
+
+                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">Operations</h6>
+                <a href="#" class="nav-link-admin" data-section="users">
+                    <i class="fas fa-users me-2"></i>All Users
+                </a>
+
+                <hr class="my-3 border-secondary opacity-25">
+                <a href="{{ url_for('logout') }}" class="nav-link-admin" style="color: #ff6b6b;">
+                    <i class="fas fa-sign-out-alt me-2"></i>Secure Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 p-4" style="margin-left: 300px; overflow-y: auto;">
+            
+            <!-- Infrastructure Overview -->
+            <section id="section-overview" class="section-admin">
+                <div class="mb-5">
+                    <h2 class="fw-black text-primary mb-1">Infrastructure Overview</h2>
+                    <p class="text-muted">Railway Deployment & Database Health</p>
+                </div>
+
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-primary">
+                            <div class="display-4 fw-bold text-primary mb-2">{{ users|length }}</div>
+                            <p class="text-muted small fw-bold">TOTAL ACCOUNTS</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-warning">
+                            <div class="display-4 fw-bold text-warning mb-2">{{ admins|length }}</div>
+                            <p class="text-muted small fw-bold">ACTIVE ADMINS</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-success">
+                            <div class="display-4 fw-bold text-success mb-2">99%</div>
+                            <p class="text-muted small fw-bold">DB UPTIME</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-info">
+                            <div class="display-4 fw-bold text-info mb-2"><i class="fas fa-check-circle"></i></div>
+                            <p class="text-muted small fw-bold">SYSTEM HEALTH</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="dash-card p-4 rounded-4 h-100">
+                            <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-database me-2"></i>PostgreSQL Integration</h5>
+                            <div class="p-3 bg-light rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="fw-bold text-dark">Database Connection</small>
+                                    <span class="badge bg-success">Secure</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="fw-bold text-dark">Storage Volume (/data)</small>
+                                    <span class="badge bg-info">Mounted</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-info" style="width: 45%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="dash-card p-4 rounded-4 h-100">
+                            <h5 class="fw-bold mb-4 text-danger"><i class="fas fa-shield-alt me-2"></i>Security Alerts</h5>
+                            <div class="alert alert-success bg-success text-white border-0">
+                                <i class="fas fa-check-circle me-2"></i> No unauthorized access attempts detected.
+                            </div>
+                            <div class="alert alert-info bg-info text-white border-0">
+                                <i class="fas fa-info-circle me-2"></i> SuperAdmin account active and protected.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Management Section -->
+            <section id="section-admins" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Admin Management</h2>
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-user-plus me-2"></i>Create New Admin</h5>
+                    <!-- Form would go here, omitting for brevity or we can add later if requested -->
+                    <p class="text-muted small">Admin creation is restricted to SuperAdmin via manual database insertion or future expansion.</p>
+                </div>
+                
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Admin ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for admin in admins %}
+                                <tr>
+                                    <td class="fw-bold">{{ admin.student_id or 'PENDING-ID' }}</td>
+                                    <td>{{ admin.name }}</td>
+                                    <td class="small">{{ admin.email }}</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Audit Logs Section -->
+            <section id="section-audit" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">System Audit Logs</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Admin ID</th>
+                                    <th>Action</th>
+                                    <th>Target ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in audit_logs %}
+                                <tr>
+                                    <td class="small">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td><span class="badge bg-secondary">{{ log.admin_id }}</span></td>
+                                    <td class="fw-bold">{{ log.action }}</td>
+                                    <td>{{ log.target_user_id or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No audit logs available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- All Users Section -->
+            <section id="section-users" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Global User Directory</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>System ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td class="fw-bold">{{ user.student_id or 'N/A' }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td>
+                                        <span class="badge {% if user.role == 'SuperAdmin' %}bg-danger{% elif user.role == 'Admin' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{ user.role }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if user.status == 'Approved' %}bg-success{% else %}bg-secondary{% endif %}">{{ user.status }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<style>
+    .nav-link-admin {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    .nav-link-admin:hover {
+        background: rgba(255, 111, 0, 0.2);
+        color: white;
+    }
+    .nav-link-admin.active {
+        background: rgba(255, 111, 0, 0.25);
+        color: white;
+        border-left: 4px solid var(--accent-orange);
+    }
+    .section-admin {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+    document.querySelectorAll('[data-section]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = e.currentTarget.dataset.section;
+            
+            document.querySelectorAll('.section-admin').forEach(s => s.classList.add('d-none'));
+            document.querySelectorAll('.nav-link-admin').forEach(a => a.classList.remove('active'));
+            
+            document.getElementById('section-' + section).classList.remove('d-none');
+            e.currentTarget.classList.add('active');
+        });
+    });
+</script>
+{% endblock %}
