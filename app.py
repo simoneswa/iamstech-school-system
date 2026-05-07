@@ -61,35 +61,41 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- Auto-Seed Database ---
-def init_db():
-    with app.app_context():
-        try:
-            db.create_all()
-            # Auto-seed admin if no users exist
-            if User.query.count() == 0:
-                admin = User(
-                    name='System Administrator',
-                    email='admin@iamstech.com',
-                    school_email='admin@iamstech.edu',
-                    password=generate_password_hash('2026iloveiamstech'),
-                    role='Admin',
-                    status='Approved',
-                    must_change_password=False
-                )
-                db.session.add(admin)
-                db.session.commit()
-                logger.info("Database initialized and Admin user created.")
-            else:
-                logger.info("Database already initialized.")
-        except Exception as e:
-            logger.error(f"Initialization error: {e}")
+# --- Safe Database Initialization ---
+_db_initialized = False
 
-init_db()
+@app.before_request
+def first_request_init():
+    global _db_initialized
+    if not _db_initialized:
+        with app.app_context():
+            try:
+                logger.info(f"Connecting to: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1]}") # Log host only for safety
+                db.create_all()
+                if User.query.count() == 0:
+                    admin = User(
+                        name='System Administrator',
+                        email='admin@iamstech.com',
+                        school_email='admin@iamstech.edu',
+                        password=generate_password_hash('2026iloveiamstech'),
+                        role='Admin',
+                        status='Approved',
+                        must_change_password=False
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("First-time setup: Admin user created.")
+                _db_initialized = True
+            except Exception as e:
+                logger.error(f"Startup Database Error: {e}")
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy", "database": str(db.engine.url.drivername)}), 200
+    return jsonify({
+        "status": "healthy", 
+        "database": str(db.engine.url.drivername),
+        "initialized": _db_initialized
+    }), 200
 
 # --- File Upload Config ---
 # Use Railway Volume if available, else fallback to static
