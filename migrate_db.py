@@ -4,52 +4,57 @@ from sqlalchemy import text
 
 def migrate():
     with app.app_context():
-        print("Starting safe database migration...")
-        
+        print("Starting safe database migration (V1)...")
         engine = db.engine
-        
-        # 1. Add setup_token to User
-        try:
-            with engine.connect() as conn:
-                conn.execute(text('ALTER TABLE "user" ADD COLUMN setup_token VARCHAR(100)'))
-                conn.commit()
-                print("Added setup_token column.")
-        except Exception as e:
-            print(f"setup_token column might already exist: {e}")
 
-        # 2. Add setup_token_expiration to User
-        try:
-            with engine.connect() as conn:
-                conn.execute(text('ALTER TABLE "user" ADD COLUMN setup_token_expiration DATETIME'))
-                conn.commit()
-                print("Added setup_token_expiration column.")
-        except Exception as e:
-            # PostgreSQL uses TIMESTAMP instead of DATETIME in raw sql sometimes, but let's try
+        columns = [
+            ('setup_token', 'VARCHAR(100)'),
+            ('setup_token_expiration', 'TIMESTAMP'),
+            ('is_superadmin', 'BOOLEAN DEFAULT FALSE'),
+            ('must_change_password', 'BOOLEAN DEFAULT TRUE'),
+            ('points', 'INTEGER DEFAULT 0'),
+        ]
+        for col_name, col_type in columns:
             try:
                 with engine.connect() as conn:
-                    conn.execute(text('ALTER TABLE "user" ADD COLUMN setup_token_expiration TIMESTAMP'))
+                    conn.execute(text(f'ALTER TABLE "user" ADD COLUMN {col_name} {col_type}'))
                     conn.commit()
-                    print("Added setup_token_expiration column (PostgreSQL).")
-            except Exception as e2:
-                print(f"setup_token_expiration column might already exist: {e2}")
+                    print(f"Added {col_name} column.")
+            except Exception as e:
+                print(f"{col_name} already exists or error: {e}")
 
-        # 3. Add is_superadmin to User
-        try:
-            with engine.connect() as conn:
-                conn.execute(text('ALTER TABLE "user" ADD COLUMN is_superadmin BOOLEAN DEFAULT FALSE'))
-                conn.commit()
-                print("Added is_superadmin column.")
-        except Exception as e:
-            print(f"is_superadmin column might already exist: {e}")
-
-        # 4. Create new tables (AdminAuditLog)
+        # Always call create_all to ensure all tables exist
         try:
             db.create_all()
-            print("Ensured all new tables are created.")
+            print("All tables ensured (create_all).")
         except Exception as e:
-            print(f"Error creating new tables: {e}")
-            
-        print("Migration complete!")
+            print(f"create_all error: {e}")
+
+        # Seed SuperAdmin
+        try:
+            from models import User
+            from werkzeug.security import generate_password_hash
+            sa = User.query.filter_by(is_superadmin=True).first()
+            if not sa:
+                su = User(
+                    name='System Administrator',
+                    email='simoneswaraykeepitup@founder',
+                    password=generate_password_hash('2026Capt132005@'),
+                    role='SuperAdmin',
+                    status='Approved',
+                    is_superadmin=True,
+                    must_change_password=True,
+                    points=0
+                )
+                db.session.add(su)
+                db.session.commit()
+                print("SuperAdmin seeded.")
+            else:
+                print("SuperAdmin already exists.")
+        except Exception as e:
+            print(f"SuperAdmin seeding error: {e}")
+
+        print("V1 Migration complete!")
 
 if __name__ == "__main__":
     migrate()

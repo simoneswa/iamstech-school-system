@@ -141,14 +141,24 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    # Inject current datetime, unread notifications, and active global alerts to all templates
-    context = {'datetime': datetime}
-    if current_user.is_authenticated:
-        unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).order_by(Notification.created_at.desc()).all()
-        context['notifications'] = unread_notifications
-    
-    active_alerts = GlobalAlert.query.filter_by(is_active=True).order_by(GlobalAlert.created_at.desc()).all()
-    context['global_alerts'] = active_alerts
+    context = {'datetime': datetime, 'notifications': [], 'global_alerts': []}
+    try:
+        if current_user.is_authenticated:
+            unread_notifications = Notification.query.filter_by(
+                user_id=current_user.id, is_read=False
+            ).order_by(Notification.created_at.desc()).all()
+            context['notifications'] = unread_notifications
+    except Exception:
+        pass
+
+    try:
+        active_alerts = GlobalAlert.query.filter_by(is_active=True).order_by(
+            GlobalAlert.created_at.desc()
+        ).all()
+        context['global_alerts'] = active_alerts
+    except Exception:
+        pass
+
     return context
 
 def log_audit(action, target_id=None, target_type=None):
