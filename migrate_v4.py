@@ -6,6 +6,24 @@ def migrate():
     with app.app_context():
         print("Starting V4 database migration (Founder Seed)...")
         
+        engine = db.engine
+        from sqlalchemy import text
+        
+        # Ensure Founder table has title and message columns
+        columns = [
+            ('title', 'VARCHAR(100) DEFAULT \'Founder & CEO\''),
+            ('message', 'TEXT'),
+            ('bio', 'TEXT')
+        ]
+        for col_name, col_type in columns:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(f'ALTER TABLE founder ADD COLUMN {col_name} {col_type}'))
+                    conn.commit()
+                    print(f"Added {col_name} to Founder.")
+            except Exception as e:
+                print(f"Founder {col_name} already exists or error: {e}")
+                
         # Check if founder already exists
         founder = Founder.query.first()
         if not founder:

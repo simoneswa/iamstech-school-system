@@ -32,7 +32,7 @@ class User(db.Model, UserMixin):
     # Relationships
     enrollments = db.relationship('Enrollment', backref='student', lazy=True)
     attendances = db.relationship('Attendance', backref='student', lazy=True)
-    admin_logs = db.relationship('AdminAuditLog', backref='admin', lazy=True)
+    admin_logs = db.relationship('AdminAuditLog', backref='admin', foreign_keys='AdminAuditLog.admin_id', lazy=True)
     system_logs = db.relationship('SystemAuditLog', backref='user', foreign_keys='SystemAuditLog.user_id', lazy=True)
     notifications = db.relationship('Notification', backref='user', lazy=True)
 
