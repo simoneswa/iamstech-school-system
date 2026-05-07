@@ -108,6 +108,20 @@
     </div>
 </section>
 <!-- LEADERSHIP & VISION (Premium Founder Section) -->
+<style>
+    .founder-card .image-wrapper {
+        border: 10px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        overflow: hidden;
+        transform: rotate(-2deg);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .founder-card:hover .image-wrapper {
+        transform: rotate(0deg) scale(1.03);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+        border-color: rgba(255,111,0,0.3);
+    }
+</style>
 <section class="py-5" style="background: linear-gradient(135deg, #0d1250 0%, #1a237e 100%); color: white; position: relative; overflow: hidden;">
     <!-- Abstract Background Decor -->
     <div style="position: absolute; top: -10%; right: -5%; width: 400px; height: 400px; background: rgba(255,111,0,0.1); border-radius: 50%; filter: blur(80px);"></div>
@@ -119,7 +133,7 @@
                 {% for f in founders %}
                 <div class="col-lg-5">
                     <div class="founder-card" style="position: relative; z-index: 2;">
-                        <div class="image-wrapper shadow-lg" style="border: 10px solid rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; transform: rotate(-2deg); transition: transform 0.3s;">
+                        <div class="image-wrapper shadow-lg">
                             <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600' }}" 
                                  class="img-fluid w-100" 
                                  alt="{{ f.name }}" 

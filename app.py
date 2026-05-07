@@ -702,12 +702,38 @@ def export_data(data_type):
 def chatbot():
     data = request.json
     msg = data.get('message', '').lower()
-    # Simple rule-based chatbot for school info
-    response = "I'm the IAMSTECH Assistant. You can ask about programs, admissions, or faculty."
-    if 'admission' in msg or 'apply' in msg:
-        response = "Admissions for 2026 are open! Click 'Join IAMSTECH' to apply."
-    elif 'program' in msg or 'course' in msg:
-        response = "We offer Microsoft Office, QuickBooks, AI Techniques, and Hardware Engineering."
+    # Advanced NLP Knowledge Base Engine for IAMSTECH LIBERIA
+    import re
+    
+    # Default fallback
+    response = "I'm the IAMSTECH Assistant. I can help you with information about our location, mission, programs, admissions, and core values. How can I assist you today?"
+    
+    # NLP Intent Matching
+    if re.search(r'\b(location|where|address|locate)\b', msg):
+        response = "We are located at Hotel Africa Road, Banjor Junction, Brewerville City, Monrovia, Liberia."
+    elif re.search(r'\b(motto|slogan)\b', msg):
+        response = "Our institutional motto is: “Technology & Business Education for Future Professionals”."
+    elif re.search(r'\b(about|who are you|what is iamstech|institution)\b', msg):
+        response = "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We serve aspiring I.T. specialists, accountants, and business leaders prepared to drive innovation across Liberia and beyond."
+    elif re.search(r'\b(vision|future)\b', msg):
+        response = "Our Vision Statement: To become Liberia’s premier center of excellence for technology and business education, producing globally competitive professionals who lead digital transformation and financial integrity across Africa."
+    elif re.search(r'\b(mission|purpose)\b', msg):
+        response = "Our Mission Statement: IAMSTECH LIBERIA exists to deliver industry-relevant, hands-on education in Information Technology and Accounting. Through modern curriculum, expert instruction, and ethical training, we empower students with technical competence, analytical skills, and leadership abilities needed in today’s digital economy."
+    elif re.search(r'\b(goal|goals|aims)\b', msg):
+        response = "Our core institutional goals are: 1) Develop Tech-Ready Professionals, 2) Build Financial Experts, 3) Bridge the Skills Gap, and 4) Foster Entrepreneurship."
+    elif re.search(r'\b(value|values|core)\b', msg):
+        response = "Our Core Values are: Innovation, Integrity, Excellence, Practicality, Accountability, and Service."
+    elif re.search(r'\b(program|programs|course|courses|study|learn|department|departments|technology|accounting)\b', msg):
+        response = "We offer cutting-edge programs in Information Technology and Accounting. Our hands-on curriculum equips students with technical competence, analytical skills, and leadership abilities for the digital economy."
+    elif re.search(r'\b(admission|admissions|apply|join|enroll)\b', msg):
+        response = "Admissions are currently open! We welcome aspiring professionals. You can create an account and apply directly through our secure platform."
+    elif re.search(r'\b(founder|ceo|leader|benaiah|kanawa)\b', msg):
+        response = "Mr. Benaiah Kanawa is the Founder & CEO. He is committed to empowering the next generation of Liberian professionals through practical technology and business education."
+    elif re.search(r'\b(support|help|contact)\b', msg):
+        response = "Our tech support and student success team is always here for you! You can reach out via the Technical Support Center in your dashboard."
+    elif re.search(r'\b(hello|hi|hey|greetings)\b', msg):
+        response = "Hello! Welcome to IAMSTECH LIBERIA. I can answer any questions you have about our institution, programs, or admissions. How can I help?"
+        
     return jsonify({"response": response})
 
 @app.route('/logout')
