@@ -1,0 +1,233 @@
+:root {
+    --primary-blue: #0d1b3e;
+    --darker-blue: #071026;
+    --accent-orange: #ff6f00;
+    --light-orange: #ff8c00;
+    --pure-white: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== GLOBAL RESET & TYPOGRAPHY ===== */
+body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background-color: var(--pure-white);
+    color: var(--primary-blue);
+    overflow-x: hidden;
+}
+
+/* ===== NAVBAR RESTORATION (Match Screenshot 2) ===== */
+.navbar {
+    background: var(--pure-white);
+    padding: 15px 0;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+}
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.brand-logo {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+.brand-text {
+    line-height: 1.1;
+}
+.brand-title {
+    display: block;
+    font-weight: 900;
+    color: #1976d2; /* Match blue in screenshot logo text */
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+.brand-sub {
+    display: block;
+    font-size: 0.7rem;
+    color: #666;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.nav-link {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    color: var(--primary-blue) !important;
+    margin: 0 15px;
+    letter-spacing: 0.5px;
+}
+
+.btn-become-ready {
+    background: linear-gradient(to right, var(--accent-orange), var(--light-orange));
+    color: white !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(255, 111, 0, 0.3);
+    transition: var(--transition);
+}
+.btn-become-ready:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 111, 0, 0.4);
+}
+
+/* ===== HERO SECTION (Match Screenshot 2) ===== */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--darker-blue) 100%);
+    padding: 100px 0;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    color: white;
+    position: relative;
+}
+
+.hero-subtitle {
+    color: #fdd835; /* Yellowish orange from screenshot 2 */
+    text-transform: uppercase;
+    font-weight: 900;
+    letter-spacing: 3px;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.hero-title {
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 30px;
+}
+
+.hero-desc {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 500px;
+}
+
+.hero-main-logo {
+    width: 140px;
+    height: auto;
+    margin-bottom: 40px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+}
+
+/* ===== FLOATING CARDS (Match Screenshot 2) ===== */
+.hero-visual-stack {
+    position: relative;
+    height: 450px;
+}
+.floating-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    width: 180px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: absolute;
+    animation: float 6s ease-in-out infinite;
+    transition: var(--transition);
+}
+.floating-card i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: block;
+}
+.floating-card span {
+    font-weight: 800;
+    color: var(--primary-blue);
+    font-size: 0.9rem;
+}
+
+.card-tech { top: 0; right: 80px; animation-delay: 0s; }
+.card-tech i { color: #1976d2; }
+
+.card-training { top: 150px; right: 140px; animation-delay: 1s; }
+.card-training i { color: #2e7d32; }
+
+.card-community { top: 300px; right: 20px; animation-delay: 2s; }
+.card-community i { color: #fbc02d; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* ===== STATS BAR (Match Screenshot 3) ===== */
+.stats-bar {
+    background: #f8f9fa;
+    padding: 50px 0;
+    border-bottom: 1px solid #eee;
+}
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #1976d2;
+    display: block;
+}
+.stat-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+}
+
+/* ===== TRAINING PROGRAMS (Match Screenshot 4 & 5) ===== */
+.section-title {
+    text-transform: uppercase;
+    color: #fbc02d;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+}
+.section-header {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--primary-blue);
+}
+
+.course-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    height: 100%;
+    border: 1px solid #eee;
+    transition: var(--transition);
+}
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+.course-icon {
+    font-size: 2.5rem;
+    color: var(--primary-blue);
+    margin-bottom: 20px;
+    display: block;
+}
+.course-card h5 {
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+.course-card p {
+    font-size: 0.9rem;
+    color: #555;
+}
+.learn-more {
+    font-weight: 700;
+    color: #1976d2;
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ===== RESPONSIVENESS ===== */
+@media (max-width: 991px) {
+    .hero-title { font-size: 2.5rem; }
+    .hero-visual-stack { height: auto; margin-top: 50px; display: flex; gap: 20px; justify-content: center; }
+    .floating-card { position: static; width: 140px; }
+}

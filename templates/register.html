@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Join IAMSTECH - Professional Learning Platform{% endblock %}
+
+{% block content %}
+<div class="register-page-bg py-5" style="background: #f8f9fa;">
+    <div class="container py-5">
+        <div class="row g-5 align-items-center">
+            <!-- Information Column -->
+            <div class="col-lg-5">
+                <h3 class="display-5 fw-black text-primary mb-3">Become Future-Ready</h3>
+                <p class="lead mb-5">Join hundreds of professionals gaining industry-recognized certifications at IAMSTECH Liberia.</p>
+                
+                <div class="mb-4 d-flex gap-3">
+                    <div class="flex-shrink-0 text-warning"><i class="fas fa-check-circle fa-2x"></i></div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Global Certifications</h6>
+                        <p class="small text-muted">Programs designed for modern career advancement.</p>
+                    </div>
+                </div>
+                <div class="mb-4 d-flex gap-3">
+                    <div class="flex-shrink-0 text-warning"><i class="fas fa-check-circle fa-2x"></i></div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Expert Faculty</h6>
+                        <p class="small text-muted">Learn from experienced professionals in the tech industry.</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <div class="flex-shrink-0 text-warning"><i class="fas fa-check-circle fa-2x"></i></div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Modern Labs</h6>
+                        <p class="small text-muted">Hands-on training with latest software and hardware.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Column -->
+            <div class="col-lg-7">
+                <div class="dash-card p-5 border-start border-warning border-4">
+                    <div class="text-center mb-5">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" style="height: 70px; margin-bottom: 20px;"
+                             onerror="this.style.display='none';">
+                        <h3 class="fw-black text-primary mb-2">Admission Form</h3>
+                        <p class="text-muted small">Enter your details to apply for the 2026 session</p>
+                    </div>
+
+                    <form action="{{ url_for('register') }}" method="POST" enctype="multipart/form-data">
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="name" class="form-control" placeholder="John Doe" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" name="email" class="form-control" placeholder="john@example.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" name="phone" class="form-control" placeholder="077XXXXXXX">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Program of Interest</label>
+                                <select name="department" class="form-select" required>
+                                    <option value="" disabled selected>Choose a career path...</option>
+                                    <option value="Microsoft Office Suite">Microsoft Office Suite</option>
+                                    <option value="QuickBooks Accounting">QuickBooks Accounting</option>
+                                    <option value="AI Techniques">AI Techniques & Applications</option>
+                                    <option value="Computer Hardware">Computer Hardware Engineering</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Passport Photo (for E-ID)</label>
+                                <input type="file" name="profile_photo" class="form-control" accept="image/*" required>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check p-3 bg-light rounded-3">
+                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="terms" required>
+                                    <label class="form-check-label small text-muted" for="terms">
+                                        I certify that the information provided is accurate and I agree to institutional policies.
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-cta-portal w-100 py-3">SUBMIT APPLICATION</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

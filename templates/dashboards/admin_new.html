@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Control Center - IAMSTECH{% endblock %}
+
+{% block content %}
+<div style="background: var(--soft-gray); min-height: 100vh;">
+    <div class="d-flex" style="max-height: 100vh;">
+        <!-- Sidebar Navigation -->
+        <nav class="bg-dark text-white p-4 position-fixed start-0 top-0" style="width: 300px; height: 100vh; overflow-y: auto; z-index: 999;">
+            <div class="mb-4 pb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width: 50px; height: 50px; background: rgba(255, 111, 0, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-shield-alt fa-lg text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-black mb-0">IAMSTECH</h6>
+                        <small class="text-warning">Admin Center</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav flex-column gap-1">
+                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">Operations</h6>
+                <a href="#" class="nav-link-admin active" data-section="dashboard">
+                    <i class="fas fa-chart-bar me-2"></i>Dashboard
+                </a>
+                <a href="#" class="nav-link-admin" data-section="applicants">
+                    <i class="fas fa-user-clock me-2"></i>Applicants
+                    <span class="badge bg-danger ms-auto">{{ applicants|length }}</span>
+                </a>
+                <a href="#" class="nav-link-admin" data-section="students">
+                    <i class="fas fa-graduation-cap me-2"></i>Students
+                </a>
+                <a href="#" class="nav-link-admin" data-section="teachers">
+                    <i class="fas fa-chalkboard-user me-2"></i>Teachers
+                </a>
+
+                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">Management</h6>
+                <a href="#" class="nav-link-admin" data-section="courses">
+                    <i class="fas fa-book me-2"></i>Courses
+                </a>
+                <a href="#" class="nav-link-admin" data-section="activities">
+                    <i class="fas fa-image me-2"></i>Activities
+                </a>
+                <a href="#" class="nav-link-admin" data-section="announcements">
+                    <i class="fas fa-bullhorn me-2"></i>Announcements
+                </a>
+
+                <hr class="my-3 opacity-10">
+                <a href="{{ url_for('logout') }}" class="nav-link-admin" style="color: #ff6b6b;">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 p-4" style="margin-left: 300px; overflow-y: auto;">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard" class="section-admin">
+                <div class="mb-5">
+                    <h2 class="fw-black text-primary mb-1">Admin Dashboard</h2>
+                    <p class="text-muted">System overview and key metrics</p>
+                </div>
+
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-primary mb-2">{{ users|length }}</div>
+                            <p class="text-muted small">Total Users</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-warning mb-2">{{ applicants|length }}</div>
+                            <p class="text-muted small">Pending</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-success mb-2">{{ courses|length }}</div>
+                            <p class="text-muted small">Courses</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-info mb-2">{{ teachers|length }}</div>
+                            <p class="text-muted small">Instructors</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="dash-card p-4 rounded-4">
+                            <h5 class="fw-bold mb-3">Recent Registrations</h5>
+                            {% for user in users|reverse|first(5) %}
+                            <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                                <div>
+                                    <p class="fw-bold small mb-0">{{ user.name }}</p>
+                                    <p class="x-small text-muted mb-0">{{ user.email }}</p>
+                                </div>
+                                <span class="badge bg-primary">{{ user.role }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="dash-card p-4 rounded-4">
+                            <h5 class="fw-bold mb-3">System Status</h5>
+                            <div class="p-3 bg-light rounded-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="fw-bold">Database</small>
+                                    <span class="badge bg-success">Online</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" style="width: 95%"></div>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="fw-bold">File Storage</small>
+                                    <span class="badge bg-info">Available</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-info" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Applicants Section -->
+            <section id="section-applicants" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Pending Registrations</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Program</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in applicants %}
+                                <tr>
+                                    <td class="fw-bold">{{ app.name }}</td>
+                                    <td class="small">{{ app.email }}</td>
+                                    <td class="small">{{ app.phone }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ app.department }}</span></td>
+                                    <td>
+                                        <a href="{{ url_for('approve_user', user_id=app.id) }}" class="btn btn-success btn-sm rounded-pill px-3">Approve</a>
+                                        <a href="{{ url_for('reject_user', user_id=app.id) }}" class="btn btn-danger btn-sm rounded-pill px-3">Reject</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Students Section -->
+            <section id="section-students" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Student Directory</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Program</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                {% if user.role == 'Student' and user.status == 'Approved' %}
+                                <tr>
+                                    <td class="fw-bold">{{ user.student_id }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td class="small">{{ user.school_email }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ user.department }}</span></td>
+                                    <td><span class="badge bg-success">Approved</span></td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Teachers Section -->
+            <section id="section-teachers" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Faculty Management</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Courses</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for teacher in teachers %}
+                                <tr>
+                                    <td class="fw-bold">{{ teacher.name }}</td>
+                                    <td class="small">{{ teacher.email }}</td>
+                                    <td>{{ teacher.assigned_courses|length }} courses</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Courses Section -->
+            <section id="section-courses" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Manage Programs</h2>
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-plus me-2"></i>Add New Course</h5>
+                    <form action="{{ url_for('admin_manage_courses') }}" method="POST" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" name="name" class="form-control rounded-3" placeholder="Course Name" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="code" class="form-control rounded-3" placeholder="Code" required>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="teacher_id" class="form-select rounded-3" required>
+                                <option value="" disabled selected>Select Instructor...</option>
+                                {% for t in teachers %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 rounded-3">Add</button>
+                        </div>
+                        <div class="col-12">
+                            <textarea name="description" class="form-control rounded-3" placeholder="Description..." rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Active Courses</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Code</th>
+                                    <th>Instructor</th>
+                                    <th>Students</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in courses %}
+                                <tr>
+                                    <td class="fw-bold">{{ course.name }}</td>
+                                    <td class="small">{{ course.code }}</td>
+                                    <td>{{ course.teacher.name if course.teacher else 'TBA' }}</td>
+                                    <td><span class="badge bg-primary">{{ course.enrollments|length }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activities Section -->
+            <section id="section-activities" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Campus Activities Gallery</h2>
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-plus me-2"></i>Upload Activity</h5>
+                    <form action="{{ url_for('admin_add_activity') }}" method="POST" enctype="multipart/form-data" class="row g-3">
+                        <div class="col-md-6">
+                            <input type="text" name="title" class="form-control rounded-3" placeholder="Activity Title" required>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="file" name="image" class="form-control rounded-3" accept="image/*" required>
+                        </div>
+                        <div class="col-12">
+                            <textarea name="desc" class="form-control rounded-3" placeholder="Description..." rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary rounded-3">Upload Activity</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Announcements Section -->
+            <section id="section-announcements" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">System Announcements</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-3">Recent Announcements</h5>
+                    {% for ann in announcements|slice(5) %}
+                    <div class="p-3 border rounded-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold small mb-1">{{ ann.title }}</h6>
+                                <p class="x-small text-muted mb-0">{{ ann.date.strftime('%B %d, %Y') }}</p>
+                            </div>
+                            <span class="badge bg-primary">Posted</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<style>
+    .nav-link-admin {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+    .nav-link-admin:hover {
+        background: rgba(255, 111, 0, 0.2);
+        color: white;
+    }
+
+    .nav-link-admin.active {
+        background: rgba(255, 111, 0, 0.25);
+        color: white;
+        border-left: 4px solid var(--accent-orange);
+        padding-left: calc(12px - 4px);
+    }
+
+    .section-admin {
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+        nav {
+            width: 100% !important;
+            position: relative !important;
+        }
+
+        main {
+            margin-left: 0 !important;
+        }
+    }
+</style>
+
+<script>
+    document.querySelectorAll('[data-section]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = e.target.closest('[data-section]').dataset.section;
+            
+            // Hide all sections
+            document.querySelectorAll('.section-admin').forEach(s => s.classList.add('d-none'));
+            document.querySelectorAll('.nav-link-admin').forEach(a => a.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById('section-' + section).classList.remove('d-none');
+            e.target.closest('[data-section]').classList.add('active');
+        });
+    });
+</script>
+{% endblock %}

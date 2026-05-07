@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Faculty Dashboard - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="teacher-dashboard">
+    <div class="dashboard-wrapper d-flex min-vh-100">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-sidebar bg-dark text-white p-0" style="width: 280px; min-height: 100vh;">
+            <div class="sidebar-header p-4 border-bottom border-secondary text-center">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo mb-3"
+                     onerror="this.style.display='none';">
+                <h6 class="fw-black mb-0">FACULTY PORTAL</h6>
+            </div>
+
+            <div class="sidebar-menu p-3">
+                <a href="{{ url_for('dashboard') }}" class="nav-link active rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-home"></i> <span>Overview</span>
+                </a>
+                <a href="#courses" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-book-open"></i> <span>My Courses</span>
+                </a>
+                <a href="#meetings" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-video"></i> <span>Virtual Classes</span>
+                </a>
+                <hr class="border-secondary">
+                <a href="{{ url_for('logout') }}" class="nav-link rounded-3 d-flex align-items-center gap-3 p-3 text-danger">
+                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 bg-light p-5">
+            <div class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h3 class="fw-black text-primary mb-1">Welcome, {{ current_user.name }}</h3>
+                    <p class="text-muted small mb-0">Professional Instructor • {{ current_user.department }}</p>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold">{{ datetime.now().strftime('%B %d, %Y') }}</div>
+                    <div class="small text-muted">Academic Session 2026</div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Course Management -->
+                <div class="col-lg-8">
+                    <div id="courses" class="dash-card p-4 mb-4">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-graduation-cap text-primary me-2"></i>Active Courses</h5>
+                        {% for course in courses %}
+                        <div class="p-3 bg-light rounded-3 mb-3 border-start border-primary border-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ course.name }}</h6>
+                                    <span class="badge bg-white text-primary border">{{ course.code }}</span>
+                                </div>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignModal{{ course.id }}">
+                                    Post Assignment
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Modal -->
+                        <div class="modal fade" id="assignModal{{ course.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form action="{{ url_for('post_assignment') }}" method="POST">
+                                        <input type="hidden" name="course_id" value="{{ course.id }}">
+                                        <div class="modal-header border-0 pb-0">
+                                            <h5 class="modal-title fw-black">New Assignment: {{ course.name }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Title</label>
+                                                <input type="text" name="title" class="form-control" placeholder="Assignment Title" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Due Date</label>
+                                                <input type="date" name="due_date" class="form-control" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Instructions</label>
+                                                <textarea name="content" class="form-control" rows="4" required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-0 pt-0">
+                                            <button type="submit" class="btn btn-primary w-100">Publish Assignment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Meeting Sidebar -->
+                <div class="col-lg-4">
+                    <div id="meetings" class="dash-card p-4">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-broadcast-tower text-danger me-2"></i>Live Sessions</h5>
+                        <button class="btn btn-outline-danger w-100 mb-4" data-bs-toggle="modal" data-bs-target="#meetingModal">
+                            <i class="fas fa-plus me-2"></i>Schedule Meeting
+                        </button>
+                        
+                        {% for m in meetings %}
+                        <div class="p-3 bg-light rounded-3 mb-3">
+                            <h6 class="small fw-bold mb-1">{{ m.title }}</h6>
+                            <p class="x-small text-muted mb-2"><i class="fas fa-clock me-1"></i>{{ m.date }} • {{ m.time }}</p>
+                            <a href="{{ m.meet_link }}" target="_blank" class="btn btn-danger btn-sm w-100 rounded-pill">Start Link</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.dashboard-sidebar .nav-link {
+    color: rgba(255,255,255,0.7);
+    transition: all 0.3s;
+}
+.dashboard-sidebar .nav-link:hover, .dashboard-sidebar .nav-link.active {
+    background: rgba(255,111,0,0.2);
+    color: white !important;
+    border-left: 4px solid var(--accent-orange);
+    padding-left: calc(1rem - 4px);
+}
+.x-small { font-size: 0.75rem; }
+</style>
+{% endblock %}

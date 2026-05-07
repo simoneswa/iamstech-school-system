@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - IAMSTECH Training Portal{% endblock %}
+
+{% block content %}
+<div class="login-portal-bg d-flex align-items-center min-vh-100 py-5" style="background: linear-gradient(135deg, #0d1b3e 0%, #1a237e 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="login-card shadow-lg rounded-5 overflow-hidden bg-white">
+                    <div class="row g-0">
+
+                        <!-- LEFT BRANDING PANEL -->
+                        <div class="col-lg-5 p-5 text-white text-center d-flex flex-column justify-content-center" style="background: linear-gradient(160deg, #1a237e 0%, #0d1b3e 100%); position: relative; overflow: hidden;">
+                            <div class="mb-4">
+                                <img src="{{ url_for('static', filename='img/logo.png') }}" 
+                                     alt="IAMSTECH Logo" 
+                                     style="height: 120px; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+                                <div class="logo-fallback-login d-none align-items-center justify-content-center bg-white-10 rounded-4" style="width: 100px; height: 100px; margin: 0 auto; border: 2px dashed rgba(255,255,255,0.3);">
+                                    <i class="fas fa-shield-alt fa-3x text-warning"></i>
+                                </div>
+                            </div>
+                            <h2 class="fw-black mb-2">IAMSTECH LIBERIA</h2>
+                            <p class="text-warning fw-bold small text-uppercase mb-4" style="letter-spacing: 2px;">Professional Learning Platform</p>
+                            <div class="mx-auto bg-warning rounded-pill mb-4" style="width: 50px; height: 3px;"></div>
+                            <p class="small opacity-75">"Shaping Tomorrow's Leaders<br>Through Technology"</p>
+                        </div>
+
+                        <!-- RIGHT LOGIN PANEL -->
+                        <div class="col-lg-7 p-5">
+                            <h3 class="fw-black text-primary mb-1">Welcome Back</h3>
+                            <p class="text-muted small mb-4">Select your role and sign in to your portal</p>
+
+                            <!-- ROLE SELECTOR -->
+                            <div class="role-selector mb-4">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <div class="role-tab active" data-role="Student" id="tab-student" onclick="selectRole('Student')">
+                                            <i class="fas fa-user-graduate mb-1"></i>
+                                            <div class="small fw-bold">Student</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="role-tab" data-role="Teacher" id="tab-teacher" onclick="selectRole('Teacher')">
+                                            <i class="fas fa-chalkboard-teacher mb-1"></i>
+                                            <div class="small fw-bold">Teacher</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="role-tab" data-role="Admin" id="tab-admin" onclick="selectRole('Admin')">
+                                            <i class="fas fa-user-shield mb-1"></i>
+                                            <div class="small fw-bold">Admin</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Login Form -->
+                            <form method="POST" action="{{ url_for('login') }}" id="login-form">
+                                <input type="hidden" name="selected_role" id="selected-role" value="Student">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Email / Student ID</label>
+                                    <input type="text" name="email" id="input-email" class="form-control" placeholder="Enter ID or Email" required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold">Password</label>
+                                    <div class="input-group">
+                                        <input type="password" name="password" id="input-password" class="form-control border-end-0" placeholder="Enter password" required>
+                                        <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePassword()">
+                                            <i class="fas fa-eye" id="eye-icon"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-cta-portal w-100 py-3" id="submit-btn">
+                                    SIGN IN AS STUDENT
+                                </button>
+                            </form>
+
+                            <div class="text-center mt-4 pt-3 border-top">
+                                <p class="small text-muted mb-0">Not yet enrolled? 
+                                    <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Become Future-Ready</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.role-tab {
+    padding: 12px 5px;
+    border-radius: 12px;
+    border: 2px solid #f8f9fa;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #aaa;
+    background: #f8f9fa;
+}
+.role-tab:hover { color: var(--primary-blue); border-color: var(--primary-blue); }
+.role-tab.active {
+    background: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+    box-shadow: 0 5px 15px rgba(13, 27, 62, 0.2);
+}
+.role-tab i { display: block; font-size: 1.2rem; }
+.bg-white-10 { background: rgba(255, 255, 255, 0.1); }
+</style>
+
+<script>
+    function selectRole(role) {
+        document.getElementById('selected-role').value = role;
+        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + role.toLowerCase()).classList.add('active');
+        document.getElementById('submit-btn').textContent = 'SIGN IN AS ' + role.toUpperCase();
+        document.getElementById('input-email').placeholder = (role === 'Student') ? 'Student ID or Email' : 'Institutional Email';
+    }
+
+    function togglePassword() {
+        const pwd = document.getElementById('input-password');
+        const icon = document.getElementById('eye-icon');
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            pwd.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+</script>
+{% endblock %}

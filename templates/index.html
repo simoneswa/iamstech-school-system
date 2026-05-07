@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- HERO SECTION (Match Screenshot 2) -->
+<header class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="IAMSTECH Hero Logo" class="hero-main-logo">
+                <p class="hero-subtitle">PROFESSIONAL TECHNOLOGY INSTITUTE</p>
+                <h1 class="hero-title">Shaping Tomorrow's <br>Leaders Through <br>Technology</h1>
+                <p class="hero-desc mb-5">Industry-recognized vocational training and professional development for the modern world.</p>
+                
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>STUDENT PORTAL</a>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="hero-visual-stack">
+                    <!-- Floating Card 1 -->
+                    <div class="floating-card card-tech">
+                        <i class="fas fa-code"></i>
+                        <span>Technology</span>
+                    </div>
+                    <!-- Floating Card 2 -->
+                    <div class="floating-card card-training">
+                        <i class="fas fa-book-open"></i>
+                        <span>Training</span>
+                    </div>
+                    <!-- Floating Card 3 -->
+                    <div class="floating-card card-community">
+                        <i class="fas fa-users"></i>
+                        <span>Community</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- STATS BAR (Match Screenshot 3) -->
+<section class="stats-bar shadow-sm">
+    <div class="container">
+        <div class="row text-center g-4">
+            <div class="col-md-4">
+                <span class="stat-number">8+</span>
+                <span class="stat-label">Professional Programs</span>
+            </div>
+            <div class="col-md-4 border-start border-end">
+                <span class="stat-number">2026</span>
+                <span class="stat-label">Enrollment Year</span>
+            </div>
+            <div class="col-md-4">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Industry Focused</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TRAINING PROGRAMS (Match Screenshot 4 & 5) -->
+<section id="programs" class="py-5 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">PROFESSIONAL DEVELOPMENT</p>
+            <h2 class="section-header">Our Training Programs</h2>
+            <p class="text-muted mt-3">Specialized vocational certifications for modern professionals</p>
+        </div>
+        
+        <div class="row g-4 mt-4">
+            <!-- Program 1 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-laptop-code course-icon"></i>
+                    <h5>Microsoft Office Suite</h5>
+                    <p>Master essential digital productivity tools used across all industries.</p>
+                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <!-- Program 2 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-calculator course-icon"></i>
+                    <h5>QuickBooks Accounting</h5>
+                    <p>Professional financial management and bookkeeping expertise.</p>
+                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <!-- Program 3 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-folder-open course-icon"></i>
+                    <h5>Office Procedures</h5>
+                    <p>Advanced administrative and organizational skills for effective office management.</p>
+                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <!-- Program 4 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-globe course-icon"></i>
+                    <h5>Internet Usage</h5>
+                    <p>Digital citizenship, security, and professional online proficiency.</p>
+                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ACTIVITIES & ANNOUNCEMENTS (Match Screenshot 6) -->
+<section class="py-5 bg-light">
+    <div class="container py-5">
+        <div class="row g-5">
+            <!-- Latest Announcements -->
+            <div class="col-lg-12">
+                <div class="text-center mb-5">
+                    <p class="section-title">NEWS & UPDATES</p>
+                    <h2 class="section-header">Latest Announcements</h2>
+                </div>
+                
+                {% if announcements %}
+                    <div class="row g-4">
+                    {% for ann in announcements %}
+                        <div class="col-md-6 mx-auto">
+                            <div class="card border-0 shadow-sm p-4 border-start border-warning border-4">
+                                <h5 class="fw-bold mb-1">{{ ann.title }}</h5>
+                                <p class="small text-muted mb-3"><i class="fas fa-calendar-alt me-2"></i>{{ ann.date.strftime('%B %d, %Y') }}</p>
+                                <p class="text-muted">{{ ann.content[:150] }}...</p>
+                                <a href="#" class="text-warning fw-bold text-decoration-none small">Read full update +</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">Stay tuned for upcoming institutional announcements.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

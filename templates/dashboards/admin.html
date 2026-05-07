@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="dashboard-wrapper d-flex min-vh-100">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-sidebar bg-dark text-white p-0" style="width: 280px; min-height: 100vh;">
+            <div class="sidebar-header p-4 border-bottom border-secondary text-center">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo mb-3"
+                     onerror="this.style.display='none';">
+                <h6 class="fw-black mb-0">IAMSTECH ADMIN</h6>
+            </div>
+
+            <div class="sidebar-menu p-3">
+                <a href="{{ url_for('dashboard') }}" class="nav-link active rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-chart-line"></i> <span>Overview</span>
+                </a>
+                <a href="#applicants" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-user-clock"></i> <span>Applicants</span>
+                </a>
+                <a href="#users" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-users"></i> <span>Manage Users</span>
+                </a>
+                <a href="#courses" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-book"></i> <span>Courses</span>
+                </a>
+                <a href="#activity" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-camera"></i> <span>Gallery Post</span>
+                </a>
+                <hr class="border-secondary">
+                <a href="{{ url_for('logout') }}" class="nav-link rounded-3 d-flex align-items-center gap-3 p-3 text-danger">
+                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow-1 bg-light p-5">
+            <!-- Stats Row -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-3">
+                    <div class="dash-card p-4 text-center">
+                        <div class="display-5 fw-black text-primary mb-1">{{ users|length }}</div>
+                        <p class="text-muted small mb-0">TOTAL USERS</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="dash-card p-4 text-center">
+                        <div class="display-5 fw-black text-warning mb-1">{{ applicants|length }}</div>
+                        <p class="text-muted small mb-0">PENDING APPLICANTS</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="dash-card p-4 text-center">
+                        <div class="display-5 fw-black text-info mb-1">{{ courses|length }}</div>
+                        <p class="text-muted small mb-0">ACTIVE COURSES</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="dash-card p-4 text-center">
+                        <div class="display-5 fw-black text-success mb-1">{{ teachers|length }}</div>
+                        <p class="text-muted small mb-0">FACULTY MEMBERS</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Applicants -->
+            <div id="applicants" class="dash-card p-4 mb-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-user-clock text-warning me-2"></i>New Applications</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Applicant</th>
+                                <th>Department</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in applicants %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            {{ app.name[0] }}
+                                        </div>
+                                        <span class="fw-bold">{{ app.name }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark">{{ app.department }}</span></td>
+                                <td class="small">{{ app.email }}</td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('approve_user', user_id=app.id) }}" class="btn btn-success btn-sm px-3">Approve</a>
+                                        <a href="{{ url_for('reject_user', user_id=app.id) }}" class="btn btn-outline-danger btn-sm px-3">Reject</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Create Course -->
+            <div id="courses" class="dash-card p-4 mb-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-plus-circle text-primary me-2"></i>Create New Course</h5>
+                <form action="{{ url_for('admin_manage_courses') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" name="name" class="form-control" placeholder="Course Name" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="code" class="form-control" placeholder="Code (e.g. MS101)" required>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="teacher_id" class="form-select" required>
+                                <option value="" disabled selected>Assign Faculty...</option>
+                                {% for t in teachers %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">Create Course</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.dashboard-sidebar .nav-link {
+    color: rgba(255,255,255,0.7);
+    transition: all 0.3s;
+}
+.dashboard-sidebar .nav-link:hover, .dashboard-sidebar .nav-link.active {
+    background: rgba(255,111,0,0.2);
+    color: white !important;
+    border-left: 4px solid var(--accent-orange);
+    padding-left: calc(1rem - 4px);
+}
+</style>
+{% endblock %}

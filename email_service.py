@@ -1,0 +1,82 @@
+import os
+from flask_mail import Mail, Message
+from flask import url_for
+
+mail = Mail()
+
+def send_approval_email(user, temp_password):
+    """
+    Sends an official welcome email to the approved student with their new credentials.
+    """
+    try:
+        msg = Message(
+            subject="Welcome to IAMSTECH LIBERIA - Your Student Credentials",
+            sender=os.getenv("MAIL_USERNAME"),
+            recipients=[user.email]
+        )
+        
+        # Professional formatting for the email body
+        msg.body = f"""
+Dear {user.name},
+
+Congratulations! Your application to the Institute of Advanced Management Science & Technology (IAMSTECH) LIBERIA has been approved.
+
+Your official student credentials have been generated. Please use the following details to access the Student Portal:
+
+--------------------------------------------------
+STUDENT ID: {user.student_id}
+SCHOOL EMAIL: {user.school_email}
+TEMPORARY PASSWORD: {temp_password}
+--------------------------------------------------
+
+LOGIN PORTAL: {url_for('login', _external=True)}
+
+IMPORTANT SECURITY NOTICE:
+For your protection, you will be required to change your password upon your first login. Do not share these credentials with anyone.
+
+Welcome to the future of technology and management.
+
+Best Regards,
+Admissions Office
+IAMSTECH LIBERIA
+"Shaping Tomorrow’s Leaders Through Technology"
+        """
+        
+        msg.html = render_approval_html(user, temp_password)
+        
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
+def render_approval_html(user, temp_password):
+    return f"""
+    <div style="font-family: 'Outfit', sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        <div style="background: #1a237e; color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">Welcome to IAMSTECH</h1>
+            <p style="margin: 5px 0 0; opacity: 0.8;">Shaping Tomorrow’s Leaders Through Technology</p>
+        </div>
+        <div style="padding: 40px; color: #333; line-height: 1.6;">
+            <p>Dear <strong>{user.name}</strong>,</p>
+            <p>Congratulations! Your application has been <strong>Approved</strong>. You are now officially a student of IAMSTECH LIBERIA.</p>
+            
+            <div style="background: #fdfbf7; border-left: 5px solid #ff6f00; padding: 20px; margin: 25px 0;">
+                <p style="margin: 0 0 10px;"><strong>Student ID:</strong> <span style="color: #ff6f00;">{user.student_id}</span></p>
+                <p style="margin: 0 0 10px;"><strong>School Email:</strong> {user.school_email}</p>
+                <p style="margin: 0;"><strong>Temp Password:</strong> <code style="background: #eee; padding: 2px 5px; border-radius: 3px;">{temp_password}</code></p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="{url_for('login', _external=True)}" style="background: #1a237e; color: white; padding: 15px 35px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block;">Login to Student Portal</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; pt: 20px;">
+                * You will be required to change your password on your first login.
+            </p>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 11px; color: #999;">
+            &copy; 2026 IAMSTECH LIBERIA. Hotel Africa Road, Monrovia.
+        </div>
+    </div>
+    """

@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="student-dashboard">
+    <div class="dashboard-wrapper d-flex min-vh-100">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-sidebar bg-dark text-white p-0" style="width: 280px; min-height: 100vh;">
+            <div class="sidebar-header p-4 border-bottom border-secondary text-center">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo mb-3"
+                     onerror="this.style.display='none';">
+                <h6 class="fw-black mb-0">STUDENT PORTAL</h6>
+            </div>
+
+            <div class="sidebar-menu p-3">
+                <a href="{{ url_for('dashboard') }}" class="nav-link active rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-home"></i> <span>Dashboard</span>
+                </a>
+                <a href="#courses" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-book-open"></i> <span>My Courses</span>
+                </a>
+                <a href="{{ url_for('view_eid') }}" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-id-card"></i> <span>Digital E-ID</span>
+                </a>
+                <a href="#attendance" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                    <i class="fas fa-calendar-check"></i> <span>Attendance</span>
+                </a>
+                <hr class="border-secondary">
+                <a href="{{ url_for('logout') }}" class="nav-link rounded-3 d-flex align-items-center gap-3 p-3 text-danger">
+                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow-1 bg-light p-5">
+            <!-- Welcome Card -->
+            <div class="dash-card p-5 mb-5 bg-primary text-white position-relative overflow-hidden" 
+                 style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);">
+                <div class="position-relative z-1">
+                    <h2 class="fw-black mb-2">Welcome Back, {{ current_user.name }}</h2>
+                    <p class="lead opacity-75 mb-0">{{ current_user.student_id }} • {{ current_user.department }}</p>
+                    <div class="mt-4">
+                        <span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="font-size: 1rem;">
+                            <i class="fas fa-star me-2"></i>{{ current_user.points }} Points
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="dash-card p-4 text-center">
+                        <h4 class="fw-black text-primary mb-1">{{ enrollments|length }}</h4>
+                        <p class="text-muted small mb-0">ENROLLED COURSES</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dash-card p-4 text-center">
+                        <h4 class="fw-black text-success mb-1">{{ att_percent|round(1) }}%</h4>
+                        <p class="text-muted small mb-0">ATTENDANCE RATE</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dash-card p-4 text-center">
+                        <h4 class="fw-black text-warning mb-1">{{ assignments|length }}</h4>
+                        <p class="text-muted small mb-0">PENDING ASSIGNMENTS</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <!-- ID Card Mini Preview -->
+                    <div class="dash-card p-4 mb-4 border-start border-warning border-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0"><i class="fas fa-id-card text-primary me-2"></i>Institutional E-ID Preview</h5>
+                            <a href="{{ url_for('view_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill px-4">Print ID</a>
+                        </div>
+                        <div class="p-4 bg-light rounded-4 border">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 text-center mb-3 mb-md-0">
+                                    <div class="rounded-3 border border-3 border-white shadow-sm overflow-hidden" style="width: 120px; height: 150px; margin: 0 auto;">
+                                        <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/logo.png') }}" class="w-100 h-100" style="object-fit: cover;">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <h4 class="fw-black text-primary mb-1">{{ current_user.name.upper() }}</h4>
+                                    <p class="text-warning fw-bold mb-3">{{ current_user.student_id }}</p>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <p class="text-muted x-small mb-0">PROGRAM</p>
+                                            <p class="fw-bold small mb-0">{{ current_user.department }}</p>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="text-muted x-small mb-0">VALID THRU</p>
+                                            <p class="fw-bold small mb-0">DEC 2026</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course List -->
+                    <div id="courses" class="dash-card p-4">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-book text-primary me-2"></i>My Enrolled Courses</h5>
+                        <div class="row g-3">
+                            {% for enr in enrollments %}
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 hover-shadow-sm transition">
+                                    <div class="fw-bold mb-1">{{ enr.course.name }}</div>
+                                    <div class="small text-muted">{{ enr.course.code }} • Prof. {{ enr.course.teacher.name }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Virtual Classes -->
+                    <div class="dash-card p-4 mb-4">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-video text-danger me-2"></i>Live Sessions</h5>
+                        {% for m in meetings %}
+                        <div class="p-3 bg-light rounded-3 mb-3 border-start border-danger border-4">
+                            <h6 class="small fw-bold mb-1">{{ m.title }}</h6>
+                            <p class="x-small text-muted mb-2">{{ m.date }} • {{ m.time }}</p>
+                            <a href="{{ m.meet_link }}" target="_blank" class="btn btn-danger btn-sm w-100 rounded-pill">Join Meeting</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.dashboard-sidebar .nav-link {
+    color: rgba(255,255,255,0.7);
+    transition: all 0.3s;
+}
+.dashboard-sidebar .nav-link:hover, .dashboard-sidebar .nav-link.active {
+    background: rgba(255,111,0,0.2);
+    color: white !important;
+    border-left: 4px solid var(--accent-orange);
+    padding-left: calc(1rem - 4px);
+}
+.x-small { font-size: 0.7rem; letter-spacing: 1px; }
+.hover-shadow-sm:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.transition { transition: all 0.3s ease; }
+</style>
+{% endblock %}

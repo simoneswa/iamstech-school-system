@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}Faculty Portal - IAMSTECH{% endblock %}
+
+{% block content %}
+<div style="background: var(--soft-gray); min-height: 100vh;">
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <nav class="bg-dark text-white p-4" style="width: 280px; min-height: 100vh;">
+            <div class="mb-4 pb-3 border-bottom">
+                <h6 class="fw-black text-warning mb-2">IAMSTECH</h6>
+                <p class="small mb-0">Faculty Portal</p>
+            </div>
+            <div class="nav flex-column gap-2">
+                <a href="#" class="nav-link text-white active" data-section="overview">
+                    <i class="fas fa-chart-line me-2"></i>Overview
+                </a>
+                <a href="#" class="nav-link text-white-80" data-section="courses">
+                    <i class="fas fa-book-open me-2"></i>My Courses
+                </a>
+                <a href="#" class="nav-link text-white-80" data-section="assignments">
+                    <i class="fas fa-file-upload me-2"></i>Assignments
+                </a>
+                <a href="#" class="nav-link text-white-80" data-section="meetings">
+                    <i class="fas fa-video me-2"></i>Meetings
+                </a>
+                <a href="#" class="nav-link text-white-80" data-section="attendance">
+                    <i class="fas fa-calendar-check me-2"></i>Attendance
+                </a>
+                <hr class="my-3 opacity-10">
+                <a href="{{ url_for('change_password') }}" class="nav-link text-white-80">
+                    <i class="fas fa-lock me-2"></i>Security
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-link" style="color: #ff6b6b;">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 p-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 class="fw-black text-primary mb-1">Faculty Control Center</h2>
+                    <p class="text-muted small">Welcome, {{ current_user.name }}</p>
+                </div>
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                    <i class="fas fa-chalkboard-user"></i>
+                </div>
+            </div>
+
+            <!-- Overview Section -->
+            <section id="section-overview" class="section-content">
+                <div class="row g-4 mb-5">
+                    <div class="col-md-4">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-primary mb-2">{{ courses|length }}</div>
+                            <p class="text-muted small">Active Courses</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-success mb-2">{{ meetings|length }}</div>
+                            <p class="text-muted small">Scheduled Meetings</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <div class="display-4 fw-bold text-warning mb-2">{{ courses|sum(attribute='enrollments')|length }}</div>
+                            <p class="text-muted small">Total Students</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Quick Actions</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('assignments')">
+                                <i class="fas fa-plus me-2"></i>Post Assignment
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('meetings')">
+                                <i class="fas fa-plus me-2"></i>Schedule Meeting
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('attendance')">
+                                <i class="fas fa-check me-2"></i>Mark Attendance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Courses Section -->
+            <section id="section-courses" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">My Courses</h5>
+                    {% if courses %}
+                        <div class="row g-4">
+                            {% for course in courses %}
+                            <div class="col-md-6">
+                                <div class="p-4 border rounded-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="fw-bold text-primary mb-0">{{ course.name }}</h6>
+                                            <p class="small text-muted mb-0">{{ course.code }}</p>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ course.enrollments|length }} Students</span>
+                                    </div>
+                                    <p class="small text-muted">{{ course.description }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-5">No courses assigned yet.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Assignments Section -->
+            <section id="section-assignments" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-plus me-2"></i>Post New Assignment</h5>
+                    <form action="{{ url_for('post_assignment') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Assignment Title</label>
+                                <input type="text" name="title" class="form-control rounded-3" placeholder="e.g. Weekly Research Paper" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Due Date</label>
+                                <input type="date" name="due_date" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Select Course</label>
+                                <select name="course_id" class="form-select rounded-3" required>
+                                    <option value="" disabled selected>Choose Course...</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.name }} ({{ course.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Points</label>
+                                <input type="number" name="points" class="form-control rounded-3" placeholder="100" value="100" min="1">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Instructions</label>
+                                <textarea name="content" class="form-control rounded-3" rows="4" placeholder="Describe the task for students..." required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success rounded-pill px-5">
+                                    <i class="fas fa-paper-plane me-2"></i>Publish Assignment
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Meetings Section -->
+            <section id="section-meetings" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-plus me-2"></i>Schedule Google Meet</h5>
+                    <form action="{{ url_for('add_meeting') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Session Title</label>
+                                <input type="text" name="title" class="form-control rounded-3" placeholder="e.g. Lecture Week 5" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Google Meet Link</label>
+                                <input type="url" name="link" class="form-control rounded-3" placeholder="https://meet.google.com/..." required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Date</label>
+                                <input type="date" name="date" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Time</label>
+                                <input type="time" name="time" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100 rounded-3">Post Link</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                {% if meetings %}
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Upcoming Meetings</h5>
+                    <div class="row g-3">
+                        {% for meeting in meetings %}
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3">
+                                <h6 class="fw-bold text-primary mb-1">{{ meeting.title }}</h6>
+                                <p class="small text-muted mb-2"><i class="fas fa-calendar me-1"></i>{{ meeting.date }}</p>
+                                <a href="{{ meeting.meet_link }}" target="_blank" class="btn btn-danger btn-sm rounded-pill">
+                                    <i class="fas fa-external-link-alt me-1"></i>Open Meet
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Attendance Section -->
+            <section id="section-attendance" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Mark Student Attendance</h5>
+                    {% if courses %}
+                        {% for course in courses %}
+                        <div class="mb-4 p-4 border rounded-4">
+                            <h6 class="fw-bold text-primary mb-3">{{ course.name }} ({{ course.code }})</h6>
+                            <form action="{{ url_for('mark_attendance') }}" method="POST">
+                                <input type="hidden" name="course_id" value="{{ course.id }}">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="small fw-bold">Student Name</th>
+                                                <th class="small fw-bold text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for enrollment in course.enrollments %}
+                                            <tr>
+                                                <td class="small">{{ enrollment.student.name }}</td>
+                                                <td class="text-center">
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <input type="radio" class="btn-check" name="status_{{ enrollment.student_id }}" id="p_{{ enrollment.student_id }}" value="Present" checked>
+                                                        <label class="btn btn-outline-success" for="p_{{ enrollment.student_id }}"><i class="fas fa-check"></i> Present</label>
+                                                        
+                                                        <input type="radio" class="btn-check" name="status_{{ enrollment.student_id }}" id="a_{{ enrollment.student_id }}" value="Absent">
+                                                        <label class="btn btn-outline-danger" for="a_{{ enrollment.student_id }}"><i class="fas fa-times"></i> Absent</label>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button type="submit" class="btn btn-primary rounded-pill px-5">Submit Attendance</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-5">No courses assigned.</p>
+                    {% endif %}
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<style>
+    .section-content {
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .nav-link {
+        border-radius: 8px;
+        transition: all 0.3s;
+        text-decoration: none;
+        padding: 10px 12px;
+    }
+
+    .nav-link.active {
+        background: rgba(255, 111, 0, 0.2);
+        color: white;
+        border-left: 4px solid var(--accent-orange);
+        padding-left: calc(12px - 4px);
+    }
+
+    .text-white-80 {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-link:hover {
+        color: white;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    @media (max-width: 768px) {
+        nav {
+            width: 100% !important;
+            min-height: auto !important;
+        }
+        
+        main {
+            width: 100% !important;
+        }
+        
+        .d-flex {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    function switchSection(sectionName) {
+        document.querySelectorAll('.section-content').forEach(s => s.classList.add('d-none'));
+        document.getElementById('section-' + sectionName).classList.remove('d-none');
+        document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+        document.querySelector('[data-section="' + sectionName + '"]').classList.add('active');
+    }
+
+    // Navigation click handlers
+    document.querySelectorAll('[data-section]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = e.target.closest('[data-section]').dataset.section;
+            switchSection(section);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="student-dashboard">
+    <div class="dashboard-wrapper d-flex min-vh-100">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-sidebar bg-dark text-white p-0 position-fixed start-0 top-0" style="width: 280px; height: 100vh; overflow-y: auto; z-index: 1000;">
+            <div class="sidebar-header p-4 border-bottom border-secondary">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="logo-placeholder-sidebar">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo"
+                             onerror="this.style.display='none'; this.parentElement.style.background='rgba(255, 111, 0, 0.2)';">
+                    </div>
+                    <div>
+                        <div class="fw-black" style="font-size: 0.9rem;">IAMSTECH</div>
+                        <div class="small text-warning">Student</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu p-3">
+                <div class="nav-section mb-4">
+                    <div class="nav-section-title text-warning small fw-bold text-uppercase mb-3" style="letter-spacing: 1px;">Main</div>
+                    <a href="{{ url_for('dashboard') }}" class="nav-link active rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-home fa-fw"></i> <span>Dashboard</span>
+                    </a>
+                    <a href="#my-courses" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-book-open fa-fw"></i> <span>My Courses</span>
+                    </a>
+                </div>
+
+                <div class="nav-section mb-4">
+                    <div class="nav-section-title text-warning small fw-bold text-uppercase mb-3">Academic</div>
+                    <a href="#assignments" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-tasks fa-fw"></i> <span>Assignments</span>
+                    </a>
+                    <a href="#attendance" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-calendar-check fa-fw"></i> <span>Attendance</span>
+                    </a>
+                    <a href="{{ url_for('view_eid') }}" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-id-card fa-fw"></i> <span>Digital E-ID</span>
+                    </a>
+                </div>
+
+                <div class="nav-section mb-4">
+                    <div class="nav-section-title text-warning small fw-bold text-uppercase mb-3">Learning</div>
+                    <a href="#meetings" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-video fa-fw"></i> <span>Virtual Classes</span>
+                    </a>
+                    <a href="#leaderboard" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-trophy fa-fw"></i> <span>Leaderboard</span>
+                    </a>
+                </div>
+
+                <div class="nav-section mb-4">
+                    <div class="nav-section-title text-warning small fw-bold text-uppercase mb-3">Settings</div>
+                    <a href="{{ url_for('change_password') }}" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
+                        <i class="fas fa-lock fa-fw"></i> <span>Security</span>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="nav-link rounded-3 d-flex align-items-center gap-3 p-3" style="color: #ff6b6b;">
+                        <i class="fas fa-sign-out-alt fa-fw"></i> <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main style="margin-left: 280px; width: calc(100% - 280px);" class="bg-soft-gray">
+            <!-- Top Bar -->
+            <div class="dashboard-topbar bg-white border-bottom shadow-sm sticky-top p-3 px-5 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">Student Dashboard</h5>
+                </div>
+                <div class="d-flex align-items-center gap-4">
+                    <div class="text-end">
+                        <p class="small text-muted mb-0">Welcome back,</p>
+                        <p class="fw-bold mb-0">{{ current_user.name }}</p>
+                    </div>
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="p-5">
+                <!-- Welcome Card -->
+                <div class="dash-card p-5 mb-4 bg-gradient rounded-4 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, var(--primary-blue) 0%, #3949ab 100%);">
+                    <div class="row align-items-center position-relative z-1">
+                        <div class="col-lg-8">
+                            <h2 class="fw-black mb-2">Welcome to Your Portal</h2>
+                            <p class="lead opacity-90 mb-3">{{ current_user.student_id }} • {{ current_user.department }}</p>
+                            <p class="opacity-80">{{ current_user.school_email }}</p>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <div class="badge bg-warning text-dark px-4 py-3" style="font-size: 1.2rem;">
+                                <i class="fas fa-star me-2"></i>{{ current_user.points }} Points
+                            </div>
+                        </div>
+                    </div>
+                    <div class="position-absolute" style="top: -50px; right: -100px; width: 300px; height: 300px; background: rgba(255, 111, 0, 0.1); border-radius: 50%;"></div>
+                </div>
+
+                <!-- Quick Stats Row -->
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 text-center rounded-4">
+                            <div class="display-4 fw-bold text-primary mb-2">{{ enrollments|length }}</div>
+                            <p class="text-muted small mb-0">Active Courses</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 text-center rounded-4">
+                            <div class="display-4 fw-bold text-success mb-2">{{ att_percent|round(1) }}%</div>
+                            <p class="text-muted small mb-0">Attendance Rate</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 text-center rounded-4">
+                            <div class="display-4 fw-bold text-warning mb-2">{{ assignments|length }}</div>
+                            <p class="text-muted small mb-0">Pending Tasks</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dash-card p-4 text-center rounded-4">
+                            <div class="display-4 fw-bold text-info mb-2">{{ leaderboard|length }}</div>
+                            <p class="text-muted small mb-0">Top Performers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="row g-4 mb-5">
+                    <!-- Left Column -->
+                    <div class="col-lg-8">
+                        <!-- Digital E-ID Card -->
+                        <div class="dash-card p-4 mb-4 rounded-4 border-start border-warning border-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">
+                                    <i class="fas fa-id-card text-primary me-2"></i>Digital Student ID
+                                </h5>
+                                <div class="gap-2 d-flex">
+                                    <a href="{{ url_for('view_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                                        <i class="fas fa-print me-1"></i> Print
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- E-ID Preview -->
+                            <div class="p-4 bg-light rounded-4" style="border: 2px solid rgba(13, 27, 62, 0.1);">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3 text-center mb-3 mb-md-0">
+                                        <div class="rounded shadow border-3 border-white" style="width: 120px; height: 150px; margin: 0 auto; overflow: hidden;">
+                                            <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/default-avatar.png') }}" 
+                                                 class="w-100 h-100" style="object-fit: cover;"
+                                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 150%22%3E%3Crect fill=%22%23e0e0e0%22 width=%22120%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2216%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="mb-3">
+                                            <small class="text-muted fw-bold text-uppercase" style="letter-spacing: 1px;">Student Information</small>
+                                            <h5 class="fw-black text-primary mb-0">{{ current_user.name.upper() }}</h5>
+                                        </div>
+                                        <div class="row text-sm mb-3">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Student ID</small>
+                                                <p class="fw-bold mb-2">{{ current_user.student_id }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Program</small>
+                                                <p class="fw-bold mb-2">{{ current_user.department }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="row text-sm">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">School Email</small>
+                                                <p class="fw-bold mb-0">{{ current_user.school_email }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Valid Through</small>
+                                                <p class="fw-bold mb-0">December 2026</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Courses Section -->
+                        <div class="dash-card p-4 mb-4 rounded-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-book-open text-primary me-2"></i>My Courses
+                            </h5>
+                            {% if enrollments %}
+                                <div class="row g-3">
+                                    {% for enr in enrollments %}
+                                    <div class="col-md-6">
+                                        <div class="p-3 border rounded-3 hover:shadow transition">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="fw-bold mb-0">{{ enr.course.name }}</h6>
+                                                <span class="badge bg-primary rounded-pill">{{ enr.course.code }}</span>
+                                            </div>
+                                            <p class="small text-muted mb-0">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ enr.course.teacher.name if enr.course.teacher else 'TBA' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center py-4">No courses enrolled yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Attendance Section -->
+                        <div id="attendance" class="dash-card p-4 mb-4 rounded-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">
+                                    <i class="fas fa-calendar-check text-success me-2"></i>Attendance Record
+                                </h5>
+                                <span class="badge bg-success rounded-pill">{{ att_percent|round(1) }}%</span>
+                            </div>
+                            <div class="progress rounded-pill" style="height: 14px; background: #e0e0e0;">
+                                <div class="progress-bar bg-success" style="width: {{ att_percent }}%"></div>
+                            </div>
+                            <p class="small text-muted mt-3 mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Attendance rate: {{ att_percent|round(1) }}% (track and maintain 75%+ for good standing)
+                            </p>
+                        </div>
+
+                        <!-- Assignments Section -->
+                        <div id="assignments" class="dash-card p-4 rounded-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-tasks text-warning me-2"></i>Pending Assignments
+                            </h5>
+                            {% if assignments %}
+                                {% for asn in assignments %}
+                                <div class="p-3 border rounded-3 mb-3 last:mb-0">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0">{{ asn.title }}</h6>
+                                        <span class="badge bg-danger rounded-pill">Due: {{ asn.due_date }}</span>
+                                    </div>
+                                    <p class="small text-muted mb-2">
+                                        <i class="fas fa-book me-1"></i>{{ asn.course.name }}
+                                    </p>
+                                    <p class="small mb-0">{{ asn.content[:100] }}...</p>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted text-center py-4">No pending assignments.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Sidebar) -->
+                    <div class="col-lg-4">
+                        <!-- Virtual Classes -->
+                        <div id="meetings" class="dash-card p-4 mb-4 rounded-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-video text-danger me-2"></i>Virtual Classes
+                            </h5>
+                            {% if meetings %}
+                                {% for m in meetings %}
+                                <div class="p-3 bg-light rounded-3 mb-3 border-start border-danger border-4">
+                                    <h6 class="fw-bold small mb-1">{{ m.title }}</h6>
+                                    <p class="small text-muted mb-2">
+                                        <i class="fas fa-clock me-1"></i>{{ m.date }}
+                                    </p>
+                                    <a href="{{ m.meet_link }}" target="_blank" class="btn btn-danger btn-sm w-100 rounded-pill">
+                                        <i class="fas fa-external-link-alt me-1"></i>Join Meeting
+                                    </a>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="small text-muted text-center py-3">No scheduled meetings.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Leaderboard -->
+                        <div id="leaderboard" class="dash-card p-4 mb-4 rounded-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-trophy text-warning me-2"></i>Leaderboard
+                            </h5>
+                            {% if leaderboard %}
+                                <div class="list-unstyled">
+                                    {% for i, student in enumerate(leaderboard, 1) %}
+                                    <div class="d-flex align-items-center justify-content-between p-2 {% if i <= 3 %}bg-light rounded-2 mb-2{% endif %}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold h6 mb-0" style="width: 30px;">
+                                                {% if i == 1 %}<i class="fas fa-crown text-warning"></i>{% elif i == 2 %}<i class="fas fa-medal text-secondary"></i>{% elif i == 3 %}<i class="fas fa-medal text-danger"></i>{% else %}#{{ i }}{% endif %}
+                                            </span>
+                                            <div>
+                                                <p class="small fw-bold mb-0">{{ student.name }}</p>
+                                                <p class="x-small text-muted mb-0">{{ student.department }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ student.points }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="small text-muted text-center py-3">Leaderboard loading...</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="dash-card p-4 rounded-4 text-center">
+                            <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+                            <h6 class="fw-bold mb-2">Need Help?</h6>
+                            <p class="small text-muted mb-4">Chat with our AI assistant for instant help</p>
+                            <button class="btn btn-primary w-100 rounded-pill" data-bs-toggle="modal" data-bs-target="#chatbotModal">
+                                <i class="fas fa-comments me-2"></i>Open Chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">
+                        <i class="fas fa-history text-info me-2"></i>Recent Activities
+                    </h5>
+                    {% if activities %}
+                        <div class="row g-3">
+                            {% for act in activities[:3] %}
+                            <div class="col-md-6">
+                                <div class="rounded-3 overflow-hidden shadow-sm hover:shadow transition">
+                                    <img src="{{ url_for('static', filename=act.image_path) }}" class="w-100" style="height: 200px; object-fit: cover;">
+                                    <div class="p-3">
+                                        <h6 class="fw-bold small mb-1">{{ act.title }}</h6>
+                                        <p class="x-small text-muted">{{ act.date.strftime('%B %d, %Y') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No activities yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Chatbot Modal -->
+<div class="modal fade" id="chatbotModal" tabindex="-1" style="backdrop-filter: blur(5px);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-5 border-0 shadow-lg">
+            <div class="modal-header bg-gradient text-white border-0 p-4" style="background: linear-gradient(135deg, var(--primary-blue) 0%, #3949ab 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-robot fa-lg"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">IAMSTECH AI Assistant</h5>
+                        <small class="opacity-75">Ask anything about courses, programs, or campus</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="chat-window" class="p-4 bg-light" style="height: 400px; overflow-y: auto;">
+                    <div class="mb-3">
+                        <div class="p-3 bg-white rounded-4 shadow-sm small d-inline-block max-width-75">
+                            <i class="fas fa-wave-square text-primary me-2"></i>Hello! I'm your IAMSTECH assistant. How can I help you?
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-white border-top">
+                    <div class="input-group">
+                        <input type="text" id="chat-input" class="form-control rounded-pill border-light px-4" placeholder="Type your question...">
+                        <button class="btn btn-primary" id="send-btn" style="border-radius: 50%; width: 44px; height: 44px; padding: 0;">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.student-dashboard {
+    background: var(--soft-gray);
+}
+
+.dashboard-sidebar {
+    background: linear-gradient(180deg, var(--dark-blue) 0%, var(--primary-blue) 100%);
+}
+
+.dashboard-sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s;
+    text-decoration: none;
+}
+
+.dashboard-sidebar .nav-link:hover,
+.dashboard-sidebar .nav-link.active {
+    background: rgba(255, 111, 0, 0.2);
+    color: white;
+    border-left: 4px solid var(--accent-orange);
+    padding-left: calc(0.75rem - 4px);
+}
+
+.dash-card {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s;
+}
+
+.dash-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-topbar {
+    top: 0;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .dashboard-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+
+    .dashboard-sidebar.show {
+        transform: translateX(0);
+    }
+
+    main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-sidebar {
+        width: 250px;
+    }
+
+    main {
+        padding: 1rem !important;
+    }
+
+    .p-5 {
+        padding: 1.5rem !important;
+    }
+}
+</style>
+
+<script>
+document.getElementById('send-btn').onclick = async function() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if(!msg) return;
+    
+    const win = document.getElementById('chat-window');
+    
+    // User message
+    win.innerHTML += `<div class="text-end mb-3"><div class="p-3 bg-primary text-white rounded-4 shadow-sm small d-inline-block">${msg}</div></div>`;
+    input.value = '';
+    win.scrollTop = win.scrollHeight;
+
+    try {
+        const res = await fetch('/api/chatbot', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: msg})
+        });
+        const data = await res.json();
+        win.innerHTML += `<div class="mb-3"><div class="p-3 bg-white rounded-4 shadow-sm small d-inline-block">${data.reply}</div></div>`;
+        win.scrollTop = win.scrollHeight;
+    } catch(e) {
+        win.innerHTML += `<div class="mb-3"><div class="p-3 bg-white rounded-4 shadow-sm small d-inline-block text-danger">System busy. Please try again.</div></div>`;
+    }
+};
+
+// Enter to send
+document.getElementById('chat-input').onkeypress = function(e) {
+    if(e.key === 'Enter') document.getElementById('send-btn').click();
+};
+</script>
+{% endblock %}
