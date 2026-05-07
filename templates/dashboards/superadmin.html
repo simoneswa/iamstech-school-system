@@ -27,6 +27,9 @@
                 <a href="#" class="nav-link-admin" data-section="admins">
                     <i class="fas fa-user-shield me-2"></i>Admin Management
                 </a>
+                <a href="#" class="nav-link-admin" data-section="applicants">
+                    <i class="fas fa-user-plus me-2"></i>Pending Applicants
+                </a>
                 <a href="#" class="nav-link-admin" data-section="audit">
                     <i class="fas fa-list-alt me-2"></i>Audit Logs
                 </a>
@@ -151,6 +154,43 @@
                                     <td>{{ admin.name }}</td>
                                     <td class="small">{{ admin.email }}</td>
                                     <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pending Applicants Section -->
+            <section id="section-applicants" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Pending Applications</h2>
+                <div class="dash-card p-4 rounded-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Department</th>
+                                    <th>Phone</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in applicants %}
+                                <tr>
+                                    <td class="fw-bold">{{ app.name }}</td>
+                                    <td>{{ app.email }}</td>
+                                    <td>{{ app.department }}</td>
+                                    <td>{{ app.phone }}</td>
+                                    <td>
+                                        <a href="{{ url_for('approve_user', user_id=app.id) }}" class="btn btn-success btn-sm rounded-pill px-3">Approve</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No pending applications.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

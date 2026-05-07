@@ -493,6 +493,7 @@ def admin_update_developer():
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/approve/<int:user_id>')
+@app.route('/approve/<int:user_id>') # Alias for compatibility
 @login_required
 @admin_required
 def approve_user(user_id):
