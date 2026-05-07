@@ -12,4 +12,4 @@ sqlalchemy==2.0.27
 flask-mail==0.9.1
 supabase==2.3.5
 email-validator==2.1.1
-pillow==10.2.0
+pillow
