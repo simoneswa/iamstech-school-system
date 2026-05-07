@@ -210,6 +210,54 @@ def dashboard():
         return render_template('dashboards/student.html', courses=courses)
 
 # --- Admin Controls ---
+@app.route('/admin/update-founder', methods=['POST'])
+@login_required
+def admin_update_founder():
+    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
+    name = request.form.get('name')
+    title = request.form.get('title')
+    message = request.form.get('message')
+    photo = request.files.get('image')
+    
+    founder = Founder.query.first() or Founder()
+    founder.name = name
+    founder.title = title
+    founder.message = message
+    
+    if photo:
+        filename = secure_filename(f"founder_{photo.filename}")
+        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
+        founder.image_path = f"uploads/branding/{filename}"
+        
+    db.session.add(founder)
+    db.session.commit()
+    flash('Founder information updated!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/update-developer', methods=['POST'])
+@login_required
+def admin_update_developer():
+    if current_user.role != 'Admin': return redirect(url_for('dashboard'))
+    name = request.form.get('name')
+    role = request.form.get('role')
+    desc = request.form.get('description')
+    photo = request.files.get('image')
+    
+    dev = Developer.query.first() or Developer()
+    dev.name = name
+    dev.role = role
+    dev.description = desc
+    
+    if photo:
+        filename = secure_filename(f"dev_{photo.filename}")
+        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
+        dev.image_path = f"uploads/branding/{filename}"
+        
+    db.session.add(dev)
+    db.session.commit()
+    flash('Developer information updated!', 'success')
+    return redirect(url_for('dashboard'))
+
 @app.route('/admin/approve/<int:user_id>')
 @login_required
 def approve_user(user_id):

@@ -64,28 +64,38 @@
     <!-- FOOTER -->
     <footer class="py-5 bg-dark text-white mt-5">
         <div class="container">
-            <div class="row g-4">
+            <div class="row g-4 text-center text-md-start">
                 <div class="col-md-4">
-                    <img src="{{ url_for('static', filename='img/logo.png') }}" class="brand-logo mb-3 invert-logo" style="filter: brightness(0) invert(1);" alt="Footer Logo">
-                    <p class="small text-white-50">Empowering the next generation of technological leaders through professional vocational training.</p>
+                    <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" 
+                         class="brand-logo mb-3" 
+                         style="height: 80px; filter: brightness(0) invert(1); object-fit: contain;" 
+                         alt="Footer Logo"
+                         onerror="this.src='{{ url_for('static', filename='img/logo.png') }}'; this.style.filter='none';">
+                    <p class="small text-white-50">Institute of Advanced Management Science & Technology. Empowering Liberia through excellence in vocational education.</p>
                 </div>
                 <div class="col-md-4">
-                    <h6 class="fw-bold mb-4">QUICK LINKS</h6>
+                    <h6 class="fw-bold mb-4 text-warning">QUICK LINKS</h6>
                     <ul class="list-unstyled small text-white-50">
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Terms of Service</a></li>
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Contact Us</a></li>
+                        <li class="mb-2"><a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home Portal</a></li>
+                        <li class="mb-2"><a href="{{ url_for('login') }}" class="text-white-50 text-decoration-none">Student Login</a></li>
+                        <li class="mb-2"><a href="{{ url_for('register') }}" class="text-white-50 text-decoration-none">Admission Form</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4">
-                    <h6 class="fw-bold mb-4">CONTACT</h6>
-                    <p class="small text-white-50"><i class="fas fa-map-marker-alt me-2"></i> Monrovia, Liberia</p>
+                    <h6 class="fw-bold mb-4 text-warning">CONTACT REGISTRY</h6>
+                    <p class="small text-white-50"><i class="fas fa-map-marker-alt me-2"></i> Hotel Africa Road, Monrovia, Liberia</p>
+                    <p class="small text-white-50"><i class="fas fa-envelope me-2"></i> info@iamstech.edu.lr</p>
                     <p class="small text-white-50"><i class="fas fa-phone me-2"></i> +231 775 478 90</p>
                 </div>
             </div>
-            <hr class="my-4 border-secondary">
-            <div class="text-center small text-white-50">
-                &copy; 2026 IAMSTECH Liberia. All rights reserved.
+            <hr class="my-4 border-secondary opacity-25">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 small text-white-50">
+                <span>&copy; 2026 IAMSTECH LIBERIA. All rights reserved.</span>
+                <div class="d-flex gap-3">
+                    <a href="#" class="text-white-50"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="text-white-50"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-white-50"><i class="fab fa-linkedin"></i></a>
+                </div>
             </div>
         </div>
     </footer>
@@ -116,6 +126,22 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Global Logo & Image Fix
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                img.addEventListener('error', function() {
+                    if (this.src.includes('logo')) {
+                        console.log('Logo failed, trying fallback...');
+                        this.src = 'https://via.placeholder.com/200x80?text=IAMSTECH+LOGO';
+                    } else {
+                        this.src = 'https://via.placeholder.com/400x300?text=Image+Unavailable';
+                    }
+                    this.style.background = '#f8f9fa';
+                });
+            });
+        });
+
         // Chatbot Logic
         const toggle = document.getElementById('chatbot-toggle');
         const windowChat = document.getElementById('chatbot-window');
@@ -149,7 +175,6 @@
         send.onclick = sendMessage;
         input.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
     </script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

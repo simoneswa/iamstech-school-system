@@ -231,3 +231,59 @@ body {
     .hero-visual-stack { height: auto; margin-top: 50px; display: flex; gap: 20px; justify-content: center; }
     .floating-card { position: static; width: 140px; }
 }
+/* --- Institutional Polish --- */
+.transition-all {
+    transition: all 0.3s ease-in-out;
+}
+
+.hover-translate-up:hover {
+    transform: translateY(-10px);
+}
+
+.fw-black {
+    font-weight: 900;
+}
+
+.display-4 {
+    letter-spacing: -1px;
+}
+
+.section-admin {
+    animation: fadeInSlide 0.5s ease-out;
+}
+
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Glassmorphism subtle effect */
+.glass-light {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Fix for broken images - ensure they dont show blank white */
+img {
+    background: #fdfbf7;
+}
+
+.logo-fix {
+    max-width: 100%;
+    height: auto;
+}
+
+.founder-card .image-wrapper:hover {
+    transform: rotate(0deg) scale(1.02) !important;
+}
+
+.dev-card {
+    background: #fff;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dev-card:hover {
+    border-color: var(--accent-orange) !important;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.05) !important;
+}

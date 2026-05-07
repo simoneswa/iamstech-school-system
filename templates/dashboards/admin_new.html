@@ -42,6 +42,9 @@
                 <a href="#" class="nav-link-admin" data-section="activities">
                     <i class="fas fa-image me-2"></i>Activities
                 </a>
+                <a href="#" class="nav-link-admin" data-section="branding">
+                    <i class="fas fa-copyright me-2"></i>Branding
+                </a>
                 <a href="#" class="nav-link-admin" data-section="announcements">
                     <i class="fas fa-bullhorn me-2"></i>Announcements
                 </a>
@@ -282,7 +285,7 @@
                 </div>
             </section>
 
-            <!-- Activities Section -->
+            <!-- Activities Section (Keep existing) -->
             <section id="section-activities" class="section-admin d-none">
                 <h2 class="fw-black text-primary mb-4">Campus Activities Gallery</h2>
                 <div class="dash-card p-4 rounded-4 mb-4">
@@ -299,6 +302,63 @@
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary rounded-3">Upload Activity</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Branding & Leadership Section -->
+            <section id="section-branding" class="section-admin d-none">
+                <h2 class="fw-black text-primary mb-4">Branding & Leadership</h2>
+                
+                <!-- Founder Update -->
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-4 text-warning"><i class="fas fa-user-tie me-2"></i>Founder / CEO Update</h5>
+                    <form action="{{ url_for('admin_update_founder') }}" method="POST" enctype="multipart/form-data" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Full Name</label>
+                            <input type="text" name="name" class="form-control rounded-3" placeholder="Founder Name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Official Title</label>
+                            <input type="text" name="title" class="form-control rounded-3" placeholder="Founder & CEO">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Executive Message (Homepage)</label>
+                            <textarea name="message" class="form-control rounded-3" rows="3" placeholder="A message to students..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Founder Photo</label>
+                            <input type="file" name="image" class="form-control rounded-3" accept="image/*">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-warning text-white fw-bold rounded-3">Update Founder Info</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Developer Update -->
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-code me-2"></i>System Developer Info</h5>
+                    <form action="{{ url_for('admin_update_developer') }}" method="POST" enctype="multipart/form-by" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Developer Name</label>
+                            <input type="text" name="name" class="form-control rounded-3" placeholder="Dev Group Name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Role/Specialty</label>
+                            <input type="text" name="role" class="form-control rounded-3" placeholder="e.g. Senior Systems Architect">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Short Bio</label>
+                            <textarea name="description" class="form-control rounded-3" rows="2" placeholder="Brief description..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Developer Photo/Logo</label>
+                            <input type="file" name="image" class="form-control rounded-3" accept="image/*">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary fw-bold rounded-3">Update Developer Info</button>
                         </div>
                     </form>
                 </div>

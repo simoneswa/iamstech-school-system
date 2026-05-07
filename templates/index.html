@@ -107,49 +107,90 @@
         </div>
     </div>
 </section>
+<!-- LEADERSHIP & VISION (Premium Founder Section) -->
+<section class="py-5" style="background: linear-gradient(135deg, #0d1250 0%, #1a237e 100%); color: white; position: relative; overflow: hidden;">
+    <!-- Abstract Background Decor -->
+    <div style="position: absolute; top: -10%; right: -5%; width: 400px; height: 400px; background: rgba(255,111,0,0.1); border-radius: 50%; filter: blur(80px);"></div>
+    <div style="position: absolute; bottom: -10%; left: -5%; width: 300px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 50%; filter: blur(60px);"></div>
 
-<!-- CAMPUS ACTIVITIES (Match Screenshot 6) -->
-<section class="py-5 bg-white">
     <div class="container py-5">
-        <div class="text-center mb-5">
-            <p class="section-title">CAMPUS LIFE</p>
-            <h2 class="section-header">Activity Highlights</h2>
-        </div>
-        
-        <div class="row g-4 mt-4">
-            {% if activities %}
-                {% for act in activities %}
-                <div class="col-lg-3 col-md-6">
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                        <img src="{{ url_for('static', filename=act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-1">{{ act.title }}</h6>
-                            <p class="x-small text-muted mb-0">{{ act.description[:60] }}...</p>
+        <div class="row align-items-center g-5">
+            {% if founders %}
+                {% for f in founders %}
+                <div class="col-lg-5">
+                    <div class="founder-card" style="position: relative; z-index: 2;">
+                        <div class="image-wrapper shadow-lg" style="border: 10px solid rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; transform: rotate(-2deg); transition: transform 0.3s;">
+                            <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600' }}" 
+                                 class="img-fluid w-100" 
+                                 alt="{{ f.name }}" 
+                                 style="min-height: 450px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/600x800?text=Founder+Photo';">
+                        </div>
+                        <div style="position: absolute; bottom: -20px; right: -20px; background: var(--accent-orange); color: white; padding: 15px 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(255,111,0,0.3); z-index: 3;">
+                            <h5 class="fw-black mb-0">IAMSTECH</h5>
+                            <small class="opacity-75">Leadership 2026</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7" style="position: relative; z-index: 2;">
+                    <div class="ps-lg-5">
+                        <span class="badge bg-warning text-dark px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">MESSAGE FROM THE FOUNDER</span>
+                        <h2 class="display-4 fw-black mb-3" style="color: white;">{{ f.name }}</h2>
+                        <h4 class="text-warning fw-bold mb-4 opacity-75">{{ f.title if f.title else 'Founder & CEO' }}</h4>
+                        
+                        <div class="founder-message mb-5" style="font-size: 1.15rem; line-height: 1.8; color: rgba(255,255,255,0.85); font-style: italic;">
+                            <i class="fas fa-quote-left text-warning fa-2x mb-3 d-block opacity-50"></i>
+                            {{ f.message if f.message else 'At IAMSTECH, we are dedicated to bridging the technology gap in Liberia. Our mission is to empower professionals with industry-standard certifications and hands-on vocational training.' }}
+                        </div>
+                        
+                        <div class="d-flex align-items-center gap-4">
+                            <div class="bg-white p-1 rounded-circle">
+                                <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" style="height: 40px; width: 40px; object-fit: contain;">
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-bold">Official Executive Statement</p>
+                                <p class="small opacity-50 mb-0">IAMSTECH Institutional Registry</p>
+                            </div>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12 text-center text-muted small">No recent activities posted.</div>
+                <!-- Placeholder if no founder seeded -->
+                <div class="col-12 text-center py-5">
+                    <p class="opacity-50 italic">Founder information currently being updated by the administration.</p>
+                </div>
             {% endif %}
         </div>
     </div>
 </section>
 
-<!-- FOUNDER SECTION -->
-<section class="py-5" style="background: var(--dark-blue); color: white;">
-    <div class="container py-5">
-        <div class="row align-items-center g-5">
-            {% if founders %}
-                {% for f in founders %}
-                <div class="col-lg-4 text-center">
-                    <img src="{{ f.image_path }}" class="rounded-circle shadow-lg mb-4" style="width: 250px; height: 250px; border: 8px solid rgba(255,111,0,0.2); object-fit: cover;">
-                </div>
-                <div class="col-lg-8">
-                    <p class="text-warning fw-bold mb-2">MESSAGE FROM OUR FOUNDER</p>
-                    <h2 class="display-5 fw-black mb-4">{{ f.name }}</h2>
-                    <p class="lead opacity-75 mb-4">{{ f.bio if f.bio else f.message }}</p>
-                    <hr class="border-warning opacity-25 w-25">
+<!-- SYSTEM DEVELOPED BY (Developer Showcase) -->
+<section class="py-5 bg-white border-top">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center mb-5">
+                <p class="text-primary fw-bold small text-uppercase mb-2" style="letter-spacing: 2px;">Digital Infrastructure</p>
+                <h3 class="fw-black">System Developed By</h3>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            {% if developers %}
+                {% for d in developers %}
+                <div class="col-lg-5">
+                    <div class="dev-card p-4 rounded-4 shadow-sm border d-flex align-items-center gap-4 transition-all hover-translate-up">
+                        <div class="flex-shrink-0">
+                            <img src="{{ url_for('static', filename=d.image_path) if d.image_path else 'https://via.placeholder.com/150' }}" 
+                                 class="rounded-3 shadow-sm" 
+                                 style="width: 100px; height: 100px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/150?text=Dev';">
+                        </div>
+                        <div>
+                            <h5 class="fw-black text-primary mb-1">{{ d.name }}</h5>
+                            <p class="text-warning small fw-bold mb-2">{{ d.role if d.role else 'Senior Systems Architect' }}</p>
+                            <p class="text-muted small mb-0">{{ d.description if d.description else 'Crafting professional institutional platforms for Liberia\'s technological advancement.' }}</p>
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
             {% endif %}
@@ -157,38 +198,56 @@
     </div>
 </section>
 
-<!-- ACTIVITIES & ANNOUNCEMENTS (Match Screenshot 6) -->
+
+<!-- CAMPUS ACTIVITIES -->
 <section class="py-5 bg-light">
     <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">CAMPUS LIFE</p>
+            <h2 class="section-header">Activity Highlights</h2>
+        </div>
+        <div class="row g-4 mt-4">
+            {% if activities %}
+                {% for act in activities %}
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 transition-all hover-translate-up">
+                        <img src="{{ url_for('static', filename=act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Activity';">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-1">{{ act.title }}</h6>
+                            <p class="x-small text-muted mb-0">{{ act.description[:80] }}...</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- ANNOUNCEMENTS -->
+<section class="py-5 bg-white">
+    <div class="container py-5">
         <div class="row g-5">
-            <!-- Latest Announcements -->
             <div class="col-lg-12">
                 <div class="text-center mb-5">
                     <p class="section-title">NEWS & UPDATES</p>
                     <h2 class="section-header">Latest Announcements</h2>
                 </div>
-                
                 {% if announcements %}
                     <div class="row g-4">
                     {% for ann in announcements %}
-                        <div class="col-md-6 mx-auto">
-                            <div class="card border-0 shadow-sm p-4 border-start border-warning border-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm p-4 border-start border-warning border-4 h-100">
                                 <h5 class="fw-bold mb-1">{{ ann.title }}</h5>
                                 <p class="small text-muted mb-3"><i class="fas fa-calendar-alt me-2"></i>{{ ann.date.strftime('%B %d, %Y') }}</p>
-                                <p class="text-muted">{{ ann.content[:150] }}...</p>
-                                <a href="#" class="text-warning fw-bold text-decoration-none small">Read full update +</a>
+                                <p class="text-muted small">{{ ann.content[:200] }}...</p>
                             </div>
                         </div>
                     {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <p class="text-muted">Stay tuned for upcoming institutional announcements.</p>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </section>
-
 {% endblock %}

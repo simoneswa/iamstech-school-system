@@ -80,11 +80,14 @@ class Activity(db.Model):
 class Founder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(100), default="Founder & CEO")
     image_path = db.Column(db.String(200))
+    message = db.Column(db.Text)
     bio = db.Column(db.Text)
 
 class Developer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(100), default="Senior Developer")
     image_path = db.Column(db.String(200))
-    role = db.Column(db.String(100))
+    description = db.Column(db.Text)
