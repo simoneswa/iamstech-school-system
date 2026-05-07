@@ -556,6 +556,34 @@ def admin_update_developer():
     flash('Developer information updated!', 'success')
     return redirect(url_for('dashboard'))
 
+@app.route('/superadmin/system-reset', methods=['POST'])
+@login_required
+@superadmin_required
+def system_reset():
+    try:
+        # Delete all users EXCEPT SuperAdmins
+        # This will also delete related records via cascade (if configured) or manual deletion
+        
+        # 1. Delete audit logs first (to avoid FK issues if not cascading)
+        AdminAuditLog.query.filter(AdminAuditLog.admin_id.in_(
+            db.session.query(User.id).filter(User.is_superadmin == False)
+        )).delete(synchronize_session=False)
+        
+        SystemAuditLog.query.filter(SystemAuditLog.user_id.in_(
+            db.session.query(User.id).filter(User.is_superadmin == False)
+        )).delete(synchronize_session=False)
+        
+        # 2. Delete main user records
+        deleted_count = User.query.filter(User.is_superadmin == False).delete(synchronize_session=False)
+        
+        db.session.commit()
+        flash(f'System Reset Successful: {deleted_count} test records cleared.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Reset Error: {str(e)}', 'danger')
+        
+    return redirect(url_for('dashboard'))
+
 @app.route('/admin/approve/<int:user_id>')
 @app.route('/approve/<int:user_id>') # Alias for compatibility
 @login_required
