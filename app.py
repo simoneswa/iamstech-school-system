@@ -370,8 +370,42 @@ def dashboard():
         return render_template('dashboards/teacher.html', meetings=meetings)
         
     else:
-        courses = Course.query.all() # In a real app, join with Enrollments
-        return render_template('dashboards/student.html', courses=courses)
+        # Gamification: Daily Login Reward
+        today = datetime.utcnow().date()
+        if getattr(current_user, 'last_login_reward_date', None) != today:
+            current_user.points = (current_user.points or 0) + 10
+            current_user.last_login_reward_date = today
+            db.session.commit()
+            flash('🎉 +10 XP for logging in today! Keep up the great work.', 'success')
+
+        # Fetch student data
+        enrollments = Enrollment.query.filter_by(student_id=current_user.id).all()
+        courses = Course.query.all()
+
+        # Attendance calculation
+        total_att = Attendance.query.filter_by(student_id=current_user.id).count()
+        present_att = Attendance.query.filter_by(student_id=current_user.id, status='Present').count()
+        att_percent = (present_att / total_att * 100) if total_att > 0 else 0
+
+        # Assignments from enrolled courses
+        enrolled_course_ids = [e.course_id for e in enrollments]
+        assignments = Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else []
+
+        # All meetings (students see all published meetings)
+        meetings = Meeting.query.order_by(Meeting.date.desc()).all()
+
+        # Leaderboard
+        top_students = User.query.filter_by(role='Student', status='Approved').order_by(User.points.desc()).limit(10).all()
+        rank = User.query.filter_by(role='Student', status='Approved').filter(User.points > (current_user.points or 0)).count() + 1
+
+        return render_template('dashboards/student.html',
+                               enrollments=enrollments,
+                               courses=courses,
+                               att_percent=att_percent,
+                               assignments=assignments,
+                               meetings=meetings,
+                               top_students=top_students,
+                               my_rank=rank)
 
 # --- Admin Controls ---
 @app.route('/admin/update-founder', methods=['POST'])

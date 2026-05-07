@@ -36,14 +36,20 @@
         <!-- Main Content Area -->
         <main class="flex-grow-1 bg-light p-5">
             <!-- Welcome Card -->
-            <div class="dash-card p-5 mb-5 bg-primary text-white position-relative overflow-hidden" 
-                 style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);">
+            <div class="dash-card p-5 mb-5 text-white position-relative overflow-hidden shadow-lg" 
+                 style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%); border-radius: 20px;">
+                <div class="position-absolute" style="right: -5%; top: -20%; opacity: 0.1; font-size: 15rem;">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
                 <div class="position-relative z-1">
-                    <h2 class="fw-black mb-2">Welcome Back, {{ current_user.name }}</h2>
+                    <h2 class="fw-black mb-2" style="font-size: 2.5rem; letter-spacing: -1px;">Welcome Back, {{ current_user.name.split(' ')[0] }}!</h2>
                     <p class="lead opacity-75 mb-0">{{ current_user.student_id }} • {{ current_user.department }}</p>
-                    <div class="mt-4">
-                        <span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="font-size: 1rem;">
-                            <i class="fas fa-star me-2"></i>{{ current_user.points }} Points
+                    <div class="mt-4 d-flex gap-3 align-items-center">
+                        <span class="badge bg-warning text-dark px-4 py-2 fw-bold shadow" style="font-size: 1.1rem; border-radius: 12px;">
+                            <i class="fas fa-star me-2"></i>{{ current_user.points }} XP
+                        </span>
+                        <span class="badge bg-success px-4 py-2 fw-bold shadow" style="font-size: 1.1rem; border-radius: 12px;">
+                            <i class="fas fa-trophy me-2"></i>Rank #{{ my_rank }}
                         </span>
                     </div>
                 </div>
@@ -121,16 +127,48 @@
                 </div>
 
                 <div class="col-lg-4">
-                    <!-- Virtual Classes -->
-                    <div class="dash-card p-4 mb-4">
-                        <h5 class="fw-bold mb-4"><i class="fas fa-video text-danger me-2"></i>Live Sessions</h5>
-                        {% for m in meetings %}
-                        <div class="p-3 bg-light rounded-3 mb-3 border-start border-danger border-4">
-                            <h6 class="small fw-bold mb-1">{{ m.title }}</h6>
-                            <p class="x-small text-muted mb-2">{{ m.date }} • {{ m.time }}</p>
-                            <a href="{{ m.meet_link }}" target="_blank" class="btn btn-danger btn-sm w-100 rounded-pill">Join Meeting</a>
+                    <!-- Academic Leaderboard -->
+                    <div class="dash-card p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(to bottom, #ffffff, #fcfdff); border-radius: 16px;">
+                        <h5 class="fw-black mb-4 text-dark"><i class="fas fa-medal text-warning me-2 fa-lg"></i>Top Performers</h5>
+                        <div class="leaderboard-list">
+                            {% for student in top_students %}
+                            <div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded-4 transition" style="background: {% if loop.index == 1 %}rgba(255,193,7,0.1){% else %}#f8f9fa{% endif %}; border-left: 4px solid {% if loop.index == 1 %}#ffc107{% elif loop.index == 2 %}#e0e0e0{% elif loop.index == 3 %}#cd7f32{% else %}transparent{% endif %};">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="fw-black text-muted" style="width: 25px;">#{{ loop.index }}</div>
+                                    <div class="avatar-circle rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                                        {{ student.name[0] }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold {{ 'text-primary' if current_user.id == student.id else 'text-dark' }}">{{ student.name.split(' ')[0] }} {% if loop.index == 1 %}<i class="fas fa-crown text-warning small ms-1"></i>{% endif %}</h6>
+                                        <small class="text-muted" style="font-size: 0.75rem;">{{ student.department[:15] }}...</small>
+                                    </div>
+                                </div>
+                                <div class="fw-bold text-success">{{ student.points }} <span class="small text-muted fw-normal">XP</span></div>
+                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
+                    </div>
+
+                    <!-- Virtual Classes -->
+                    <div class="dash-card p-4 mb-4 shadow-sm border-0" style="border-radius: 16px;">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-video text-danger me-2"></i>Upcoming Virtual Classes</h5>
+                        {% if meetings %}
+                            {% for m in meetings %}
+                            <div class="p-3 bg-white rounded-4 mb-3 border shadow-sm position-relative overflow-hidden transition hover-lift">
+                                <div class="position-absolute top-0 start-0 w-100 bg-danger" style="height: 4px;"></div>
+                                <h6 class="fw-bold mb-1 mt-1 text-dark">{{ m.title }}</h6>
+                                <p class="small text-muted mb-3"><i class="far fa-clock me-1"></i>{{ m.date }} • {{ m.time }}</p>
+                                <a href="{{ m.meet_link }}" target="_blank" class="btn btn-outline-danger btn-sm w-100 rounded-pill fw-bold">
+                                    <i class="fas fa-play-circle me-1"></i> Join Session
+                                </a>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center p-4 bg-light rounded-4 border border-dashed">
+                                <div class="text-muted mb-2"><i class="fas fa-calendar-times fa-2x opacity-50"></i></div>
+                                <p class="small text-muted mb-0">No virtual classes scheduled at this time.</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -150,7 +188,10 @@
     padding-left: calc(1rem - 4px);
 }
 .x-small { font-size: 0.7rem; letter-spacing: 1px; }
-.hover-shadow-sm:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.hover-shadow-sm:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-2px); }
+.hover-lift:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important; }
 .transition { transition: all 0.3s ease; }
+.border-dashed { border-style: dashed !important; border-width: 2px !important; }
+.leaderboard-list > div:hover { transform: scale(1.02); }
 </style>
 {% endblock %}

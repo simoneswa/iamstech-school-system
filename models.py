@@ -27,6 +27,7 @@ class User(db.Model, UserMixin):
     suspension_reason = db.Column(db.Text)
     reset_token = db.Column(db.String(100), unique=True)
     reset_token_expiration = db.Column(db.DateTime)
+    last_login_reward_date = db.Column(db.Date)
     
     # Relationships
     enrollments = db.relationship('Enrollment', backref='student', lazy=True)

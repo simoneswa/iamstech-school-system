@@ -20,7 +20,7 @@
     <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" 
+                <img src="{{ url_for('static', filename='img/logo.png') }}" 
                      alt="IAMSTECH Official Logo" 
                      class="brand-logo"
                      style="height: 60px; width: auto; object-fit: contain; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
@@ -94,11 +94,11 @@
         <div class="container">
             <div class="row g-4 text-center text-md-start">
                 <div class="col-md-4">
-                    <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" 
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" 
                          class="brand-logo mb-3" 
                          style="height: 80px; filter: brightness(0) invert(1); object-fit: contain;" 
-                         alt="Footer Logo"
-                         onerror="this.src='{{ url_for('static', filename='img/logo.png') }}'; this.style.filter='none';">
+                         alt="IAMSTECH Logo"
+                         onerror="this.onerror=null; this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'color:#ffc107; font-size:2rem;\'><i class=\'fas fa-shield-alt\'></i></div>')">
                     <p class="small text-white-50">Institute of Advanced Management Science & Technology. Empowering Liberia through excellence in vocational education.</p>
                 </div>
                 <div class="col-md-3">
