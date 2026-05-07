@@ -8,6 +8,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 import csv
+import random
 import io
 from flask import send_file
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert
@@ -249,6 +250,10 @@ def login():
                 return redirect(url_for('login'))
                 
             if check_password_hash(user.password, password):
+                if not user.is_email_verified:
+                    flash('Please verify your personal email address first.', 'warning')
+                    return redirect(url_for('verify_email', user_id=user.id))
+                    
                 if user.status != 'Approved':
                     flash('Your account is pending approval by the administrator.', 'warning')
                     return redirect(url_for('login'))
@@ -285,22 +290,81 @@ def register():
             filename = secure_filename(f"{email}_{photo.filename}")
             photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles', filename))
             
+        # Generate 6-digit OTP
+        otp = f"{random.randint(100000, 999999)}"
+        
         new_user = User(
             name=name,
             email=email,
             phone=phone,
             department=dept,
             role='Student',
-            status='Pending',
+            status='Awaiting Verification',
+            is_email_verified=False,
+            verification_code=otp,
+            verification_code_expires=datetime.utcnow() + timedelta(minutes=15),
             profile_photo=f"uploads/profiles/{filename}" if filename else None,
-            password=generate_password_hash('pending_activation')
+            password=generate_password_hash(uuid.uuid4().hex) # Placeholder
         )
         db.session.add(new_user)
         db.session.commit()
         
-        flash('Application submitted! Our admin team will review and contact you.', 'success')
-        return redirect(url_for('login'))
+        # Send OTP
+        send_verification_otp(new_user, otp)
+        
+        flash('Verification code sent to your personal email.', 'info')
+        return redirect(url_for('verify_email', user_id=new_user.id))
     return render_template('register.html')
+
+@app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
+def verify_email(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_email_verified:
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        code = request.form.get('otp')
+        
+        if user.verification_attempts >= 5:
+            flash('Too many failed attempts. Please request a new code.', 'danger')
+            return redirect(url_for('verify_email', user_id=user.id))
+            
+        if datetime.utcnow() > user.verification_code_expires:
+            flash('Verification code expired. Please request a new one.', 'danger')
+            return redirect(url_for('verify_email', user_id=user.id))
+            
+        if code == user.verification_code:
+            user.is_email_verified = True
+            user.status = 'Pending' # Move to Admin Review
+            user.verification_code = None
+            db.session.commit()
+            return render_template('verification_success.html', name=user.name)
+        else:
+            user.verification_attempts += 1
+            db.session.commit()
+            flash('Invalid verification code. Please try again.', 'danger')
+            
+    return render_template('verify_email.html', user_id=user.id, email=user.email)
+
+@app.route('/resend-verification/<int:user_id>')
+def resend_verification(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Check cooldown
+    if user.resend_cooldown and datetime.utcnow() < user.resend_cooldown:
+        flash('Please wait before requesting another code.', 'warning')
+        return redirect(url_for('verify_email', user_id=user.id))
+        
+    otp = f"{random.randint(100000, 999999)}"
+    user.verification_code = otp
+    user.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
+    user.verification_attempts = 0
+    user.resend_cooldown = datetime.utcnow() + timedelta(seconds=60)
+    db.session.commit()
+    
+    send_verification_otp(user, otp)
+    flash('A new verification code has been sent.', 'success')
+    return redirect(url_for('verify_email', user_id=user.id))
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():

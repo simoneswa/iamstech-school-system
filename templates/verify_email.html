@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-page-bg py-5" style="background: #f8f9fa; min-height: 80vh; display: flex; align-items: center;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-8">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="card-header bg-primary text-white text-center py-4 border-0">
+                        <i class="fas fa-shield-alt fa-3x mb-3"></i>
+                        <h3 class="fw-black mb-0">Verify Your Identity</h3>
+                    </div>
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-center mb-4">
+                            <p class="text-muted">We have sent a 6-digit verification code to your personal email:</p>
+                            <h6 class="fw-bold text-dark">{{ email }}</h6>
+                        </div>
+
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 small" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form action="{{ url_for('verify_email', user_id=user_id) }}" method="POST">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-muted small mb-2 text-uppercase" style="letter-spacing: 1px;">Enter 6-Digit Code</label>
+                                <input type="text" name="otp" class="form-control form-control-lg text-center fw-bold fs-2 py-3 border-2 rounded-4" maxlength="6" placeholder="000000" required pattern="\d{6}" inputmode="numeric">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm transition-all hover-lift">
+                                VERIFY & CONTINUE <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-5">
+                            <p class="small text-muted mb-2">Didn't receive the code?</p>
+                            <div id="resend-timer-wrapper">
+                                <a href="{{ url_for('resend_verification', user_id=user_id) }}" class="btn btn-link text-primary fw-bold text-decoration-none" id="resend-btn">Resend Verification Code</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('index') }}" class="text-muted small text-decoration-none"><i class="fas fa-chevron-left me-2"></i>Return to Homepage</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-page-bg {
+        background-image: radial-gradient(circle at 10% 20%, rgba(13, 27, 62, 0.05) 0%, rgba(255, 255, 255, 1) 90.2%);
+    }
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(13, 27, 62, 0.1) !important;
+    }
+    input[name="otp"]:focus {
+        border-color: #ff6f00 !important;
+        box-shadow: 0 0 0 0.25rem rgba(255, 111, 0, 0.1) !important;
+    }
+</style>
+
+<script>
+    // Simple resend cooldown logic
+    document.getElementById('resend-btn').addEventListener('click', function(e) {
+        // The link will still work, but we could add a local countdown here if desired
+    });
+</script>
+{% endblock %}

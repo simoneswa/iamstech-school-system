@@ -22,12 +22,19 @@ class User(db.Model, UserMixin):
     setup_token_expiration = db.Column(db.DateTime)
     is_superadmin = db.Column(db.Boolean, default=False)
     
+    # Email Verification Fields
+    is_email_verified = db.Column(db.Boolean, default=False)
+    verification_code = db.Column(db.String(6))
+    verification_code_expires = db.Column(db.DateTime)
+    verification_attempts = db.Column(db.Integer, default=0)
+    
     # New Account Management Fields
     is_suspended = db.Column(db.Boolean, default=False)
     suspension_reason = db.Column(db.Text)
     reset_token = db.Column(db.String(100), unique=True)
     reset_token_expiration = db.Column(db.DateTime)
     last_login_reward_date = db.Column(db.Date)
+    resend_cooldown = db.Column(db.DateTime)
     
     # Relationships
     enrollments = db.relationship('Enrollment', backref='student', lazy=True)

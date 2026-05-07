@@ -139,3 +139,59 @@ IAMSTECH Technical Support
     except Exception as e:
         print(f"Error sending reset email: {e}")
         return False
+
+def send_verification_otp(user, code):
+    """
+    Sends a 6-digit verification code to the user's personal email.
+    """
+    try:
+        msg = Message(
+            subject="Verify Your IAMSTECH Account",
+            sender=os.getenv("MAIL_USERNAME"),
+            recipients=[user.email]
+        )
+        
+        msg.body = f"""
+Dear {user.name},
+
+Thank you for applying to IAMSTECH LIBERIA.
+
+To verify your personal email address and proceed with your application, please enter the following 6-digit code on the verification screen:
+
+--------------------------------------------------
+VERIFICATION CODE: {code}
+--------------------------------------------------
+
+This code is valid for 15 minutes. 
+
+If you did not request this, please ignore this email.
+
+Best Regards,
+IAMSTECH Admissions Team
+        """
+        
+        msg.html = f"""
+        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <div style="background: #0d1b3e; color: white; padding: 30px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Verify Your Identity</h1>
+            </div>
+            <div style="padding: 40px; color: #333; line-height: 1.6; text-align: center;">
+                <p>Dear <strong>{user.name}</strong>,</p>
+                <p>Use the code below to verify your personal email and continue your enrollment.</p>
+                <div style="background: #fdfbf7; border: 2px dashed #ff6f00; padding: 20px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #ff6f00;">
+                    {code}
+                </div>
+                <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                    * This code is valid for 15 minutes. If you did not make this request, you can safely ignore this email.
+                </p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 11px; color: #999;">
+                &copy; 2026 IAMSTECH LIBERIA. Hotel Africa Road, Monrovia.
+            </div>
+        </div>
+        """
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending verification email: {e}")
+        return False
