@@ -510,17 +510,24 @@ def approve_user(user_id):
     db.session.commit()
     
     # Send activation email
-    send_approval_email(user)
+    email_sent = send_approval_email(user)
     
     # Audit log
     try:
-        log = AdminAuditLog(admin_id=current_user.id, action=f"Approved {user.role}", target_user_id=user.id)
+        action_text = f"Approved {user.role}" if email_sent else f"Approved {user.role} (Email Failed)"
+        log = AdminAuditLog(admin_id=current_user.id, action=action_text, target_user_id=user.id)
         db.session.add(log)
         db.session.commit()
     except Exception:
         db.session.rollback()
     
-    flash(f'User {user.name} approved. Setup link sent.', 'success')
+    if email_sent:
+        flash(f'Success! {user.name} approved and institutional email sent.', 'success')
+    else:
+        setup_link = url_for('setup_account', token=user.setup_token, _external=True)
+        flash(f'User approved, but the WELCOME EMAIL FAILED TO SEND. Please check your Railway SMTP environment variables (MAIL_USERNAME/PASSWORD).', 'danger')
+        flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'warning')
+        
     return redirect(url_for('dashboard'))
 
 @app.route('/setup-account/<token>', methods=['GET', 'POST'])
