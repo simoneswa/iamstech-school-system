@@ -10,9 +10,12 @@
                 <p class="hero-subtitle mt-3">INSTITUTE OF ADVANCED MANAGEMENT SCIENCE & TECHNOLOGY</p>
                 <h1 class="hero-title">Technology & Business Education for Future Professionals</h1>
                 <p class="hero-desc mb-5">"Shaping Tomorrow’s Leaders Through Technology"</p>
-                <div class="d-flex gap-3">
-                    <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>STUDENT PORTAL</a>
+                <div class="d-flex flex-column gap-2">
+                    <p class="text-white-50 mb-0 small"><i class="fas fa-graduation-cap me-2"></i>Not yet enrolled?</p>
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>STUDENT PORTAL</a>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-6 d-none d-lg-block">
