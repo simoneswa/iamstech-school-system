@@ -162,11 +162,21 @@ def inject_now():
     return context
 
 def log_audit(action, target_id=None, target_type=None):
-    if current_user.is_authenticated:
-        ip = request.remote_addr
-        log = SystemAuditLog(user_id=current_user.id, action=action, target_id=target_id, target_type=target_type, ip_address=ip)
-        db.session.add(log)
-        db.session.commit()
+    try:
+        if current_user.is_authenticated:
+            ip = request.remote_addr
+            log = SystemAuditLog(
+                user_id=current_user.id,
+                action=action,
+                target_id=target_id,
+                target_type=target_type,
+                ip_address=ip
+            )
+            db.session.add(log)
+            db.session.commit()
+    except Exception as e:
+        logger.warning(f"Audit log write failed (non-critical): {e}")
+        db.session.rollback()
 
 # --- Utility Functions ---
 def generate_institutional_id(role):
@@ -230,9 +240,12 @@ def login():
             if getattr(user, 'is_suspended', False):
                 reason = getattr(user, 'suspension_reason', 'Violation of platform policies.')
                 flash(f'Your account has been suspended. Reason: {reason}', 'danger')
-                ip = request.remote_addr
-                db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Suspended)', ip_address=ip))
-                db.session.commit()
+                try:
+                    ip = request.remote_addr
+                    db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Suspended)', ip_address=ip))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
                 return redirect(url_for('login'))
                 
             if check_password_hash(user.password, password):
@@ -243,10 +256,13 @@ def login():
                 log_audit('Successful Login')
                 return redirect(url_for('dashboard'))
                 
-            # Incorrect password
-            ip = request.remote_addr
-            db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Wrong Password)', ip_address=ip))
-            db.session.commit()
+            # Incorrect password - log it but don't crash
+            try:
+                ip = request.remote_addr
+                db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Wrong Password)', ip_address=ip))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             
         flash('Invalid credentials. Please try again.', 'danger')
     return render_template('login.html')
@@ -298,9 +314,12 @@ def forgot_password():
             send_reset_email(user)
             
             # Log it
-            ip = request.remote_addr
-            db.session.add(SystemAuditLog(user_id=user.id, action='Password Reset Requested', ip_address=ip))
-            db.session.commit()
+            try:
+                ip = request.remote_addr
+                db.session.add(SystemAuditLog(user_id=user.id, action='Password Reset Requested', ip_address=ip))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             
         # Always show the same message to prevent email enumeration
         flash('If that email exists in our system, a password reset link has been sent.', 'info')
@@ -332,9 +351,12 @@ def reset_password(token):
         db.session.commit()
         
         # Log it
-        ip = request.remote_addr
-        db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
-        db.session.commit()
+        try:
+            ip = request.remote_addr
+            db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         
         flash('Password has been successfully reset. You can now log in.', 'success')
         return redirect(url_for('login'))
@@ -486,9 +508,12 @@ def approve_user(user_id):
     send_approval_email(user)
     
     # Audit log
-    log = AdminAuditLog(admin_id=current_user.id, action=f"Approved {user.role}", target_user_id=user.id)
-    db.session.add(log)
-    db.session.commit()
+    try:
+        log = AdminAuditLog(admin_id=current_user.id, action=f"Approved {user.role}", target_user_id=user.id)
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
     
     flash(f'User {user.name} approved. Setup link sent.', 'success')
     return redirect(url_for('dashboard'))
@@ -533,8 +558,11 @@ def setup_account(token):
 def reject_user(user_id):
     user = User.query.get_or_404(user_id)
     
-    log = AdminAuditLog(admin_id=current_user.id, action=f"Rejected {user.role}", target_user_id=user.id)
-    db.session.add(log)
+    try:
+        log = AdminAuditLog(admin_id=current_user.id, action=f"Rejected {user.role}", target_user_id=user.id)
+        db.session.add(log)
+    except Exception:
+        pass
     
     db.session.delete(user)
     db.session.commit()
