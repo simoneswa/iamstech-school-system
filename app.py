@@ -56,16 +56,40 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
 # --- Initialize Extensions ---
 db.init_app(app)
-with app.app_context():
-    try:
-        db.create_all()
-    except Exception as e:
-        logger.error(f"Table creation error: {e}")
-
 mail.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# --- Auto-Seed Database ---
+def init_db():
+    with app.app_context():
+        try:
+            db.create_all()
+            # Auto-seed admin if no users exist
+            if User.query.count() == 0:
+                admin = User(
+                    name='System Administrator',
+                    email='admin@iamstech.com',
+                    school_email='admin@iamstech.edu',
+                    password=generate_password_hash('2026iloveiamstech'),
+                    role='Admin',
+                    status='Approved',
+                    must_change_password=False
+                )
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Database initialized and Admin user created.")
+            else:
+                logger.info("Database already initialized.")
+        except Exception as e:
+            logger.error(f"Initialization error: {e}")
+
+init_db()
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy", "database": str(db.engine.url.drivername)}), 200
 
 # --- File Upload Config ---
 # Use Railway Volume if available, else fallback to static
