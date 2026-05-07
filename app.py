@@ -377,13 +377,17 @@ def dashboard():
         users = User.query.all()
         admins = User.query.filter_by(role='Admin').all()
         applicants = User.query.filter_by(status='Pending').all()
-        audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
+        
+        try:
+            audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
+        except Exception:
+            audit_logs = []
+            
         return render_template('dashboards/superadmin.html', 
                              users=users, 
                              admins=admins,
                              applicants=applicants,
                              audit_logs=audit_logs)
-                             
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         applicants = User.query.filter_by(status='Pending').all()
