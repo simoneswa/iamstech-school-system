@@ -38,14 +38,42 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">HOME</a></li>
                     <li class="nav-item"><a class="nav-link" href="#programs">PROGRAMS</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">LOGIN</a></li>
-                    <li class="nav-item ms-lg-3">
-                        <a href="{{ url_for('register') }}" class="btn btn-become-ready">BECOME FUTURE-READY</a>
-                    </li>
+                    
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item position-relative d-flex align-items-center mx-2">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-bell"></i></a>
+                            {% if notifications %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; transform: translate(-30%, 30%)!important;">
+                                    {{ notifications|length }}
+                                </span>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">DASHBOARD</a></li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">LOGIN</a></li>
+                        <li class="nav-item ms-lg-3">
+                            <a href="{{ url_for('register') }}" class="btn btn-become-ready">BECOME FUTURE-READY</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
+
+    <!-- GLOBAL ALERTS -->
+    {% if global_alerts %}
+        <div class="container mt-3">
+            {% for alert in global_alerts %}
+                <div class="alert alert-{{ alert.type }} alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert" style="border-left: 5px solid currentColor !important;">
+                    <i class="fas fa-info-circle fa-lg me-3"></i>
+                    <div>
+                        <strong>System Notice:</strong> {{ alert.message }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <!-- CONTENT -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -73,7 +101,7 @@
                          onerror="this.src='{{ url_for('static', filename='img/logo.png') }}'; this.style.filter='none';">
                     <p class="small text-white-50">Institute of Advanced Management Science & Technology. Empowering Liberia through excellence in vocational education.</p>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <h6 class="fw-bold mb-4 text-warning">QUICK LINKS</h6>
                     <ul class="list-unstyled small text-white-50">
                         <li class="mb-2"><a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home Portal</a></li>
@@ -81,11 +109,25 @@
                         <li class="mb-2"><a href="{{ url_for('register') }}" class="text-white-50 text-decoration-none">Admission Form</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <h6 class="fw-bold mb-4 text-warning">CONTACT REGISTRY</h6>
                     <p class="small text-white-50"><i class="fas fa-map-marker-alt me-2"></i> Hotel Africa Road, Monrovia, Liberia</p>
                     <p class="small text-white-50"><i class="fas fa-envelope me-2"></i> info@iamstech.edu.lr</p>
                     <p class="small text-white-50"><i class="fas fa-phone me-2"></i> +231 775 478 90</p>
+                </div>
+                <!-- SUPPORT CENTER -->
+                <div class="col-md-3">
+                    <div class="bg-white-10 p-4 rounded-4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                        <h6 class="fw-bold mb-3 text-white"><i class="fas fa-headset me-2 text-warning"></i> Need Technical Support?</h6>
+                        <p class="small text-white-50 mb-3">Our team is available 24/7 to assist with your portal needs.</p>
+                        
+                        <a href="https://wa.me/231880864187" target="_blank" class="btn btn-sm btn-outline-light w-100 mb-2 d-flex align-items-center justify-content-center">
+                            <i class="fab fa-whatsapp text-success me-2 fa-lg"></i> WhatsApp Support
+                        </a>
+                        <a href="https://instagram.com/sim_one7524" target="_blank" class="btn btn-sm btn-outline-light w-100 d-flex align-items-center justify-content-center">
+                            <i class="fab fa-instagram text-danger me-2 fa-lg"></i> Instagram Support
+                        </a>
+                    </div>
                 </div>
             </div>
             <hr class="my-4 border-secondary opacity-25">
@@ -95,6 +137,7 @@
                     <a href="#" class="text-white-50"><i class="fab fa-facebook"></i></a>
                     <a href="#" class="text-white-50"><i class="fab fa-twitter"></i></a>
                     <a href="#" class="text-white-50"><i class="fab fa-linkedin"></i></a>
+                    <a href="https://wa.me/231880864187" class="text-success"><i class="fab fa-whatsapp"></i></a>
                 </div>
             </div>
         </div>

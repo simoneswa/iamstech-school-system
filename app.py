@@ -7,8 +7,11 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, timedelta
 import uuid
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog
-from email_service import mail, send_approval_email
+import csv
+import io
+from flask import send_file
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert
+from email_service import mail, send_approval_email, send_reset_email
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -138,7 +141,22 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    return {'datetime': datetime}
+    # Inject current datetime, unread notifications, and active global alerts to all templates
+    context = {'datetime': datetime}
+    if current_user.is_authenticated:
+        unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).order_by(Notification.created_at.desc()).all()
+        context['notifications'] = unread_notifications
+    
+    active_alerts = GlobalAlert.query.filter_by(is_active=True).order_by(GlobalAlert.created_at.desc()).all()
+    context['global_alerts'] = active_alerts
+    return context
+
+def log_audit(action, target_id=None, target_type=None):
+    if current_user.is_authenticated:
+        ip = request.remote_addr
+        log = SystemAuditLog(user_id=current_user.id, action=action, target_id=target_id, target_type=target_type, ip_address=ip)
+        db.session.add(log)
+        db.session.commit()
 
 # --- Utility Functions ---
 def generate_institutional_id(role):
@@ -198,12 +216,28 @@ def login():
         password = request.form.get('password')
         user = User.query.filter((User.email == email) | (User.student_id == email)).first()
         
-        if user and check_password_hash(user.password, password):
-            if user.status != 'Approved':
-                flash('Your account is pending approval by the administrator.', 'warning')
+        if user:
+            if getattr(user, 'is_suspended', False):
+                reason = getattr(user, 'suspension_reason', 'Violation of platform policies.')
+                flash(f'Your account has been suspended. Reason: {reason}', 'danger')
+                ip = request.remote_addr
+                db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Suspended)', ip_address=ip))
+                db.session.commit()
                 return redirect(url_for('login'))
-            login_user(user)
-            return redirect(url_for('dashboard'))
+                
+            if check_password_hash(user.password, password):
+                if user.status != 'Approved':
+                    flash('Your account is pending approval by the administrator.', 'warning')
+                    return redirect(url_for('login'))
+                login_user(user)
+                log_audit('Successful Login')
+                return redirect(url_for('dashboard'))
+                
+            # Incorrect password
+            ip = request.remote_addr
+            db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Wrong Password)', ip_address=ip))
+            db.session.commit()
+            
         flash('Invalid credentials. Please try again.', 'danger')
     return render_template('login.html')
 
@@ -242,6 +276,61 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.reset_token = str(uuid.uuid4())
+            user.reset_token_expiration = datetime.utcnow() + timedelta(hours=1)
+            db.session.commit()
+            send_reset_email(user)
+            
+            # Log it
+            ip = request.remote_addr
+            db.session.add(SystemAuditLog(user_id=user.id, action='Password Reset Requested', ip_address=ip))
+            db.session.commit()
+            
+        # Always show the same message to prevent email enumeration
+        flash('If that email exists in our system, a password reset link has been sent.', 'info')
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    user = User.query.filter_by(reset_token=token).first()
+    if not user or getattr(user, 'reset_token_expiration', datetime.min) < datetime.utcnow():
+        flash('Invalid or expired reset link.', 'danger')
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm = request.form.get('confirm_password')
+        
+        if password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('reset_password', token=token))
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return redirect(url_for('reset_password', token=token))
+            
+        user.password = generate_password_hash(password)
+        user.reset_token = None
+        user.must_change_password = False
+        db.session.commit()
+        
+        # Log it
+        ip = request.remote_addr
+        db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
+        db.session.commit()
+        
+        flash('Password has been successfully reset. You can now log in.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('reset_password.html', token=token)
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -256,7 +345,7 @@ def dashboard():
         users = User.query.all()
         admins = User.query.filter_by(role='Admin').all()
         applicants = User.query.filter_by(status='Pending').all()
-        audit_logs = AdminAuditLog.query.order_by(AdminAuditLog.timestamp.desc()).limit(50).all()
+        audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
         return render_template('dashboards/superadmin.html', 
                              users=users, 
                              admins=admins,
@@ -439,6 +528,102 @@ def admin_add_activity():
         db.session.commit()
         flash('Activity uploaded to gallery!', 'success')
     return redirect(url_for('dashboard'))
+
+# --- SuperAdmin Controls ---
+@app.route('/superadmin/suspend/<int:user_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def suspend_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_superadmin:
+        flash("Cannot suspend another SuperAdmin.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    reason = request.form.get('reason', 'Violation of platform policies.')
+    user.is_suspended = True
+    user.suspension_reason = reason
+    db.session.commit()
+    log_audit(f"Suspended {user.role}", target_id=user.id, target_type='User')
+    flash(f'Account {user.email} suspended successfully.', 'warning')
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/reactivate/<int:user_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def reactivate_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_suspended = False
+    user.suspension_reason = None
+    db.session.commit()
+    log_audit(f"Reactivated {user.role}", target_id=user.id, target_type='User')
+    flash(f'Account {user.email} reactivated.', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/change-role/<int:user_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def change_role(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_superadmin:
+        flash("Cannot modify SuperAdmin role.", "danger")
+        return redirect(url_for('dashboard'))
+        
+    new_role = request.form.get('role')
+    if new_role in ['Admin', 'Teacher', 'Student']:
+        old_role = user.role
+        user.role = new_role
+        # Optional: regenerate ID based on new role
+        db.session.commit()
+        log_audit(f"Changed role from {old_role} to {new_role}", target_id=user.id, target_type='User')
+        flash(f'Role updated to {new_role}.', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/broadcast', methods=['POST'])
+@login_required
+@superadmin_required
+def broadcast_alert():
+    message = request.form.get('message')
+    alert_type = request.form.get('type', 'info')
+    if message:
+        alert = GlobalAlert(message=message, type=alert_type, created_by=current_user.id)
+        db.session.add(alert)
+        db.session.commit()
+        log_audit("Created Global Alert")
+        flash('Alert broadcasted across the system.', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/export/<data_type>')
+@login_required
+@superadmin_required
+def export_data(data_type):
+    si = io.StringIO()
+    cw = csv.writer(si)
+    
+    if data_type == 'users':
+        cw.writerow(['ID', 'Name', 'Email', 'Role', 'Status', 'Suspended'])
+        users = User.query.all()
+        for u in users:
+            cw.writerow([u.student_id, u.name, u.email, u.role, u.status, u.is_suspended])
+        filename = f"iamstech_users_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+    elif data_type == 'attendance':
+        cw.writerow(['Date', 'Student ID', 'Course ID', 'Status'])
+        records = Attendance.query.all()
+        for a in records:
+            cw.writerow([a.date.strftime('%Y-%m-%d'), a.student_id, a.course_id, a.status])
+        filename = f"iamstech_attendance_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+    else:
+        flash("Invalid export type.", "danger")
+        return redirect(url_for('dashboard'))
+        
+    log_audit(f"Exported {data_type} data")
+    
+    output = io.BytesIO()
+    output.write(si.getvalue().encode('utf-8'))
+    output.seek(0)
+    
+    return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
 
 # --- Helper Routes ---
 @app.route('/chatbot', methods=['POST'])

@@ -79,3 +79,56 @@ def render_approval_html(user, setup_link):
         </div>
     </div>
     """
+
+def send_reset_email(user):
+    """
+    Sends a password reset email with a secure token.
+    """
+    try:
+        msg = Message(
+            subject="IAMSTECH LIBERIA - Password Reset Request",
+            sender=os.getenv("MAIL_USERNAME"),
+            recipients=[user.email]
+        )
+        
+        reset_link = url_for('reset_password', token=user.reset_token, _external=True)
+        
+        msg.body = f"""
+Dear {user.name},
+
+You recently requested to reset your password for your IAMSTECH account.
+
+Please use the link below to securely reset your password:
+{reset_link}
+
+This link is valid for 1 hour. If you did not request this, please ignore this email.
+
+Best Regards,
+IAMSTECH Technical Support
+        """
+        
+        msg.html = f"""
+        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <div style="background: #0d1b3e; color: white; padding: 30px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Password Reset Request</h1>
+            </div>
+            <div style="padding: 40px; color: #333; line-height: 1.6;">
+                <p>Dear <strong>{user.name}</strong>,</p>
+                <p>You requested to reset your password for your IAMSTECH <strong>{user.role}</strong> account.</p>
+                <p style="text-align: center; margin-top: 30px;">
+                    <a href="{reset_link}" style="background: #ff6f00; color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+                </p>
+                <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                    * This link is valid for 1 hour. If you did not make this request, you can safely ignore this email.
+                </p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 11px; color: #999;">
+                &copy; 2026 IAMSTECH LIBERIA. Hotel Africa Road, Monrovia.
+            </div>
+        </div>
+        """
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending reset email: {e}")
+        return False

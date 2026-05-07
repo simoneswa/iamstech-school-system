@@ -22,10 +22,18 @@ class User(db.Model, UserMixin):
     setup_token_expiration = db.Column(db.DateTime)
     is_superadmin = db.Column(db.Boolean, default=False)
     
+    # New Account Management Fields
+    is_suspended = db.Column(db.Boolean, default=False)
+    suspension_reason = db.Column(db.Text)
+    reset_token = db.Column(db.String(100), unique=True)
+    reset_token_expiration = db.Column(db.DateTime)
+    
     # Relationships
     enrollments = db.relationship('Enrollment', backref='student', lazy=True)
     attendances = db.relationship('Attendance', backref='student', lazy=True)
     admin_logs = db.relationship('AdminAuditLog', backref='admin', lazy=True)
+    system_logs = db.relationship('SystemAuditLog', backref='user', foreign_keys='SystemAuditLog.user_id', lazy=True)
+    notifications = db.relationship('Notification', backref='user', lazy=True)
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -103,3 +111,30 @@ class AdminAuditLog(db.Model):
     target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.Text)
+
+class SystemAuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Can be null if system action
+    action = db.Column(db.String(255), nullable=False)
+    target_id = db.Column(db.Integer, nullable=True) # ID of the affected resource
+    target_type = db.Column(db.String(50)) # 'User', 'Course', etc.
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(50))
+    details = db.Column(db.Text)
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(500), nullable=False)
+    type = db.Column(db.String(50), default='info') # info, success, warning, danger
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    link = db.Column(db.String(200)) # Optional link
+
+class GlobalAlert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.String(500), nullable=False)
+    type = db.Column(db.String(50), default='info')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
