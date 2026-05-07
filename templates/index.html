@@ -1,22 +1,20 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!-- HERO SECTION (Match Screenshot 2) -->
+<!-- HERO SECTION (Institutional) -->
 <header class="hero-section">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="IAMSTECH Hero Logo" class="hero-main-logo">
-                <p class="hero-subtitle">PROFESSIONAL TECHNOLOGY INSTITUTE</p>
-                <h1 class="hero-title">Shaping Tomorrow's <br>Leaders Through <br>Technology</h1>
-                <p class="hero-desc mb-5">Industry-recognized vocational training and professional development for the modern world.</p>
-                
+                <img src="{{ url_for('static', filename='img/iamstech-logo.png') }}" alt="IAMSTECH Official Logo" class="hero-main-logo" style="max-width: 220px; background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
+                <p class="hero-subtitle mt-3">INSTITUTE OF ADVANCED MANAGEMENT SCIENCE & TECHNOLOGY</p>
+                <h1 class="hero-title">Technology & Business Education for Future Professionals</h1>
+                <p class="hero-desc mb-5">"Shaping Tomorrow’s Leaders Through Technology"</p>
                 <div class="d-flex gap-3">
                     <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
                     <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>STUDENT PORTAL</a>
                 </div>
             </div>
-            
             <div class="col-lg-6 d-none d-lg-block">
                 <div class="hero-visual-stack">
                     <!-- Floating Card 1 -->
@@ -106,6 +104,55 @@
                     <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- CAMPUS ACTIVITIES (Match Screenshot 6) -->
+<section class="py-5 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">CAMPUS LIFE</p>
+            <h2 class="section-header">Activity Highlights</h2>
+        </div>
+        
+        <div class="row g-4 mt-4">
+            {% if activities %}
+                {% for act in activities %}
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                        <img src="{{ url_for('static', filename=act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-1">{{ act.title }}</h6>
+                            <p class="x-small text-muted mb-0">{{ act.description[:60] }}...</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center text-muted small">No recent activities posted.</div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- FOUNDER SECTION -->
+<section class="py-5" style="background: var(--dark-blue); color: white;">
+    <div class="container py-5">
+        <div class="row align-items-center g-5">
+            {% if founders %}
+                {% for f in founders %}
+                <div class="col-lg-4 text-center">
+                    <img src="{{ f.image_path }}" class="rounded-circle shadow-lg mb-4" style="width: 250px; height: 250px; border: 8px solid rgba(255,111,0,0.2); object-fit: cover;">
+                </div>
+                <div class="col-lg-8">
+                    <p class="text-warning fw-bold mb-2">MESSAGE FROM OUR FOUNDER</p>
+                    <h2 class="display-5 fw-black mb-4">{{ f.name }}</h2>
+                    <p class="lead opacity-75 mb-4">{{ f.bio if f.bio else f.message }}</p>
+                    <hr class="border-warning opacity-25 w-25">
+                </div>
+                {% endfor %}
+            {% endif %}
         </div>
     </div>
 </section>

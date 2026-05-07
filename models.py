@@ -60,7 +60,7 @@ class Announcement(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    posted_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class Meeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
