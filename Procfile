@@ -1,1 +1,1 @@
-web: python migrate_db.py && python migrate_v2.py && python migrate_v3.py && python migrate_v4.py && gunicorn app:app --log-file - --access-logfile - --error-logfile - --log-level debug
+web: python migrate_db.py && python migrate_v2.py && python migrate_v3.py && python migrate_v4.py && python fix_bad_emails.py && gunicorn app:app --log-file - --access-logfile - --error-logfile - --log-level debug

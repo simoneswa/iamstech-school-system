@@ -26,6 +26,7 @@ Congratulations! Your application to the Institute of Advanced Management Scienc
 Your official institutional credentials have been generated.
 
 --------------------------------------------------
+APPROVAL STATUS: CONFIRMED
 INSTITUTIONAL ID: {user.student_id}
 INSTITUTIONAL EMAIL: {user.school_email}
 --------------------------------------------------
@@ -33,7 +34,8 @@ INSTITUTIONAL EMAIL: {user.school_email}
 To complete your registration, please set up your secure password using the link below:
 {setup_link}
 
-This link is valid for 72 hours. Do not share this link with anyone.
+Once your password is set, you can log in using either your Institutional ID or Institutional Email.
+This setup link is valid for 72 hours. Do not share this link with anyone.
 
 Welcome to the future of technology and management.
 
@@ -62,12 +64,17 @@ def render_approval_html(user, setup_link):
             <p>Congratulations! Your application has been <strong>Approved</strong>. You are now officially recognized as a <strong>{user.role}</strong> at IAMSTECH LIBERIA.</p>
             
             <div style="background: #fdfbf7; border-left: 5px solid #ff6f00; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 10px;"><strong>Institutional ID:</strong> <span style="color: #ff6f00;">{user.student_id}</span></p>
-                <p style="margin: 0 0 10px;"><strong>Institutional Email:</strong> {user.school_email}</p>
+                <p style="margin: 0 0 10px;"><strong>Approval Status:</strong> <span style="color: green; font-weight: bold;">CONFIRMED</span></p>
+                <p style="margin: 0 0 10px;"><strong>Institutional ID:</strong> <span style="color: #ff6f00; font-weight: bold;">{user.student_id}</span></p>
+                <p style="margin: 0 0 10px;"><strong>Institutional Email:</strong> <span style="font-weight: bold;">{user.school_email}</span></p>
             </div>
             
             <p style="text-align: center; margin-top: 30px;">
                 <a href="{setup_link}" style="background: #ff6f00; color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Setup Secure Account</a>
+            </p>
+            
+            <p style="text-align: center; margin-top: 15px;">
+                <small>Once setup is complete, you can <a href="{url_for('login', _external=True)}">log in to the portal here</a>.</small>
             </p>
             
             <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">

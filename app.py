@@ -199,11 +199,11 @@ def generate_institutional_id(role):
 
 def generate_institutional_email(name, role):
     base_name = name.lower().replace(' ', '.')
-    domain = "students.iamstech.edu"
+    domain = "student.iamtech.edu.lr"
     if role == "Teacher":
-        domain = "faculty.iamstech.edu"
+        domain = "faculty.iamtech.edu.lr"
     elif role in ["Admin", "SuperAdmin"]:
-        domain = "admin.iamstech.edu"
+        domain = "admin.iamtech.edu.lr"
         
     email = f"{base_name}@{domain}"
     counter = 1
@@ -234,7 +234,7 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = User.query.filter((User.email == email) | (User.student_id == email)).first()
+        user = User.query.filter((User.email == email) | (User.student_id == email) | (User.school_email == email)).first()
         
         if user:
             if getattr(user, 'is_suspended', False):
