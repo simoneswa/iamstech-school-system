@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 
 {% block title %}SuperAdmin Center - IAMSTECH{% endblock %}
+{% block extra_css %}
+<style>
+    body { zoom: 0.9; } /* Subtle zoom out for better visibility */
+    .dash-card { transition: transform 0.2s; }
+    .dash-card:hover { transform: translateY(-5px); }
+    .stat-card { padding: 1.5rem !important; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div style="background: var(--soft-gray); min-height: 100vh;">
