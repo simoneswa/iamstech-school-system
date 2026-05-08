@@ -11,8 +11,29 @@ import csv
 import random
 import io
 from flask import send_file
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email
+
+# --- Global Error Handlers ---
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    db.session.rollback()
+    return render_template('errors/500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Log the error
+    logger.error(f"Unhandled Exception: {e}")
+    db.session.rollback()
+    # If we are in debug mode, let the default debugger handle it
+    if app.debug:
+        raise e
+    return render_template('errors/500.html'), 500
+
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -109,14 +130,22 @@ def first_request_init():
                         school_email='super.admin@iamstech.edu',
                         password=generate_password_hash('2026Capt132005@'),
                         role='SuperAdmin',
+                        registration_state='approved',
                         status='Approved',
-                        must_change_password=True,
-                        is_superadmin=True
+                        must_change_password=False,
+                        is_superadmin=True,
+                        is_email_verified=True
                     )
                     db.session.add(admin)
                     db.session.commit()
                     logger.info("First-time setup: SuperAdmin account created.")
+                elif super_admin.registration_state != 'approved':
+                    super_admin.registration_state = 'approved'
+                    super_admin.is_superadmin = True
+                    super_admin.is_email_verified = True
+                    db.session.commit()
                 _db_initialized = True
+
             except Exception as e:
                 logger.error(f"Startup Database Error: {e}")
 
@@ -254,7 +283,7 @@ def login():
                     flash('Please verify your personal email address first.', 'warning')
                     return redirect(url_for('verify_email', user_id=user.id))
                     
-                if user.status != 'Approved':
+                if user.registration_state != 'approved':
                     flash('Your account is pending approval by the administrator.', 'warning')
                     return redirect(url_for('login'))
                 login_user(user)
@@ -284,50 +313,62 @@ def register():
         existing_user = User.query.filter_by(email=email).first()
         
         if existing_user:
-            if existing_user.is_email_verified:
-                if existing_user.status == 'Approved':
-                    flash('This email is already registered and active. Please login.', 'info')
-                else:
-                    flash('An application with this email is already pending review.', 'warning')
+            # Block only fully active, approved, and verified accounts
+            if existing_user.is_email_verified and existing_user.registration_state == 'approved':
+                flash('This email is already registered and active. Please login.', 'info')
                 return redirect(url_for('login'))
-            
-            # If not verified, we'll recycle the record (re-registration support)
-            user_to_save = existing_user
-            user_to_save.name = name
-            user_to_save.phone = phone
-            user_to_save.department = dept
+            elif existing_user.registration_state in ['pending_verification', 'verified_awaiting_approval']:
+                flash('An application with this email is already pending review.', 'warning')
+                # Allow user to continue with verification flow
+                user_to_save = existing_user
+            else:
+                # For rejected, suspended, or other states allow re-registration
+                flash('Your previous application was not approved. Please re-register.', 'warning')
+                user_to_save = existing_user
+                user_to_save.registration_state = 'pending_verification'
+                user_to_save.is_email_verified = False
         else:
             user_to_save = User(email=email, role='Student')
             db.session.add(user_to_save)
 
+        # Process profile photo
         filename = None
         if photo:
             filename = secure_filename(f"{email}_{photo.filename}")
             photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles', filename))
             user_to_save.profile_photo = f"uploads/profiles/{filename}"
+
+        try:
+            # Generate fresh OTP and set registration state
+            otp = f"{random.randint(100000, 999999)}"
+            user_to_save.name = name
+            user_to_save.phone = phone
+            user_to_save.department = dept
+            user_to_save.registration_state = 'pending_verification'
+            user_to_save.is_email_verified = False
+            user_to_save.verification_code = otp
+            user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
+            user_to_save.verification_attempts = 0
             
-        # Generate fresh OTP
-        otp = f"{random.randint(100000, 999999)}"
-        
-        user_to_save.name = name
-        user_to_save.phone = phone
-        user_to_save.department = dept
-        user_to_save.status = 'Awaiting Verification'
-        user_to_save.is_email_verified = False
-        user_to_save.verification_code = otp
-        user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
-        user_to_save.verification_attempts = 0
-        
-        if not existing_user:
-             user_to_save.password = generate_password_hash(uuid.uuid4().hex)
-        
-        db.session.commit()
-        
-        # Send OTP
-        send_verification_otp(user_to_save, otp)
-        
-        flash('Verification code sent to your personal email.', 'info')
-        return redirect(url_for('verify_email', user_id=user_to_save.id))
+            if not existing_user:
+                user_to_save.password = generate_password_hash(uuid.uuid4().hex)
+            
+            db.session.commit()
+            logger.info(f"Registration state saved for {email}. Sending OTP...")
+            
+            # Send OTP
+            sent = send_verification_otp(user_to_save, otp)
+            if not sent:
+                logger.error(f"Failed to send OTP to {email}. Check mail server settings.")
+            
+            flash('Verification code sent to your personal email.', 'info')
+            return redirect(url_for('verify_email', user_id=user_to_save.id))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {e}")
+            flash('A system error occurred during registration. Our team has been notified.', 'danger')
+            return redirect(url_for('register'))
+
     return render_template('register.html')
 
 @app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
@@ -349,7 +390,7 @@ def verify_email(user_id):
             
         if code == user.verification_code:
             user.is_email_verified = True
-            user.status = 'Pending' # Move to Admin Review
+            user.registration_state = 'verified_awaiting_approval'  # Move to admin review
             user.verification_code = None
             db.session.commit()
             return render_template('verification_success.html', name=user.name)
@@ -630,7 +671,7 @@ def cleanup_abandoned():
 @admin_required
 def approve_user(user_id):
     user = User.query.get_or_404(user_id)
-    user.status = 'Approved'
+    user.registration_state = 'approved'
     user.student_id = generate_institutional_id(user.role)
     user.school_email = generate_institutional_email(user.name, user.role)
     
@@ -819,7 +860,8 @@ def export_data(data_type):
         cw.writerow(['ID', 'Name', 'Email', 'Role', 'Status', 'Suspended'])
         users = User.query.all()
         for u in users:
-            cw.writerow([u.student_id, u.name, u.email, u.role, u.status, u.is_suspended])
+            cw.writerow([u.student_id, u.name, u.email, u.role, u.registration_state, u.is_suspended])
+
         filename = f"iamstech_users_{datetime.now().strftime('%Y%m%d')}.csv"
         
     elif data_type == 'attendance':
@@ -846,39 +888,99 @@ def export_data(data_type):
 def chatbot():
     data = request.json
     msg = data.get('message', '').lower()
-    # Advanced NLP Knowledge Base Engine for IAMSTECH LIBERIA
-    import re
-    
-    # Default fallback
-    response = "I'm the IAMSTECH Assistant. I can help you with information about our location, mission, programs, admissions, and core values. How can I assist you today?"
-    
-    # NLP Intent Matching
-    if re.search(r'\b(location|where|address|locate)\b', msg):
-        response = "We are located at Hotel Africa Road, Banjor Junction, Brewerville City, Monrovia, Liberia."
-    elif re.search(r'\b(motto|slogan)\b', msg):
-        response = "Our institutional motto is: “Technology & Business Education for Future Professionals”."
-    elif re.search(r'\b(about|who are you|what is iamstech|institution)\b', msg):
-        response = "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We serve aspiring I.T. specialists, accountants, and business leaders prepared to drive innovation across Liberia and beyond."
-    elif re.search(r'\b(vision|future)\b', msg):
-        response = "Our Vision Statement: To become Liberia’s premier center of excellence for technology and business education, producing globally competitive professionals who lead digital transformation and financial integrity across Africa."
-    elif re.search(r'\b(mission|purpose)\b', msg):
-        response = "Our Mission Statement: IAMSTECH LIBERIA exists to deliver industry-relevant, hands-on education in Information Technology and Accounting. Through modern curriculum, expert instruction, and ethical training, we empower students with technical competence, analytical skills, and leadership abilities needed in today’s digital economy."
-    elif re.search(r'\b(goal|goals|aims)\b', msg):
-        response = "Our core institutional goals are: 1) Develop Tech-Ready Professionals, 2) Build Financial Experts, 3) Bridge the Skills Gap, and 4) Foster Entrepreneurship."
-    elif re.search(r'\b(value|values|core)\b', msg):
-        response = "Our Core Values are: Innovation, Integrity, Excellence, Practicality, Accountability, and Service."
-    elif re.search(r'\b(program|programs|course|courses|study|learn|department|departments|technology|accounting)\b', msg):
-        response = "We offer cutting-edge programs in Information Technology and Accounting. Our hands-on curriculum equips students with technical competence, analytical skills, and leadership abilities for the digital economy."
-    elif re.search(r'\b(admission|admissions|apply|join|enroll)\b', msg):
-        response = "Admissions are currently open! We welcome aspiring professionals. You can create an account and apply directly through our secure platform."
-    elif re.search(r'\b(founder|ceo|leader|benaiah|kanawa)\b', msg):
-        response = "Mr. Benaiah Kanawa is the Founder & CEO. He is committed to empowering the next generation of Liberian professionals through practical technology and business education."
-    elif re.search(r'\b(support|help|contact)\b', msg):
-        response = "Our tech support and student success team is always here for you! You can reach out via the Technical Support Center in your dashboard."
-    elif re.search(r'\b(hello|hi|hey|greetings)\b', msg):
-        response = "Hello! Welcome to IAMSTECH LIBERIA. I can answer any questions you have about our institution, programs, or admissions. How can I help?"
-        
+    # Institutional Knowledge Base
+    responses = {
+        "location": [
+            "IAMSTECH LIBERIA is located at Hotel Africa Road, Banjor Junction, Brewerville City, Monrovia, Liberia. We are easily accessible from the main highway.",
+            "You can find us in Brewerville City, specifically at the Banjor Junction on Hotel Africa Road. We welcome visitors during office hours!"
+        ],
+        "motto": [
+            "Our institutional motto is: “Technology & Business Education for Future Professionals”. This guides every program we offer.",
+            "“Technology & Business Education for Future Professionals” — that's the motto we live by at IAMSTECH."
+        ],
+        "about": [
+            "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
+            "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
+        ],
+        "vision": [
+            "To become Liberia’s premier center of excellence for technology and business education, producing globally competitive professionals who lead digital transformation.",
+            "Our vision is to lead digital transformation in Liberia by producing world-class tech and business professionals."
+        ],
+        "mission": [
+            "To deliver industry-relevant, hands-on education in Information Technology and Accounting, empowering students with technical competence and ethical leadership.",
+            "Our mission is simple: empower students through hands-on technical training and ethical leadership development."
+        ],
+        "programs": [
+            "We offer professional certifications in Microsoft Office Suite, QuickBooks Accounting, AI Techniques, Computer Hardware Engineering, and more. Which one interests you?",
+            "Our programs include Microsoft Office, QuickBooks, AI applications, and Hardware Engineering. All courses are hands-on and industry-focused."
+        ],
+        "admission": [
+            "Admissions for the 2026 academic year are now open! You can register on this portal, verify your email, and wait for administrative approval.",
+            "You can join IAMSTECH today! Just head over to the Registration page to start your application process."
+        ],
+        "founder": [
+            "Mr. Benaiah Kanawa is our Founder & CEO. He is a visionary leader dedicated to bridging the technological gap in Liberia.",
+            "Our institution was founded by Mr. Benaiah Kanawa, who serves as the CEO and Lead Visionary."
+        ],
+        "support": [
+            "If you encounter any technical issues, please contact our support team via WhatsApp at +231 880 864 187 or visit the Technical Support Center in your dashboard.",
+            "Need help? You can reach our technical support team at +231 880 864 187 (WhatsApp) or through your student dashboard."
+        ],
+        "fees": [
+            "Tuition and registration fees vary by program. Please visit the Admissions office at our Banjor campus for a detailed fee schedule.",
+            "For the most accurate fee information, we recommend visiting our campus office or contacting the finance department through the support line."
+        ],
+        "duration": [
+            "Most of our certificate programs run for 3 to 6 months of intensive, hands-on training.",
+            "Our professional courses typically take 3-6 months to complete, depending on the specific program."
+        ],
+        "greetings": [
+            "Hello! I'm the IAMSTECH Assistant. How can I help you today?",
+            "Greetings from IAMSTECH! What would you like to know about our programs or admissions?",
+            "Hi there! Ready to start your professional journey with us? Ask me anything!"
+        ]
+    }
+
+    # Intent Matching
+    matched_intent = None
+    if re.search(r'\b(location|where|address|locate|map|situated)\b', msg):
+        matched_intent = "location"
+    elif re.search(r'\b(motto|slogan|saying)\b', msg):
+        matched_intent = "motto"
+    elif re.search(r'\b(about|who|what|institution|iamstech|school|college|institute)\b', msg):
+        matched_intent = "about"
+    elif re.search(r'\b(vision|future|goal)\b', msg):
+        matched_intent = "vision"
+    elif re.search(r'\b(mission|purpose|aim)\b', msg):
+        matched_intent = "mission"
+    elif re.search(r'\b(program|course|study|learn|department|it|accounting|quickbooks|microsoft|ai|hardware)\b', msg):
+        matched_intent = "programs"
+    elif re.search(r'\b(admission|apply|join|enroll|register|form|apply)\b', msg):
+        matched_intent = "admission"
+    elif re.search(r'\b(founder|ceo|leader|benaiah|kanawa|head)\b', msg):
+        matched_intent = "founder"
+    elif re.search(r'\b(support|help|contact|phone|email|whatsapp|technical|broken|error)\b', msg):
+        matched_intent = "support"
+    elif re.search(r'\b(fee|cost|price|tuition|pay|money|scholarship)\b', msg):
+        matched_intent = "fees"
+    elif re.search(r'\b(duration|time|long|period|month|week|graduate)\b', msg):
+        matched_intent = "duration"
+    elif re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo)\b', msg):
+        matched_intent = "greetings"
+
+    if matched_intent:
+        response = random.choice(responses[matched_intent])
+    else:
+        # Contextual Fallback
+        fallbacks = [
+            "I'm not quite sure about that. Would you like to know about our IT and Accounting programs?",
+            "I didn't catch that perfectly. I can help with admissions, location, or technical support. Which one do you need?",
+            "Could you please rephrase? I'm specifically trained to help with IAMSTECH institutional information."
+        ]
+        response = random.choice(fallbacks)
+
     return jsonify({"response": response})
+
 
 @app.route('/logout')
 @login_required
