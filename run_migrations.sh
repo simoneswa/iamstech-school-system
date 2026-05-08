@@ -7,7 +7,8 @@ python migrate_v6.py
 
 # Seed SuperAdmin if missing
 echo "Ensuring SuperAdmin account..."
-python scratch/seed_sa.py
+python seed_sa.py
+
 
 # Final checks completed, start the server
 echo "Starting Gunicorn server..."
