@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # --- Flask App & Production Config ---
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
+app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
 
 # --- Global Error Handlers ---
 @app.errorhandler(404)
@@ -56,12 +57,14 @@ else:
     # Priority 1: Railway Persistent Volume
     if os.path.exists('/data'):
         db_path = '/data/iamstech.db'
-    # Priority 2: Vercel Temporary Store (non-persistent)
+    # Priority 2: Standard Flask Instance Folder (Preferred for local)
+    elif os.path.exists(app.instance_path):
+        db_path = os.path.join(app.instance_path, 'iamstech.db')
+    # Priority 3: Vercel Temporary Store (non-persistent)
     elif os.path.exists('/tmp'):
         db_path = '/tmp/iamstech.db'
-    # Priority 3: Local Development
     else:
-        db_path = os.path.join(app.instance_path, 'iamstech.db')
+        db_path = 'iamstech.db'
         
     # Ensure the directory exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -75,10 +78,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # --- Mail Config from Environment ---
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 
 # --- Initialize Extensions ---
 db.init_app(app)
@@ -118,36 +123,11 @@ _db_initialized = False
 def first_request_init():
     global _db_initialized
     if not _db_initialized:
-        with app.app_context():
-            try:
-                db.create_all()
-                # Auto-seed SuperAdmin if it doesn't exist
-                super_admin = User.query.filter_by(email='simoneswaraykeepitup@founder').first()
-                if not super_admin:
-                    admin = User(
-                        name='Lead Systems Developer',
-                        email='simoneswaraykeepitup@founder',
-                        school_email='super.admin@iamstech.edu',
-                        password=generate_password_hash('2026Capt132005@'),
-                        role='SuperAdmin',
-                        registration_state='approved',
-                        status='Approved',
-                        must_change_password=False,
-                        is_superadmin=True,
-                        is_email_verified=True
-                    )
-                    db.session.add(admin)
-                    db.session.commit()
-                    logger.info("First-time setup: SuperAdmin account created.")
-                elif super_admin.registration_state != 'approved':
-                    super_admin.registration_state = 'approved'
-                    super_admin.is_superadmin = True
-                    super_admin.is_email_verified = True
-                    db.session.commit()
-                _db_initialized = True
+        # Just mark as initialized. The actual creation should happen via migrate_v6.py or manual db.create_all()
+        # This prevents the request-time deadlock/failure loop.
+        _db_initialized = True
+        logger.info("Application initialized (DB state assumed healthy via migration scripts).")
 
-            except Exception as e:
-                logger.error(f"Startup Database Error: {e}")
 
 @app.route('/health')
 def health_check():
@@ -279,7 +259,12 @@ def login():
                 return redirect(url_for('login'))
                 
             if check_password_hash(user.password, password):
-                if not user.is_email_verified and not user.is_superadmin:
+                if user.is_superadmin:
+                    login_user(user)
+                    flash('SuperAdmin access granted.', 'success')
+                    return redirect(url_for('dashboard'))
+                    
+                if not getattr(user, 'is_email_verified', False):
                     flash('Please verify your personal email address first.', 'warning')
                     return redirect(url_for('verify_email', user_id=user.id))
                     
@@ -360,28 +345,43 @@ def register():
             user_to_save.verification_code = otp
             user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
             user_to_save.verification_attempts = 0
+            user_to_save.otp_email_status = 'pending'
             
             # Ensure a password exists (UUID fallback if new)
             if not user_to_save.password:
                 user_to_save.password = generate_password_hash(uuid.uuid4().hex)
             
             db.session.commit()
-            logger.info(f"Registration committed for {email}. Sending OTP...")
+            logger.info(f"Registration committed for {email}. Attempting to send OTP asynchronously...")
             
-            # 5. Send OTP (non-blocking failure)
+            # 5. Send OTP (async, NON-BLOCKING)
             send_verification_otp(user_to_save, otp)
             
-            flash('Verification code sent to your personal email.', 'info')
+            flash('Registration successful! Redirecting to verification step...', 'success')
             return redirect(url_for('verify_email', user_id=user_to_save.id))
+                
         except Exception as e:
             db.session.rollback()
             logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {str(e)}")
+            try:
+                with open('scratch/registration_errors.txt', 'a') as f:
+                    f.write(f"ERROR: {str(e)}\\n")
+            except:
+                pass
             flash('A system error occurred during registration. Our team has been notified.', 'danger')
             return redirect(url_for('register'))
 
 
 
     return render_template('register.html')
+
+@app.route('/debug_errors')
+def debug_errors():
+    try:
+        with open('scratch/registration_errors.txt', 'r') as f:
+            return f.read(), 200, {'Content-Type': 'text/plain'}
+    except:
+        return "No errors logged yet."
 
 @app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
 def verify_email(user_id):
@@ -409,8 +409,12 @@ def verify_email(user_id):
         else:
             user.verification_attempts += 1
             db.session.commit()
-            flash('Invalid verification code. Please try again.', 'danger')
-            
+    if app.config['DEV_MODE']:
+        flash(f'DEV MODE - Your OTP is: {user.verification_code}', 'warning')
+        
+    if user.otp_email_status == 'failed':
+        flash('Notice: We encountered an issue sending the verification email. If you have your OTP through other means, enter it below.', 'danger')
+
     return render_template('verify_email.html', user_id=user.id, email=user.email)
 
 @app.route('/resend-verification/<int:user_id>')
@@ -427,10 +431,12 @@ def resend_verification(user_id):
     user.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
     user.verification_attempts = 0
     user.resend_cooldown = datetime.utcnow() + timedelta(seconds=60)
+    user.otp_email_status = 'pending'
     db.session.commit()
     
     send_verification_otp(user, otp)
-    flash('A new verification code has been sent.', 'success')
+    flash('A new verification code delivery attempt has started.', 'info')
+        
     return redirect(url_for('verify_email', user_id=user.id))
 
 
@@ -677,6 +683,25 @@ def cleanup_abandoned():
         db.session.rollback()
         flash(f'Cleanup Error: {str(e)}', 'danger')
         
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/force-verify/<int:user_id>')
+@login_required
+@superadmin_required
+def force_verify(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_email_verified:
+        flash('User is already verified.', 'info')
+    else:
+        user.is_email_verified = True
+        user.registration_state = 'verified_awaiting_approval'
+        user.verification_code = None
+        db.session.commit()
+        try:
+            log_audit(f"Force Verified User {user.email}", target_id=user.id, target_type='User')
+        except:
+            pass
+        flash(f'Account {user.email} successfully force verified.', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/approve/<int:user_id>')
