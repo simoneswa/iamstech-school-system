@@ -54,7 +54,8 @@ def create_backup():
         except Exception as e:
             print('WARNING: SQLite backup failed – proceeding without backup:', e)
 
-create_backup()
+# create_backup()
+
 
 # Helper: wrap DDL/DML in a transaction for atomicity
 def execute_sql(stmt, params=None):
