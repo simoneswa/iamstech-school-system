@@ -992,6 +992,14 @@ def export_data(data_type):
             cw.writerow([a.date.strftime('%Y-%m-%d'), a.student_id, a.course_id, a.status])
         filename = f"iamstech_attendance_{datetime.now().strftime('%Y%m%d')}.csv"
         
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+@app.route('/setup-account/<token>', methods=['GET', 'POST'])
+def setup_account(token):
+    user = User.query.filter_by(setup_token=token).first()
     try:
         if not user:
             flash('Invalid or expired setup link.', 'danger')
@@ -1025,6 +1033,14 @@ def export_data(data_type):
         logger.error(f"SETUP ACCOUNT ERROR: {str(e)}")
         flash('A system error occurred during account setup. Please try again or contact support.', 'danger')
         return redirect(url_for('login'))
+
+@app.route('/chatbot', methods=['POST'])
+def chatbot():
+    data = request.json
+    msg = data.get('message', '').lower()
+    
+    responses = {
+        "info": [
             "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
             "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
         ],
