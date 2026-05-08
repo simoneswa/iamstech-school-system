@@ -391,6 +391,7 @@ def register():
         is_safe_mode = os.environ.get('IAMSTECH_REG_SAFE_MODE', '').lower() == 'true'
         if is_safe_mode:
             logger.info(f"[REG] SAFE_MODE detected. Skipping email dispatch for {email}")
+            logger.info(f"[REG] SAFE_MODE OTP for {email} is: {otp}")
             flash('Registration successful! Redirecting to verification (SAFE MODE)', 'success')
             redirect_url = url_for('verify_email', user_id=user_to_save.id, _external=True)
             logger.info(f"[REG] SAFE_MODE Redirecting to: {redirect_url}")
