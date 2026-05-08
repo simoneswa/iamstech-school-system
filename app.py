@@ -375,9 +375,10 @@ def register():
             return redirect(url_for('verify_email', user_id=user_to_save.id))
         except Exception as e:
             db.session.rollback()
-            err_msg = str(e)
-            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {err_msg}")
-            flash(f'Registration failed: {err_msg}', 'danger')
+            err_detail = f"{type(e).__name__}: {str(e)}"
+            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {err_detail}")
+            # FORCE EXPOSURE FOR DIAGNOSIS
+            flash(f'Registration Error: {err_detail}', 'danger')
             return redirect(url_for('register'))
 
 
