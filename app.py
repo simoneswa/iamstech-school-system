@@ -14,6 +14,14 @@ from flask import send_file
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email
 
+# --- Professional Logging ---
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- Flask App & Production Config ---
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
+
 # --- Global Error Handlers ---
 @app.errorhandler(404)
 def page_not_found(e):
@@ -34,15 +42,6 @@ def handle_exception(e):
         raise e
     return render_template('errors/500.html'), 500
 
-
-# --- Professional Logging ---
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-# --- Flask App & Production Config ---
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
 
 # --- Database Configuration ---
 db_url = os.environ.get("DATABASE_URL")
