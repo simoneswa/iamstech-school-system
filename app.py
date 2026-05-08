@@ -577,6 +577,7 @@ def dashboard():
 
     if current_user.role == 'SuperAdmin':
         users = User.query.all()
+        admins = User.query.filter_by(role='Admin').all()
         # Modern filter: show everyone who has verified their email but isn't approved yet
         applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
         
