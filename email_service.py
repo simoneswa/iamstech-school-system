@@ -37,6 +37,13 @@ def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None):
     """
     try:
         app = current_app._get_current_object()
+        
+        # Respect SAFE_MODE globally
+        is_safe_mode = os.environ.get('IAMSTECH_REG_SAFE_MODE', '').lower() == 'true'
+        if is_safe_mode:
+            print(f"INFO: [SAFE_MODE] Skipping email dispatch to {recipients}")
+            return True
+
         sender_email = app.config.get("MAIL_USERNAME")
         print(f"DEBUG: Initiating email from {sender_email} to {recipients}")
         msg = Message(

@@ -293,10 +293,12 @@
                                     <td>
                                         {% if user.is_suspended %}
                                             <span class="badge bg-danger">Suspended</span>
-                                        {% elif user.status == 'Approved' %}
+                                        {% elif user.registration_state == 'approved' %}
                                             <span class="badge bg-success">Approved</span>
+                                        {% elif user.registration_state == 'verified_awaiting_approval' %}
+                                            <span class="badge bg-warning text-dark">Verified (Pending Approval)</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">{{ user.status }}</span>
+                                            <span class="badge bg-secondary">{{ (user.registration_state or 'Pending')|title }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
