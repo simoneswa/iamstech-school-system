@@ -1038,6 +1038,27 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+@app.route('/debug_sys')
+def debug_sys():
+    import os, sys
+    try:
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')
+        db_file = db_uri.replace('sqlite:///', '') if db_uri.startswith('sqlite:///') else 'NOT SQLITE'
+        
+        info = {
+            'cwd': os.getcwd(),
+            'db_uri': db_uri,
+            'db_file_exists': os.path.exists(db_file) if db_file != 'NOT SQLITE' else 'N/A',
+            'data_dir_exists': os.path.exists('/data'),
+            'data_dir_writable': os.access('/data', os.W_OK) if os.path.exists('/data') else 'N/A',
+            'instance_path': app.instance_path,
+            'instance_path_exists': os.path.exists(app.instance_path)
+        }
+        return jsonify(info)
+    except Exception as e:
+        return str(e), 500
+
+
 # --- Production Entry Point for Vercel ---
 def handler(event, context):
     return app(event, context)
