@@ -13,7 +13,7 @@ import random
 import io
 from flask import send_file
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
-from email_service import mail, send_approval_email, send_reset_email
+from email_service import mail, send_approval_email, send_reset_email, send_verification_otp
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
