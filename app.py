@@ -128,10 +128,16 @@ _db_initialized = False
 def first_request_init():
     global _db_initialized
     if not _db_initialized:
-        # Just mark as initialized. The actual creation should happen via migrate_v6.py or manual db.create_all()
-        # This prevents the request-time deadlock/failure loop.
-        _db_initialized = True
-        logger.info("Application initialized (DB state assumed healthy via migration scripts).")
+        try:
+            db.create_all()
+            # Run seeding logic
+            from seed_sa_module import seed_sa_func
+            seed_sa_func()
+            _db_initialized = True
+            logger.info("Database initialized and SuperAdmin ensured.")
+        except Exception as e:
+            logger.error(f"DB Initialization failed: {e}")
+            # Don't set _db_initialized = True, try again next request if it fails
 
 
 @app.route('/health')
