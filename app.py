@@ -303,16 +303,20 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        logger.info("[REG] --- NEW REGISTRATION REQUEST RECEIVED ---")
         name = request.form.get('name')
         email = request.form.get('email')
         phone = request.form.get('phone')
         dept = request.form.get('department')
         photo = request.files.get('profile_photo')
+        
         # 1. Basic Validation & Normalization
         name = name.strip() if name else ""
         email = email.strip().lower() if email else ""
+        logger.info(f"[REG] Processing registration for: {email}")
         
         if not name or not email:
+            logger.warning("[REG] Missing name or email, redirecting back.")
             flash('Full Name and Email Address are required.', 'danger')
             return redirect(url_for('register'))
 
@@ -322,36 +326,35 @@ def register():
         if existing_user:
             # Block only fully active, approved, and verified accounts
             if existing_user.is_email_verified and existing_user.registration_state == 'approved':
+                logger.info(f"[REG] User {email} already active, redirecting to login.")
                 flash('This email is already registered and active. Please login.', 'info')
                 return redirect(url_for('login'))
             
             # If application is in progress, reuse the record
             user_to_save = existing_user
-            logger.info(f"Re-using existing onboarding record for {email}")
+            logger.info(f"[REG] Re-using existing onboarding record for {email} (ID: {user_to_save.id})")
         else:
             # Create new user record
             user_to_save = User(email=email, role='Student', name=name)
             db.session.add(user_to_save)
-            logger.info(f"Creating new onboarding record for {email}")
+            logger.info(f"[REG] Creating new onboarding record for {email}")
 
         try:
             # 3. Handle File Upload (inside transaction block)
             if photo and photo.filename:
-                # Ensure filename is safe and unique
+                logger.info(f"[REG] Saving profile photo for {email}")
                 ext = photo.filename.rsplit('.', 1)[1].lower() if '.' in photo.filename else 'jpg'
                 safe_name = f"{uuid.uuid4().hex[:10]}.{ext}"
                 filename = secure_filename(f"{email.split('@')[0]}_{safe_name}")
-                
-                # Ensure directory exists (redundant but safe)
                 profile_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'profiles')
                 os.makedirs(profile_dir, exist_ok=True)
-                
                 photo.save(os.path.join(profile_dir, filename))
                 user_to_save.profile_photo = f"uploads/profiles/{filename}"
+                logger.info(f"[REG] Photo saved: {user_to_save.profile_photo}")
 
             # 4. Generate fresh OTP and update state
             otp = f"{random.randint(100000, 999999)}"
-            user_to_save.name = name  # Sync name in case it changed
+            user_to_save.name = name
             user_to_save.phone = phone
             user_to_save.department = dept
             user_to_save.registration_state = 'pending_verification'
@@ -359,33 +362,52 @@ def register():
             user_to_save.verification_code = otp
             user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
             user_to_save.verification_attempts = 0
-            user_to_save.otp_email_status = 'pending'
+            # Safe attribute set for otp_email_status
+            if hasattr(user_to_save, 'otp_email_status'):
+                user_to_save.otp_email_status = 'pending'
             
-            # Ensure a password exists (UUID fallback if new)
-            if not user_to_save.password:
+            if not getattr(user_to_save, 'password', None):
                 user_to_save.password = generate_password_hash(uuid.uuid4().hex)
             
+            logger.info(f"[REG] Finalizing DB save for {email}...")
             db.session.commit()
-            logger.info(f"Registration committed for {email}. Attempting to send OTP asynchronously...")
+            logger.info(f"[REG] DB commit SUCCESS for {email}. New/Current ID: {user_to_save.id}")
             
-            # 5. Send OTP (async, NON-BLOCKING)
-            send_verification_otp(user_to_save, otp)
-            
-            flash('Registration successful! Redirecting to verification step...', 'success')
-            return redirect(url_for('verify_email', user_id=user_to_save.id))
-                
+            # CRITICAL: Re-verify record exists in current session scope
+            # This helps debug SQLite invisibility issues on Railway
+            verify_user = db.session.get(User, user_to_save.id)
+            if not verify_user:
+                 logger.error(f"[REG] POST-COMMIT FATAL: User ID {user_to_save.id} not found in DB immediately after commit!")
+            else:
+                 logger.info(f"[REG] Verified record exists: {verify_user.email}")
+
         except Exception as e:
             db.session.rollback()
-            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {str(e)}")
-            try:
-                with open('scratch/registration_errors.txt', 'a') as f:
-                    f.write(f"ERROR: {str(e)}\\n")
-            except:
-                pass
-            flash('A system error occurred during registration. Our team has been notified.', 'danger')
+            logger.error(f"[REG] CRITICAL REGISTRATION ERROR for {email}: {str(e)}", exc_info=True)
+            flash('A system error occurred during registration.', 'danger')
             return redirect(url_for('register'))
 
+        # SAFE_MODE: skip email logic if env var is set
+        is_safe_mode = os.environ.get('IAMSTECH_REG_SAFE_MODE', '').lower() == 'true'
+        if is_safe_mode:
+            logger.info(f"[REG] SAFE_MODE detected. Skipping email dispatch for {email}")
+            flash('Registration successful! Redirecting to verification (SAFE MODE)', 'success')
+            redirect_url = url_for('verify_email', user_id=user_to_save.id, _external=True)
+            logger.info(f"[REG] SAFE_MODE Redirecting to: {redirect_url}")
+            return redirect(redirect_url)
 
+        # 5. Send OTP (async, NON-BLOCKING)
+        try:
+            logger.info(f"[REG] Dispatching OTP email for {email}")
+            send_verification_otp(user_to_save, otp)
+        except Exception as e:
+            logger.error(f"[REG] Async email dispatch failed: {str(e)}")
+
+        flash('Registration successful! Please check your email.', 'success')
+        # Generate the absolute URL to avoid proxy issues
+        redirect_url = url_for('verify_email', user_id=user_to_save.id, _external=True)
+        logger.info(f"[REG] SUCCESS: Redirecting {email} (ID: {user_to_save.id}) to {redirect_url}")
+        return redirect(redirect_url)
 
     return render_template('register.html')
 
@@ -397,13 +419,48 @@ def debug_errors():
     except:
         return "No errors logged yet."
 
+@app.route('/run-migration-v6')
+def run_migration_v6():
+    """Emergency route to add missing otp_email_status column"""
+    from sqlalchemy import text
+    try:
+        db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS otp_email_status VARCHAR(20) DEFAULT 'pending';"))
+        db.session.commit()
+        return "SUCCESS: 'otp_email_status' column verified/added. You can now try registering again.", 200
+    except Exception as e:
+        db.session.rollback()
+        return f"MIGRATION FAILED: {str(e)}", 500
+
 @app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
+@app.route('/verify-email/<int:user_id>/', methods=['GET', 'POST'])
 def verify_email(user_id):
-    user = User.query.get_or_404(user_id)
+    logger.info(f"[VERIFY] Incoming request for ID: {user_id} (Path: {request.path})")
+    
+    # Robust lookup: try session.get first, then fallback to query
+    user = db.session.get(User, user_id)
+    if not user:
+        user = User.query.filter_by(id=user_id).first()
+    
+    if not user:
+        # DEEP DIAGNOSTICS: Why is this user missing?
+        total_users = User.query.count()
+        db_type = "PostgreSQL" if "postgresql" in app.config['SQLALCHEMY_DATABASE_URI'].lower() else "SQLite"
+        logger.error(f"[VERIFY] 404 FATAL: User ID {user_id} not found. DB Type: {db_type}, Total Users in DB: {total_users}")
+        
+        # If it's a small number of users, log their IDs for debugging
+        if total_users < 20:
+             all_ids = [u.id for u in User.query.all()]
+             logger.info(f"[VERIFY] Current DB IDs: {all_ids}")
+
+        return render_template('errors/404.html', 
+                             message=f"Verification record (ID: {user_id}) not found in the current {db_type} database. Total users: {total_users}."), 404
+
     if user.is_email_verified:
+        logger.info(f"[VERIFY] User {user.email} already verified, redirecting to login.")
         return redirect(url_for('login'))
         
     if request.method == 'POST':
+        logger.info(f"[VERIFY] Processing OTP submission for {user.email}")
         code = request.form.get('otp')
         
         if user.verification_attempts >= 5:
@@ -426,7 +483,7 @@ def verify_email(user_id):
     if app.config['DEV_MODE']:
         flash(f'DEV MODE - Your OTP is: {user.verification_code}', 'warning')
         
-    if user.otp_email_status == 'failed':
+    if getattr(user, 'otp_email_status', None) == 'failed':
         flash('Notice: We encountered an issue sending the verification email. If you have your OTP through other means, enter it below.', 'danger')
 
     return render_template('verify_email.html', user_id=user.id, email=user.email)
@@ -445,7 +502,8 @@ def resend_verification(user_id):
     user.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
     user.verification_attempts = 0
     user.resend_cooldown = datetime.utcnow() + timedelta(seconds=60)
-    user.otp_email_status = 'pending'
+    if hasattr(user, 'otp_email_status'):
+        user.otp_email_status = 'pending'
     db.session.commit()
     
     send_verification_otp(user, otp)
@@ -734,10 +792,19 @@ def approve_user(user_id):
     user.must_change_password = True
     
     db.session.commit()
-    
-    # Send activation email
-    email_sent = send_approval_email(user)
-    
+
+    # Send activation email (fully isolated)
+    email_sent = False
+    try:
+        email_sent = send_approval_email(user)
+    except Exception as e:
+        logger.error(f"NON-BLOCKING: Failed to send approval email for {user.email}: {str(e)}")
+        try:
+            with open('scratch/registration_errors.txt', 'a') as f:
+                f.write(f"NON-BLOCKING EMAIL ERROR (approval): {str(e)}\n")
+        except:
+            pass
+
     # Audit log
     try:
         action_text = f"Approved {user.role}" if email_sent else f"Approved {user.role} (Email Failed)"
@@ -746,14 +813,15 @@ def approve_user(user_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-    
+
+    setup_link = url_for('setup_account', token=user.setup_token, _external=True)
     if email_sent:
         flash(f'Success! {user.name} approved and institutional email sent.', 'success')
+        flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'info')
     else:
-        setup_link = url_for('setup_account', token=user.setup_token, _external=True)
         flash(f'User approved, but the WELCOME EMAIL FAILED TO SEND. Please check your Railway SMTP environment variables (MAIL_USERNAME/PASSWORD).', 'danger')
         flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'warning')
-        
+
     return redirect(url_for('dashboard'))
 
 @app.route('/setup-account/<token>', methods=['GET', 'POST'])
@@ -924,34 +992,39 @@ def export_data(data_type):
             cw.writerow([a.date.strftime('%Y-%m-%d'), a.student_id, a.course_id, a.status])
         filename = f"iamstech_attendance_{datetime.now().strftime('%Y%m%d')}.csv"
         
-    else:
-        flash("Invalid export type.", "danger")
-        return redirect(url_for('dashboard'))
-        
-    log_audit(f"Exported {data_type} data")
-    
-    output = io.BytesIO()
-    output.write(si.getvalue().encode('utf-8'))
-    output.seek(0)
-    
-    return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
+    try:
+        if not user:
+            flash('Invalid or expired setup link.', 'danger')
+            return redirect(url_for('login'))
 
-# --- Helper Routes ---
-@app.route('/chatbot', methods=['POST'])
-def chatbot():
-    data = request.json
-    msg = data.get('message', '').lower()
-    # Institutional Knowledge Base
-    responses = {
-        "location": [
-            "IAMSTECH LIBERIA is located at Hotel Africa Road, Banjor Junction, Brewerville City, Monrovia, Liberia. We are easily accessible from the main highway.",
-            "You can find us in Brewerville City, specifically at the Banjor Junction on Hotel Africa Road. We welcome visitors during office hours!"
-        ],
-        "motto": [
-            "Our institutional motto is: “Technology & Business Education for Future Professionals”. This guides every program we offer.",
-            "“Technology & Business Education for Future Professionals” — that's the motto we live by at IAMSTECH."
-        ],
-        "about": [
+        if user.setup_token_expiration < datetime.utcnow():
+            flash('Setup link expired. Please contact administration.', 'danger')
+            return redirect(url_for('login'))
+
+        if request.method == 'POST':
+            password = request.form.get('password')
+            confirm = request.form.get('confirm_password')
+
+            if password != confirm:
+                flash('Passwords do not match.', 'danger')
+                return redirect(url_for('setup_account', token=token))
+
+            if len(password) < 8:
+                flash('Password must be at least 8 characters.', 'danger')
+                return redirect(url_for('setup_account', token=token))
+
+            user.password = generate_password_hash(password)
+            user.setup_token = None # Invalidate token
+            user.must_change_password = False
+            db.session.commit()
+            flash('Account setup complete! You can now log in.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('setup_account.html', user=user)
+    except Exception as e:
+        logger.error(f"SETUP ACCOUNT ERROR: {str(e)}")
+        flash('A system error occurred during account setup. Please try again or contact support.', 'danger')
+        return redirect(url_for('login'))
             "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
             "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
         ],

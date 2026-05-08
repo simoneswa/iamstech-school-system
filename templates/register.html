@@ -90,4 +90,14 @@
         </div>
     </div>
 </div>
+{% block scripts %}
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>SUBMITTING...';
+    console.log("Registration form submitted, native lifecycle started.");
+});
+</script>
+{% endblock %}
 {% endblock %}

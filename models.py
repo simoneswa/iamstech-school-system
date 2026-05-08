@@ -28,6 +28,7 @@ class User(db.Model, UserMixin):
     verification_code = db.Column(db.String(6))
     verification_code_expires = db.Column(db.DateTime)
     verification_attempts = db.Column(db.Integer, default=0)
+    otp_email_status = db.Column(db.String(20), default='pending') # pending, sent, failed
     
     # New Account Management Fields
     is_suspended = db.Column(db.Boolean, default=False)
