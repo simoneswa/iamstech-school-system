@@ -97,62 +97,90 @@
                     </div>
                 </div>
 
-                <div class="row g-4">
-                    <div class="col-lg-6">
-                        <div class="dash-card p-4 rounded-4 h-100">
-                            <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-database me-2"></i>PostgreSQL Integration</h5>
-                            <div class="p-3 bg-light rounded-3 mb-3 border">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <small class="fw-bold text-dark">Database Connection</small>
-                                    <span class="badge bg-success">Secure</span>
+                <!-- Database & Infrastructure (Full Width) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="dash-card p-3 rounded-4">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fas fa-database me-2"></i>PostgreSQL Integration</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="fw-bold text-dark">Database Connection</small>
+                                            <span class="badge bg-success">Secure</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="fw-bold text-dark">Storage Volume (/data)</small>
+                                            <span class="badge bg-info">Mounted</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-info" style="width: 45%"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="p-3 bg-light rounded-3 border">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <small class="fw-bold text-dark">Storage Volume (/data)</small>
-                                    <span class="badge bg-info">Mounted</span>
-                                </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-info" style="width: 45%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                        <div class="dash-card p-4 rounded-4 h-100 border-start border-4 border-danger">
-                            <h5 class="fw-bold mb-4 text-danger"><i class="fas fa-trash-alt me-2"></i>System Maintenance</h5>
-                            <div class="p-3 bg-light rounded-3 mb-4">
-                                <p class="small text-muted mb-0"><strong>Production Reset:</strong> This will permanently delete all test accounts, applicants, and audit logs. The SuperAdmin account will be preserved.</p>
-                            </div>
-                            <div class="d-flex flex-column gap-3">
-                                <form action="{{ url_for('system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL ACTION: Are you sure you want to delete ALL non-superadmin accounts? This cannot be undone.');">
-                                    <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-bold">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>RESET ALL TEST DATA
-                                    </button>
-                                </form>
-                                <form action="{{ url_for('cleanup_abandoned') }}" method="POST">
-                                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-white">
-                                        <i class="fas fa-broom me-2"></i>CLEAN ABANDONED SIGNUPS
-                                    </button>
-                                </form>
                             </div>
                         </div>
                     </div>
                 </div>
-                    <div class="col-lg-6">
-                        <div class="dash-card p-4 rounded-4 h-100">
-                            <h5 class="fw-bold mb-4 text-danger"><i class="fas fa-shield-alt me-2"></i>Security Alerts</h5>
-                            <div class="alert alert-success bg-success text-white border-0">
-                                <i class="fas fa-check-circle me-2"></i> No unauthorized access attempts detected.
-                            </div>
-                            <div class="alert alert-info bg-info text-white border-0">
-                                <i class="fas fa-info-circle me-2"></i> SuperAdmin account active and protected.
+
+                <!-- Security Alerts (Full Width - Moved Down) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="dash-card p-3 rounded-4">
+                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-shield-alt me-2"></i>Security Alerts</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="alert alert-success bg-success text-white border-0 mb-0">
+                                        <i class="fas fa-check-circle me-2"></i> No unauthorized access attempts detected.
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="alert alert-info bg-info text-white border-0 mb-0">
+                                        <i class="fas fa-info-circle me-2"></i> SuperAdmin account active and protected.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- System Maintenance (Full Width) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="dash-card p-3 rounded-4 border-start border-4 border-danger">
+                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-trash-alt me-2"></i>System Maintenance</h5>
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="p-2 bg-light rounded-3">
+                                        <p class="small text-muted mb-0"><strong>Production Reset:</strong> This will permanently delete all test accounts, applicants, and audit logs. The SuperAdmin account will be preserved.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <form action="{{ url_for('system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL ACTION: Are you sure you want to delete ALL non-superadmin accounts? This cannot be undone.');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>RESET ALL DATA
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-3">
+                                    <form action="{{ url_for('cleanup_abandoned') }}" method="POST">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-white">
+                                            <i class="fas fa-broom me-2"></i>CLEAN ABANDONED
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </section>
 
             <!-- Admin Management Section -->
