@@ -1,5 +1,7 @@
 #!/bin/bash
+set -e
 echo "Starting IAMSTECH Production Deployment Sequence..."
+
 
 # Run the core repair and migration script
 echo "Running Database Migration & Repair (migrate_v6.py)..."
