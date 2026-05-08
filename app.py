@@ -47,7 +47,7 @@ def handle_exception(e):
     # If we are in debug mode, let the default debugger handle it
     if app.debug:
         raise e
-    return render_template('errors/500.html', error=str(e)), 500
+    return render_template('errors/500.html', error=e), 500
 
 
 # --- Database Configuration ---

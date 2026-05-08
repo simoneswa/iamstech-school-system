@@ -10,9 +10,10 @@
             <h1 class="display-1 fw-black text-primary">500</h1>
             <h2 class="fw-bold mb-4">Internal Server Error</h2>
             <p class="text-muted mb-5">Something went wrong on our end. Our technical team has been notified. Please try again later or contact support if the issue persists.</p>
-            {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-            {% endif %}
+            <div class="alert alert-danger" style="text-align: left; overflow: auto; max-height: 200px;">
+                <strong>Type:</strong> {{ error.__class__.__name__ }}<br>
+                <strong>Error:</strong> {{ error|string }}
+            </div>
             <div class="d-flex gap-3 justify-content-center">
                 <a href="{{ url_for('index') }}" class="btn btn-primary px-5 py-3 rounded-pill fw-bold">
                     <i class="fas fa-home me-2"></i> Return Home
