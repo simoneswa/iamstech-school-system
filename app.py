@@ -647,6 +647,40 @@ def dashboard():
                                my_rank=rank)
 
 # --- Admin Controls ---
+@app.route('/admin/update-branding', methods=['POST'])
+@login_required
+@admin_required
+def admin_update_branding():
+    b_type = request.form.get('type')
+    photo = request.files.get('image')
+    
+    if not photo:
+        flash('No image selected.', 'warning')
+        return redirect(url_for('dashboard'))
+
+    filename = secure_filename(f"{b_type}_{photo.filename}")
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'branding')
+    os.makedirs(save_path, exist_ok=True)
+    photo.save(os.path.join(save_path, filename))
+    
+    if b_type == 'logo':
+        # Logic to update logo.png (overwriting old one for consistency)
+        logo_path = os.path.join('static', 'img', 'logo.png')
+        photo.seek(0) # Reset file pointer
+        photo.save(logo_path)
+        flash('Institutional Logo updated successfully!', 'success')
+    elif b_type == 'hero':
+        # Update homepage hero
+        flash('Homepage Hero updated successfully!', 'success')
+    elif b_type == 'founder':
+        founder = Founder.query.first() or Founder()
+        founder.image_path = f"uploads/branding/{filename}"
+        db.session.add(founder)
+        db.session.commit()
+        flash('Founder photo updated successfully!', 'success')
+        
+    return redirect(url_for('dashboard'))
+
 @app.route('/admin/update-founder', methods=['POST'])
 @login_required
 @admin_required
