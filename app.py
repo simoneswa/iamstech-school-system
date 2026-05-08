@@ -375,10 +375,8 @@ def register():
             return redirect(url_for('verify_email', user_id=user_to_save.id))
         except Exception as e:
             db.session.rollback()
-            err_detail = f"{type(e).__name__}: {str(e)}"
-            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {err_detail}")
-            # FORCE EXPOSURE FOR DIAGNOSIS
-            flash(f'Registration Error: {err_detail}', 'danger')
+            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {str(e)}")
+            flash('A system error occurred during registration. Our team has been notified.', 'danger')
             return redirect(url_for('register'))
 
 
@@ -434,6 +432,38 @@ def resend_verification(user_id):
     send_verification_otp(user, otp)
     flash('A new verification code has been sent.', 'success')
     return redirect(url_for('verify_email', user_id=user.id))
+
+@app.route('/setup-account/<token>', methods=['GET', 'POST'])
+def setup_account(token):
+    user = User.query.filter_by(setup_token=token).first_or_404()
+    
+    if user.setup_token_expiration and datetime.utcnow() > user.setup_token_expiration:
+        flash('Account activation link expired. Please contact support.', 'danger')
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return render_template('setup_account.html', token=token, user=user)
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return render_template('setup_account.html', token=token, user=user)
+            
+        user.password = generate_password_hash(password)
+        user.setup_token = None
+        user.setup_token_expiration = None
+        user.must_change_password = False
+        user.registration_state = 'approved'
+        db.session.commit()
+        
+        flash('Account activated! You can now login with your new password.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('setup_account.html', token=token, user=user)
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
