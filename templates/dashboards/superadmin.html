@@ -118,11 +118,18 @@
                             <div class="p-3 bg-light rounded-3 mb-4">
                                 <p class="small text-muted mb-0"><strong>Production Reset:</strong> This will permanently delete all test accounts, applicants, and audit logs. The SuperAdmin account will be preserved.</p>
                             </div>
-                            <form action="{{ url_for('system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL ACTION: Are you sure you want to delete ALL non-superadmin accounts? This cannot be undone.');">
-                                <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-bold">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>RESET TEST DATA
-                                </button>
-                            </form>
+                            <div class="d-flex flex-column gap-3">
+                                <form action="{{ url_for('system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL ACTION: Are you sure you want to delete ALL non-superadmin accounts? This cannot be undone.');">
+                                    <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-bold">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>RESET ALL TEST DATA
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('cleanup_abandoned') }}" method="POST">
+                                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-white">
+                                        <i class="fas fa-broom me-2"></i>CLEAN ABANDONED SIGNUPS
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>

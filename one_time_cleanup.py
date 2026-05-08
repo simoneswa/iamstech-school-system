@@ -25,17 +25,17 @@ def cleanup():
         )
         cur = conn.cursor()
 
-        print("Deleting non-superadmin accounts and logs...")
+        print("Executing Deep Cleanup of Test/Abandoned Records...")
         
-        # 1. Delete logs
+        # 1. Delete audit logs first (FK dependencies)
         cur.execute("DELETE FROM admin_audit_log WHERE admin_id IN (SELECT id FROM \"user\" WHERE is_superadmin = FALSE);")
         cur.execute("DELETE FROM system_audit_log WHERE user_id IN (SELECT id FROM \"user\" WHERE is_superadmin = FALSE);")
         
-        # 2. Delete users
+        # 2. Delete all non-superadmin users (Resetting the system)
         cur.execute("DELETE FROM \"user\" WHERE is_superadmin = FALSE;")
         
         conn.commit()
-        print(f"Cleanup successful. {cur.rowcount} users removed.")
+        print(f"Deep Cleanup Successful.")
         cur.close()
         conn.close()
 

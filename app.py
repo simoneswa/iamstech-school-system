@@ -281,39 +281,53 @@ def register():
         dept = request.form.get('department')
         photo = request.files.get('profile_photo')
         
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered.', 'danger')
-            return redirect(url_for('register'))
+        existing_user = User.query.filter_by(email=email).first()
+        
+        if existing_user:
+            if existing_user.is_email_verified:
+                if existing_user.status == 'Approved':
+                    flash('This email is already registered and active. Please login.', 'info')
+                else:
+                    flash('An application with this email is already pending review.', 'warning')
+                return redirect(url_for('login'))
             
+            # If not verified, we'll recycle the record (re-registration support)
+            user_to_save = existing_user
+            user_to_save.name = name
+            user_to_save.phone = phone
+            user_to_save.department = dept
+        else:
+            user_to_save = User(email=email, role='Student')
+            db.session.add(user_to_save)
+
         filename = None
         if photo:
             filename = secure_filename(f"{email}_{photo.filename}")
             photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles', filename))
+            user_to_save.profile_photo = f"uploads/profiles/{filename}"
             
-        # Generate 6-digit OTP
+        # Generate fresh OTP
         otp = f"{random.randint(100000, 999999)}"
         
-        new_user = User(
-            name=name,
-            email=email,
-            phone=phone,
-            department=dept,
-            role='Student',
-            status='Awaiting Verification',
-            is_email_verified=False,
-            verification_code=otp,
-            verification_code_expires=datetime.utcnow() + timedelta(minutes=15),
-            profile_photo=f"uploads/profiles/{filename}" if filename else None,
-            password=generate_password_hash(uuid.uuid4().hex) # Placeholder
-        )
-        db.session.add(new_user)
+        user_to_save.name = name
+        user_to_save.phone = phone
+        user_to_save.department = dept
+        user_to_save.status = 'Awaiting Verification'
+        user_to_save.is_email_verified = False
+        user_to_save.verification_code = otp
+        user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
+        user_to_save.verification_attempts = 0
+        
+        if not existing_user:
+             user_to_save.password = generate_password_hash(uuid.uuid4().hex)
+        
         db.session.commit()
         
         # Send OTP
-        send_verification_otp(new_user, otp)
+        send_verification_otp(user_to_save, otp)
         
         flash('Verification code sent to your personal email.', 'info')
-        return redirect(url_for('verify_email', user_id=new_user.id))
+        return redirect(url_for('verify_email', user_id=user_to_save.id))
     return render_template('register.html')
 
 @app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
@@ -562,9 +576,9 @@ def admin_update_developer():
 def system_reset():
     try:
         # Delete all users EXCEPT SuperAdmins
-        # This will also delete related records via cascade (if configured) or manual deletion
+        # This will also delete related records via cascade
         
-        # 1. Delete audit logs first (to avoid FK issues if not cascading)
+        # 1. Delete audit logs first
         AdminAuditLog.query.filter(AdminAuditLog.admin_id.in_(
             db.session.query(User.id).filter(User.is_superadmin == False)
         )).delete(synchronize_session=False)
@@ -577,10 +591,36 @@ def system_reset():
         deleted_count = User.query.filter(User.is_superadmin == False).delete(synchronize_session=False)
         
         db.session.commit()
-        flash(f'System Reset Successful: {deleted_count} test records cleared.', 'success')
+        flash(f'System Reset Successful: {deleted_count} records cleared.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Reset Error: {str(e)}', 'danger')
+        
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/cleanup-abandoned', methods=['POST'])
+@login_required
+@superadmin_required
+def cleanup_abandoned():
+    try:
+        # 1. Delete expired OTP records (not verified and expired > 1 hour ago)
+        expired_cutoff = datetime.utcnow() - timedelta(hours=1)
+        abandoned = User.query.filter(
+            User.is_email_verified == False,
+            User.verification_code_expires < expired_cutoff,
+            User.is_superadmin == False
+        ).all()
+        
+        count = 0
+        for u in abandoned:
+            db.session.delete(u)
+            count += 1
+            
+        db.session.commit()
+        flash(f'Cleanup Successful: {count} abandoned registration records removed.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Cleanup Error: {str(e)}', 'danger')
         
     return redirect(url_for('dashboard'))
 
