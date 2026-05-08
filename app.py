@@ -997,42 +997,7 @@ def export_data(data_type):
     output.headers["Content-type"] = "text/csv"
     return output
 
-@app.route('/setup-account/<token>', methods=['GET', 'POST'])
-def setup_account(token):
-    user = User.query.filter_by(setup_token=token).first()
-    try:
-        if not user:
-            flash('Invalid or expired setup link.', 'danger')
-            return redirect(url_for('login'))
 
-        if user.setup_token_expiration < datetime.utcnow():
-            flash('Setup link expired. Please contact administration.', 'danger')
-            return redirect(url_for('login'))
-
-        if request.method == 'POST':
-            password = request.form.get('password')
-            confirm = request.form.get('confirm_password')
-
-            if password != confirm:
-                flash('Passwords do not match.', 'danger')
-                return redirect(url_for('setup_account', token=token))
-
-            if len(password) < 8:
-                flash('Password must be at least 8 characters.', 'danger')
-                return redirect(url_for('setup_account', token=token))
-
-            user.password = generate_password_hash(password)
-            user.setup_token = None # Invalidate token
-            user.must_change_password = False
-            db.session.commit()
-            flash('Account setup complete! You can now log in.', 'success')
-            return redirect(url_for('login'))
-
-        return render_template('setup_account.html', user=user)
-    except Exception as e:
-        logger.error(f"SETUP ACCOUNT ERROR: {str(e)}")
-        flash('A system error occurred during account setup. Please try again or contact support.', 'danger')
-        return redirect(url_for('login'))
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
