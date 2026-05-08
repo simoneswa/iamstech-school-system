@@ -93,6 +93,14 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 
 # --- Initialize Extensions ---
 db.init_app(app)
+with app.app_context():
+    try:
+        db.create_all()
+        from seed_sa_module import seed_sa_func
+        seed_sa_func()
+    except Exception as e:
+        print(f"Startup DB init failed: {e}")
+
 mail.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
