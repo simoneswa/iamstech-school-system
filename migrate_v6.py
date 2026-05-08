@@ -6,24 +6,18 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import OperationalError
 
-# -------------------------------------------------------------------
-# 1. Load and validate DATABASE_URL
-# -------------------------------------------------------------------
-DATABASE_URL = os.getenv('DATABASE_URL')
-if not DATABASE_URL:
-    # Fallback to local SQLite for development (creates a file backup later)
-    db_path = os.path.join(os.path.abspath(os.getcwd()), 'instance', 'iamstech.db')
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    DATABASE_URL = f'sqlite:///{db_path}'
-    print('INFO: Using SQLite fallback DB at', db_path)
-else:
-    # Convert legacy scheme for SQLAlchemy compatibility
-    if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+from app import app, db
 
-engine = create_engine(DATABASE_URL, echo=False)
-connection = engine.connect()
-inspector = inspect(engine)
+# -------------------------------------------------------------------
+# 1. Use the initialized db from app.py
+# -------------------------------------------------------------------
+with app.app_context():
+    # Ensure all tables exist (important if /data is a fresh volume)
+    db.create_all()
+    engine = db.engine
+    DATABASE_URL = str(engine.url)
+    connection = engine.connect()
+    inspector = inspect(engine)
 
 # -------------------------------------------------------------------
 # 2. Safety – create a DB backup / snapshot before any mutation
