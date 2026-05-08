@@ -3,10 +3,10 @@
 {% block title %}SuperAdmin Center - IAMSTECH{% endblock %}
 {% block extra_css %}
 <style>
-    body { zoom: 0.9; } /* Subtle zoom out for better visibility */
-    .dash-card { transition: transform 0.2s; }
-    .dash-card:hover { transform: translateY(-5px); }
-    .stat-card { padding: 1.5rem !important; }
+    body { zoom: 0.8; } /* More aggressive zoom out */
+    .dash-card { padding: 1.2rem !important; margin-bottom: 0.5rem !important; }
+    .stat-card { padding: 1rem !important; border-radius: 12px !important; }
+    .stat-number { font-size: 1.5rem !important; }
 </style>
 {% endblock %}
 
@@ -14,7 +14,7 @@
 <div style="background: var(--soft-gray); min-height: 100vh;">
     <div class="d-flex" style="max-height: 100vh;">
         <!-- Sidebar Navigation -->
-        <nav class="bg-dark text-white p-4 position-fixed start-0 top-0" style="width: 300px; height: 100vh; overflow-y: auto; z-index: 999; border-right: 2px solid #ff6f00;">
+        <nav class="bg-dark text-white p-3 position-fixed start-0 top-0" style="width: 240px; height: 100vh; overflow-y: auto; z-index: 999; border-right: 2px solid #ff6f00;">
             <div class="mb-4 pb-3 border-bottom border-secondary">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div style="width: 50px; height: 50px; background: rgba(255, 111, 0, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
@@ -61,7 +61,7 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="flex-grow-1 p-4" style="margin-left: 300px; overflow-y: auto;">
+        <main class="flex-grow-1 p-3" style="margin-left: 240px; overflow-y: auto;">
             
             <!-- Infrastructure Overview -->
             <section id="section-overview" class="section-admin">
@@ -70,28 +70,28 @@
                     <p class="text-muted">Railway Deployment & Database Health</p>
                 </div>
 
-                <div class="row g-4 mb-5">
+                <div class="row g-2 mb-4">
                     <div class="col-md-3">
-                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-primary">
-                            <div class="display-4 fw-bold text-primary mb-2">{{ users|length }}</div>
+                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-primary">
+                            <div class="stat-number fw-bold text-primary mb-1">{{ users|length }}</div>
                             <p class="text-muted small fw-bold">TOTAL ACCOUNTS</p>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-warning">
-                            <div class="display-4 fw-bold text-warning mb-2">{{ admins|length }}</div>
+                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-warning">
+                            <div class="stat-number fw-bold text-warning mb-1">{{ admins|length }}</div>
                             <p class="text-muted small fw-bold">ACTIVE ADMINS</p>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-success">
-                            <div class="display-4 fw-bold text-success mb-2">99%</div>
+                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-success">
+                            <div class="stat-number fw-bold text-success mb-1">99%</div>
                             <p class="text-muted small fw-bold">DB UPTIME</p>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="dash-card p-4 rounded-4 text-center border-bottom border-4 border-info">
-                            <div class="display-4 fw-bold text-info mb-2"><i class="fas fa-check-circle"></i></div>
+                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-info">
+                            <div class="stat-number fw-bold text-info mb-1"><i class="fas fa-check-circle"></i></div>
                             <p class="text-muted small fw-bold">SYSTEM HEALTH</p>
                         </div>
                     </div>
