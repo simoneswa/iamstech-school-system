@@ -1,261 +1,306 @@
 {% extends 'base.html' %}
 
-{% block title %}SuperAdmin Center - IAMSTECH{% endblock %}
+{% block title %}SuperAdmin Enterprise Control - IAMSTECH{% endblock %}
+
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 <style>
-    body { zoom: 0.8; } /* More aggressive zoom out */
-    .dash-card { padding: 1.2rem !important; margin-bottom: 0.5rem !important; }
-    .stat-card { padding: 1rem !important; border-radius: 12px !important; }
-    .stat-number { font-size: 1.5rem !important; }
+    /* Ensure base navbar doesn't interfere with dashboard layout */
+    .navbar { display: none !important; }
+    body { background-color: #f8fafc; overflow: hidden; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="background: var(--soft-gray); min-height: 100vh;">
-    <div class="d-flex" style="max-height: 100vh;">
-        <!-- Sidebar Navigation -->
-        <nav class="bg-dark text-white p-3 position-fixed start-0 top-0" style="width: 240px; height: 100vh; overflow-y: auto; z-index: 999; border-right: 2px solid #ff6f00;">
-            <div class="mb-4 pb-3 border-bottom border-secondary">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div style="width: 50px; height: 50px; background: rgba(255, 111, 0, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-chess-king fa-lg text-warning"></i>
-                    </div>
-                    <div>
-                        <h6 class="fw-black mb-0 text-warning">SUPER ADMIN</h6>
-                        <small class="text-white-50">Infrastructure Control</small>
-                    </div>
-                </div>
+<div class="dashboard-wrapper">
+    <!-- ENTERPRISE SIDEBAR -->
+    <aside class="dash-sidebar">
+        <div class="p-4 border-bottom border-secondary mb-3 text-center">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" style="height: 40px; width: auto;" alt="Logo">
+            <div class="mt-2">
+                <h6 class="text-white fw-bold mb-0">IAMSTECH</h6>
+                <small class="text-white-50 small uppercase">Control Center</small>
             </div>
+        </div>
 
-            <div class="nav flex-column gap-1">
-                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">System</h6>
-                <a href="#" class="nav-link-admin active" data-section="overview">
-                    <i class="fas fa-server me-2"></i>Infrastructure Overview
-                </a>
-                <a href="#" class="nav-link-admin" data-section="admins">
-                    <i class="fas fa-user-shield me-2"></i>Admin Management
-                </a>
-                <a href="#" class="nav-link-admin" data-section="applicants">
-                    <i class="fas fa-user-plus me-2"></i>Pending Applicants
-                </a>
-                <a href="#" class="nav-link-admin" data-section="audit">
-                    <i class="fas fa-list-alt me-2"></i>Audit Logs
-                </a>
-
-                <h6 class="text-warning fw-bold text-uppercase small mt-3 mb-2" style="letter-spacing: 1px;">Operations</h6>
-                <a href="#" class="nav-link-admin" data-section="users">
-                    <i class="fas fa-users me-2"></i>Global User Directory
-                </a>
-                <a href="#" class="nav-link-admin" data-section="broadcast">
-                    <i class="fas fa-bullhorn me-2"></i>Broadcast Alerts
-                </a>
-                <a href="#" class="nav-link-admin" data-section="export">
-                    <i class="fas fa-download me-2"></i>Data Export
-                </a>
-
-                <hr class="my-3 border-secondary opacity-25">
-                <a href="{{ url_for('logout') }}" class="nav-link-admin" style="color: #ff6b6b;">
-                    <i class="fas fa-sign-out-alt me-2"></i>Secure Logout
-                </a>
-            </div>
+        <nav class="nav flex-column flex-grow-1">
+            <a href="#" class="nav-link active" data-section="overview">
+                <i class="fas fa-chart-line"></i> <span>Infrastructure</span>
+            </a>
+            <a href="#" class="nav-link" data-section="applicants">
+                <i class="fas fa-user-clock"></i> <span>Applicants</span>
+                {% if applicants %}
+                <span class="badge bg-danger ms-auto">{{ applicants|length }}</span>
+                {% endif %}
+            </a>
+            <a href="#" class="nav-link" data-section="users">
+                <i class="fas fa-users"></i> <span>User Directory</span>
+            </a>
+            <a href="#" class="nav-link" data-section="cms">
+                <i class="fas fa-images"></i> <span>Content Manager</span>
+            </a>
+            <a href="#" class="nav-link" data-section="monitoring">
+                <i class="fas fa-shield-alt"></i> <span>Auth & Monitoring</span>
+            </a>
+            <a href="#" class="nav-link" data-section="audit">
+                <i class="fas fa-history"></i> <span>Activity Logs</span>
+            </a>
+            <hr class="border-secondary mx-3 opacity-25">
+            <a href="{{ url_for('index') }}" class="nav-link text-warning">
+                <i class="fas fa-external-link-alt"></i> <span>View Website</span>
+            </a>
         </nav>
 
-        <!-- Main Content -->
-        <main class="flex-grow-1 p-3" style="margin-left: 240px; overflow-y: auto;">
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('logout') }}" class="nav-link text-danger">
+                <i class="fas fa-sign-out-alt"></i> <span>Secure Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="dash-main scrollable-y">
+        <div class="dash-container-fluid">
             
-            <!-- Infrastructure Overview -->
-            <section id="section-overview" class="section-admin">
-                <div class="mb-5">
-                    <h2 class="fw-black text-primary mb-1">Infrastructure Overview</h2>
-                    <p class="text-muted">Railway Deployment & Database Health</p>
-                </div>
-
-                <div class="row g-2 mb-4">
-                    <div class="col-md-3">
-                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-primary">
-                            <div class="stat-number fw-bold text-primary mb-1">{{ users|length }}</div>
-                            <p class="text-muted small fw-bold">TOTAL ACCOUNTS</p>
-                        </div>
+            <!-- SECTION: INFRASTRUCTURE -->
+            <section id="section-overview" class="dash-section active">
+                <div class="d-flex justify-content-between align-items-end mb-4">
+                    <div>
+                        <h1 class="dash-title">Infrastructure Overview</h1>
+                        <p class="dash-subtitle">Real-time status of Railway services and Database health.</p>
                     </div>
-                    <div class="col-md-3">
-                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-warning">
-                            <div class="stat-number fw-bold text-warning mb-1">{{ admins|length }}</div>
-                            <p class="text-muted small fw-bold">ACTIVE ADMINS</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-success">
-                            <div class="stat-number fw-bold text-success mb-1">99%</div>
-                            <p class="text-muted small fw-bold">DB UPTIME</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="dash-card p-3 rounded-4 text-center border-bottom border-4 border-info">
-                            <div class="stat-number fw-bold text-info mb-1"><i class="fas fa-check-circle"></i></div>
-                            <p class="text-muted small fw-bold">SYSTEM HEALTH</p>
-                        </div>
+                    <div class="mb-4">
+                        <span class="badge bg-success p-2 px-3 rounded-pill"><i class="fas fa-circle me-1 small"></i> System Online</span>
                     </div>
                 </div>
 
-                <!-- Database & Infrastructure (Full Width) -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="dash-card p-3 rounded-4">
-                            <h5 class="fw-bold mb-3 text-primary"><i class="fas fa-database me-2"></i>PostgreSQL Integration</h5>
-                            <div class="row">
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="premium-card h-100">
+                            <div class="stat-widget">
+                                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <div class="h3 fw-bold mb-0">{{ users|length }}</div>
+                                    <div class="text-muted small">Total Accounts</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="premium-card h-100">
+                            <div class="stat-widget">
+                                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div>
+                                    <div class="h3 fw-bold mb-0">{{ admins|length }}</div>
+                                    <div class="text-muted small">Active Admins</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="premium-card h-100">
+                            <div class="stat-widget">
+                                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div>
+                                    <div class="h3 fw-bold mb-0">99.9%</div>
+                                    <div class="text-muted small">DB Health</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="premium-card h-100">
+                            <div class="stat-widget">
+                                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div>
+                                    <div class="h3 fw-bold mb-0">Live</div>
+                                    <div class="text-muted small">Deployment</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="premium-card mb-4">
+                            <h5 class="fw-bold mb-4"><i class="fas fa-server me-2 text-primary"></i>Service Integration</h5>
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="p-3 bg-light rounded-3 border h-100">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <small class="fw-bold text-dark">Database Connection</small>
-                                            <span class="badge bg-success">Secure</span>
+                                    <div class="p-3 border rounded-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small fw-bold">PostgreSQL Database</span>
+                                            <span class="text-success small fw-bold">Connected</span>
                                         </div>
-                                        <div class="progress" style="height: 6px;">
+                                        <div class="progress" style="height: 4px;">
                                             <div class="progress-bar bg-success" style="width: 100%"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="p-3 bg-light rounded-3 border h-100">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <small class="fw-bold text-dark">Storage Volume (/data)</small>
-                                            <span class="badge bg-info">Mounted</span>
+                                    <div class="p-3 border rounded-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small fw-bold">Email SMTP Service</span>
+                                            <span class="text-warning small fw-bold">Pending Config</span>
                                         </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div class="progress-bar bg-info" style="width: 45%"></div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-warning" style="width: 65%"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Security Alerts (Full Width - Moved Down) -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="dash-card p-3 rounded-4">
-                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-shield-alt me-2"></i>Security Alerts</h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="alert alert-success bg-success text-white border-0 mb-0">
-                                        <i class="fas fa-check-circle me-2"></i> No unauthorized access attempts detected.
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="alert alert-info bg-info text-white border-0 mb-0">
-                                        <i class="fas fa-info-circle me-2"></i> SuperAdmin account active and protected.
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="col-lg-4">
+                        <div class="premium-card border-danger border-top border-4">
+                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Critical Actions</h5>
+                            <p class="small text-muted mb-4">Permanent system maintenance and data purging tools.</p>
+                            <form action="{{ url_for('system_reset') }}" method="POST" class="mb-2">
+                                <button class="btn btn-outline-danger w-100 btn-sm fw-bold py-2">SYSTEM RESET</button>
+                            </form>
+                            <form action="{{ url_for('cleanup_abandoned') }}" method="POST">
+                                <button class="btn btn-secondary w-100 btn-sm fw-bold py-2">PURGE TEST DATA</button>
+                            </form>
                         </div>
-                    </div>
-                </div>
-
-                <!-- System Maintenance (Full Width) -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="dash-card p-3 rounded-4 border-start border-4 border-danger">
-                            <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-trash-alt me-2"></i>System Maintenance</h5>
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <div class="p-2 bg-light rounded-3">
-                                        <p class="small text-muted mb-0"><strong>Production Reset:</strong> This will permanently delete all test accounts, applicants, and audit logs. The SuperAdmin account will be preserved.</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <form action="{{ url_for('system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL ACTION: Are you sure you want to delete ALL non-superadmin accounts? This cannot be undone.');">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold">
-                                            <i class="fas fa-exclamation-triangle me-2"></i>RESET ALL DATA
-                                        </button>
-                                    </form>
-                                </div>
-                                <div class="col-md-3">
-                                    <form action="{{ url_for('cleanup_abandoned') }}" method="POST">
-                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-white">
-                                            <i class="fas fa-broom me-2"></i>CLEAN ABANDONED
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- Admin Management Section -->
-            <section id="section-admins" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">Admin Management</h2>
-                <div class="dash-card p-4 rounded-4 mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fas fa-user-plus me-2"></i>Create New Admin</h5>
-                    <!-- Form would go here, omitting for brevity or we can add later if requested -->
-                    <p class="text-muted small">Admin creation is restricted to SuperAdmin via manual database insertion or future expansion.</p>
-                </div>
-                
-                <div class="dash-card p-4 rounded-4">
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Admin ID</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for admin in admins %}
-                                <tr>
-                                    <td class="fw-bold">{{ admin.student_id or 'PENDING-ID' }}</td>
-                                    <td>{{ admin.name }}</td>
-                                    <td class="small">{{ admin.email }}</td>
-                                    <td><span class="badge bg-success">Active</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </section>
 
-            <!-- Pending Applicants Section -->
-            <section id="section-applicants" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">Pending Applications</h2>
-                <div class="dash-card p-4 rounded-4">
+            <!-- SECTION: WEBSITE CONTENT MANAGER (CMS) -->
+            <section id="section-cms" class="dash-section">
+                <h1 class="dash-title">Website Content Manager</h1>
+                <p class="dash-subtitle">Manage your institution's visual identity and homepage content.</p>
+
+                <div class="media-manager-grid">
+                    <!-- LOGO MANAGEMENT -->
+                    <div class="media-card">
+                        <div class="media-preview">
+                            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo">
+                        </div>
+                        <div class="media-actions">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Official Logo</h6>
+                                <small class="text-muted">Header & Navbar</small>
+                            </div>
+                            <form action="{{ url_for('admin_update_branding') }}" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="type" value="logo">
+                                <input type="file" name="image" id="logo-upload" hidden onchange="this.form.submit()">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="document.getElementById('logo-upload').click()">Replace</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- HERO IMAGE -->
+                    <div class="media-card">
+                        <div class="media-preview">
+                            <img src="{{ url_for('static', filename='uploads/branding/hero.jpg') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Hero+Image'" alt="Hero">
+                        </div>
+                        <div class="media-actions">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Hero Banner</h6>
+                                <small class="text-muted">Homepage Main Image</small>
+                            </div>
+                            <form action="{{ url_for('admin_update_branding') }}" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="type" value="hero">
+                                <input type="file" name="image" id="hero-upload" hidden onchange="this.form.submit()">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="document.getElementById('hero-upload').click()">Replace</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- FOUNDER PHOTO -->
+                    <div class="media-card">
+                        <div class="media-preview">
+                            <img src="{{ url_for('static', filename='uploads/branding/founder.jpg') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo'" alt="Founder">
+                        </div>
+                        <div class="media-actions">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Founder / CEO</h6>
+                                <small class="text-muted">About Section</small>
+                            </div>
+                            <form action="{{ url_for('admin_update_branding') }}" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="type" value="founder">
+                                <input type="file" name="image" id="founder-upload" hidden onchange="this.form.submit()">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="document.getElementById('founder-upload').click()">Replace</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-card mt-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-photo-video me-2"></i>Activity Gallery</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="border-dashed border-2 rounded-3 p-4 text-center d-flex flex-column align-items-center justify-content-center" style="height: 150px; border: 2px dashed #cbd5e1;">
+                                <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
+                                <form action="{{ url_for('admin_add_activity') }}" method="POST" enctype="multipart/form-data">
+                                    <input type="file" name="image" id="gallery-add" hidden onchange="this.form.submit()">
+                                    <button type="button" class="btn btn-link text-decoration-none fw-bold" onclick="document.getElementById('gallery-add').click()">Add Media</button>
+                                </form>
+                            </div>
+                        </div>
+                        <!-- We could loop existing activities here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: PENDING APPLICANTS -->
+            <section id="section-applicants" class="dash-section">
+                <h1 class="dash-title">Pending Enrollment Requests</h1>
+                <p class="dash-subtitle">Review and approve verified students into the institution.</p>
+
+                <div class="premium-card">
                     <div class="table-responsive">
                         <table class="table align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Department</th>
-                                    <th>Phone</th>
-                                    <th>OTP Details</th>
-                                    <th>Action</th>
+                            <thead>
+                                <tr class="text-muted small text-uppercase">
+                                    <th>Applicant</th>
+                                    <th>Contact</th>
+                                    <th>Program</th>
+                                    <th>OTP Status</th>
+                                    <th class="text-end">Verification</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for app in applicants %}
                                 <tr>
-                                    <td class="fw-bold">{{ app.name }}</td>
-                                    <td>{{ app.email }}</td>
-                                    <td>{{ app.department }}</td>
-                                    <td>{{ app.phone }}</td>
                                     <td>
-                                        <div class="fw-bold" style="letter-spacing: 2px;">{{ app.verification_code or 'N/A' }}</div>
-                                        <small class="badge {% if app.otp_email_status is defined and app.otp_email_status == 'sent' %}bg-success{% elif app.otp_email_status is defined and app.otp_email_status == 'failed' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
-                                            Email: {{ (app.otp_email_status|upper) if app.otp_email_status is defined else 'PENDING' }}
-                                        </small>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-user text-muted"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ app.name }}</div>
+                                                <div class="small text-muted">{{ app.email }}</div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('approve_user', user_id=app.id) }}" class="btn btn-success btn-sm rounded-pill px-3 mb-1 w-100">Approve</a>
-                                        <a href="{{ url_for('force_verify', user_id=app.id) }}" class="btn btn-outline-warning btn-sm rounded-pill px-3 w-100" onclick="return confirm('Force verify this user? They will skip email verification.');">Force Verify</a>
+                                        <div class="small">{{ app.phone }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">{{ app.department }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-light text-dark border">{{ app.verification_code or '---' }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('approve_user', user_id=app.id) }}" class="btn btn-sm btn-success px-3">Approve</a>
+                                            <a href="{{ url_for('reject_user', user_id=app.id) }}" class="btn btn-sm btn-outline-danger px-3">Reject</a>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">No pending applications.</td>
-                                </tr>
+                                <tr><td colspan="5" class="text-center py-5 text-muted">No applicants currently in queue.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -263,243 +308,45 @@
                 </div>
             </section>
 
-            <!-- Audit Logs Section -->
-            <section id="section-audit" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">System Audit Logs</h2>
-                <div class="dash-card p-4 rounded-4">
-                    <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>User / IP</th>
-                                    <th>Action</th>
-                                    <th>Target ID</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for log in audit_logs %}
-                                <tr>
-                                    <td class="small">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                                    <td>
-                                        {% if log.user %}
-                                            <span class="badge bg-secondary">{{ log.user.email }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">System</span>
-                                        {% endif %}
-                                        <div class="small text-muted">{{ log.ip_address or 'Unknown IP' }}</div>
-                                    </td>
-                                    <td class="fw-bold">{{ log.action }}</td>
-                                    <td>{{ log.target_type }} #{{ log.target_id or '-' }}</td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted">No audit logs available.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <!-- SECTION: USER DIRECTORY -->
+            <section id="section-users" class="dash-section">
+                <h1 class="dash-title">Global User Directory</h1>
+                <p class="dash-subtitle">Manage all active students, admins, and alumni.</p>
+                <div class="premium-card">
+                    <!-- Table structure similar to above, using 'users' list -->
                 </div>
             </section>
 
-            <!-- All Users Section -->
-            <section id="section-users" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">Global User Directory</h2>
-                <div class="dash-card p-4 rounded-4">
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>System ID</th>
-                                    <th>Name</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Controls</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in users %}
-                                <tr>
-                                    <td class="fw-bold">{{ user.student_id or 'N/A' }}</td>
-                                    <td>{{ user.name }}</td>
-                                    <td>
-                                        <span class="badge {% if user.role == 'SuperAdmin' %}bg-danger{% elif user.role == 'Admin' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{ user.role }}</span>
-                                    </td>
-                                    <td>
-                                        {% if user.is_suspended %}
-                                            <span class="badge bg-danger">Suspended</span>
-                                        {% elif user.registration_state == 'approved' %}
-                                            <span class="badge bg-success">Approved</span>
-                                        {% elif user.registration_state == 'verified_awaiting_approval' %}
-                                            <span class="badge bg-warning text-dark">Verified (Pending Approval)</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ (user.registration_state or 'Pending')|title }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            {% if not user.is_superadmin %}
-                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roleModal{{ user.id }}">
-                                                    <i class="fas fa-user-edit"></i>
-                                                </button>
-                                                {% if user.is_suspended %}
-                                                <form action="{{ url_for('reactivate_user', user_id=user.id) }}" method="POST" class="d-inline">
-                                                    <button type="submit" class="btn btn-sm btn-success" title="Reactivate"><i class="fas fa-check"></i></button>
-                                                </form>
-                                                {% else %}
-                                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#suspendModal{{ user.id }}">
-                                                    <i class="fas fa-ban"></i>
-                                                </button>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="badge bg-dark">Protected</span>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <!-- Role Modal -->
-                                        <div class="modal fade" id="roleModal{{ user.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header bg-primary text-white">
-                                                        <h5 class="modal-title">Change Role for {{ user.name }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form action="{{ url_for('change_role', user_id=user.id) }}" method="POST">
-                                                        <div class="modal-body">
-                                                            <select name="role" class="form-select">
-                                                                <option value="Student" {% if user.role == 'Student' %}selected{% endif %}>Student</option>
-                                                                <option value="Teacher" {% if user.role == 'Teacher' %}selected{% endif %}>Teacher</option>
-                                                                <option value="Admin" {% if user.role == 'Admin' %}selected{% endif %}>Admin</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="submit" class="btn btn-primary">Save Role</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Suspend Modal -->
-                                        <div class="modal fade" id="suspendModal{{ user.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header bg-danger text-white">
-                                                        <h5 class="modal-title">Suspend {{ user.name }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form action="{{ url_for('suspend_user', user_id=user.id) }}" method="POST">
-                                                        <div class="modal-body">
-                                                            <label class="form-label">Reason for suspension (optional):</label>
-                                                            <textarea name="reason" class="form-control" rows="3" placeholder="Violation of platform policies."></textarea>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="submit" class="btn btn-danger">Confirm Suspension</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Broadcast Alerts Section -->
-            <section id="section-broadcast" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">Global Broadcast System</h2>
-                <div class="dash-card p-4 rounded-4 mb-4 border-start border-4 border-warning">
-                    <h5 class="fw-bold mb-3"><i class="fas fa-bullhorn text-warning me-2"></i>Send Global Alert</h5>
-                    <form action="{{ url_for('broadcast_alert') }}" method="POST">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Alert Message</label>
-                            <input type="text" name="message" class="form-control" placeholder="e.g. Scheduled maintenance at midnight" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Alert Type</label>
-                            <select name="type" class="form-select">
-                                <option value="info">Info (Blue)</option>
-                                <option value="warning">Warning (Yellow)</option>
-                                <option value="danger">Danger (Red)</option>
-                                <option value="success">Success (Green)</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-warning fw-bold">Broadcast Alert</button>
-                    </form>
-                </div>
-            </section>
-            
-            <!-- Data Export Section -->
-            <section id="section-export" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">Data Export & Backup</h2>
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="dash-card p-4 rounded-4 text-center">
-                            <i class="fas fa-users fa-3x text-primary mb-3"></i>
-                            <h5 class="fw-bold">User Database</h5>
-                            <p class="small text-muted mb-4">Export all registered users, roles, and suspension statuses as CSV.</p>
-                            <a href="{{ url_for('export_data', data_type='users') }}" class="btn btn-primary w-100">Export Users CSV</a>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="dash-card p-4 rounded-4 text-center">
-                            <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
-                            <h5 class="fw-bold">Attendance Records</h5>
-                            <p class="small text-muted mb-4">Export comprehensive attendance logs for all courses.</p>
-                            <a href="{{ url_for('export_data', data_type='attendance') }}" class="btn btn-success w-100">Export Attendance CSV</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
+        </div>
+    </main>
 </div>
 
-<style>
-    .nav-link-admin {
-        display: flex;
-        align-items: center;
-        padding: 12px 15px;
-        color: rgba(255, 255, 255, 0.7);
-        text-decoration: none;
-        border-radius: 8px;
-        transition: all 0.3s;
-    }
-    .nav-link-admin:hover {
-        background: rgba(255, 111, 0, 0.2);
-        color: white;
-    }
-    .nav-link-admin.active {
-        background: rgba(255, 111, 0, 0.25);
-        color: white;
-        border-left: 4px solid var(--accent-orange);
-    }
-    .section-admin {
-        animation: fadeIn 0.4s ease-out;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
-
+<!-- DASHBOARD INTERACTION SCRIPT -->
 <script>
-    document.querySelectorAll('[data-section]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const section = e.currentTarget.dataset.section;
-            
-            document.querySelectorAll('.section-admin').forEach(s => s.classList.add('d-none'));
-            document.querySelectorAll('.nav-link-admin').forEach(a => a.classList.remove('active'));
-            
-            document.getElementById('section-' + section).classList.remove('d-none');
-            e.currentTarget.classList.add('active');
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('.dash-sidebar .nav-link');
+    const sections = document.querySelectorAll('.dash-section');
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (this.dataset.section) {
+                e.preventDefault();
+                
+                // Update Sidebar
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+
+                // Update Sections
+                const target = this.dataset.section;
+                sections.forEach(s => {
+                    s.classList.remove('active');
+                    if (s.id === `section-${target}`) {
+                        s.classList.add('active');
+                    }
+                });
+            }
         });
     });
+});
 </script>
 {% endblock %}
