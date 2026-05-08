@@ -1044,18 +1044,23 @@ def logout():
 @app.route('/debug_sys')
 def debug_sys():
     import os, sys
+    from sqlalchemy import inspect
     try:
         db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')
-        db_file = db_uri.replace('sqlite:///', '') if db_uri.startswith('sqlite:///') else 'NOT SQLITE'
+        # Strip query params like ?timeout=20
+        db_file = db_uri.split('?')[0].replace('sqlite:///', '') if db_uri.startswith('sqlite:///') else 'NOT SQLITE'
+        
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
         
         info = {
             'cwd': os.getcwd(),
             'db_uri': db_uri,
+            'db_file': db_file,
             'db_file_exists': os.path.exists(db_file) if db_file != 'NOT SQLITE' else 'N/A',
+            'tables': tables,
             'data_dir_exists': os.path.exists('/data'),
-            'data_dir_writable': os.access('/data', os.W_OK) if os.path.exists('/data') else 'N/A',
             'instance_path': app.instance_path,
-            'instance_path_exists': os.path.exists(app.instance_path),
             'migration_success_exists': os.path.exists('/tmp/migration_success')
         }
         return jsonify(info)
