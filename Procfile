@@ -1,1 +1,1 @@
-web: sh run_migrations.sh
+web: bash run_migrations.sh

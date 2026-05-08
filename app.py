@@ -73,7 +73,8 @@ else:
         
     # Ensure the directory exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+    # Increase timeout to handle concurrency on Railway/SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}?timeout=20"
 
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
@@ -128,16 +129,10 @@ _db_initialized = False
 def first_request_init():
     global _db_initialized
     if not _db_initialized:
-        try:
-            db.create_all()
-            # Run seeding logic
-            from seed_sa_module import seed_sa_func
-            seed_sa_func()
-            _db_initialized = True
-            logger.info("Database initialized and SuperAdmin ensured.")
-        except Exception as e:
-            logger.error(f"DB Initialization failed: {e}")
-            # Don't set _db_initialized = True, try again next request if it fails
+        # We don't call create_all here anymore to avoid thundering herd.
+        # It's called at module level or via migrations.
+        _db_initialized = True
+        logger.info("Application initialized.")
 
 
 @app.route('/health')
@@ -1052,7 +1047,8 @@ def debug_sys():
             'data_dir_exists': os.path.exists('/data'),
             'data_dir_writable': os.access('/data', os.W_OK) if os.path.exists('/data') else 'N/A',
             'instance_path': app.instance_path,
-            'instance_path_exists': os.path.exists(app.instance_path)
+            'instance_path_exists': os.path.exists(app.instance_path),
+            'migration_success_exists': os.path.exists('/tmp/migration_success')
         }
         return jsonify(info)
     except Exception as e:
