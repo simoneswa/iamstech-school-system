@@ -84,9 +84,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # --- Mail Config from Environment ---
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
@@ -420,17 +420,7 @@ def debug_errors():
     except:
         return "No errors logged yet."
 
-@app.route('/run-migration-v6')
-def run_migration_v6():
-    """Emergency route to add missing otp_email_status column"""
-    from sqlalchemy import text
-    try:
-        db.session.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS otp_email_status VARCHAR(20) DEFAULT 'pending';"))
-        db.session.commit()
-        return "SUCCESS: 'otp_email_status' column verified/added. You can now try registering again.", 200
-    except Exception as e:
-        db.session.rollback()
-        return f"MIGRATION FAILED: {str(e)}", 500
+
 
 @app.route('/verify-email/<int:user_id>', methods=['GET', 'POST'])
 @app.route('/verify-email/<int:user_id>/', methods=['GET', 'POST'])
@@ -587,8 +577,8 @@ def dashboard():
 
     if current_user.role == 'SuperAdmin':
         users = User.query.all()
-        admins = User.query.filter_by(role='Admin').all()
-        applicants = User.query.filter_by(status='Pending').all()
+        # Modern filter: show everyone who has verified their email but isn't approved yet
+        applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
         
         try:
             audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
