@@ -38,11 +38,16 @@ def internal_server_error(e):
 def handle_exception(e):
     # Log the error
     logger.error(f"Unhandled Exception: {e}")
+    try:
+        with open('scratch/registration_errors.txt', 'a') as f:
+            f.write(f"UNHANDLED: {str(e)}\n")
+    except:
+        pass
     db.session.rollback()
     # If we are in debug mode, let the default debugger handle it
     if app.debug:
         raise e
-    return render_template('errors/500.html'), 500
+    return render_template('errors/500.html', error=str(e)), 500
 
 
 # --- Database Configuration ---
