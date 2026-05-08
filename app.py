@@ -309,39 +309,50 @@ def register():
         phone = request.form.get('phone')
         dept = request.form.get('department')
         photo = request.files.get('profile_photo')
+        # 1. Basic Validation & Normalization
+        name = name.strip() if name else ""
+        email = email.strip().lower() if email else ""
         
-        existing_user = User.query.filter_by(email=email).first()
+        if not name or not email:
+            flash('Full Name and Email Address are required.', 'danger')
+            return redirect(url_for('register'))
+
+        # 2. Check for existing user (case-insensitive)
+        existing_user = User.query.filter(db.func.lower(User.email) == email).first()
         
         if existing_user:
             # Block only fully active, approved, and verified accounts
             if existing_user.is_email_verified and existing_user.registration_state == 'approved':
                 flash('This email is already registered and active. Please login.', 'info')
                 return redirect(url_for('login'))
-            elif existing_user.registration_state in ['pending_verification', 'verified_awaiting_approval']:
-                flash('An application with this email is already pending review.', 'warning')
-                # Allow user to continue with verification flow
-                user_to_save = existing_user
-            else:
-                # For rejected, suspended, or other states allow re-registration
-                flash('Your previous application was not approved. Please re-register.', 'warning')
-                user_to_save = existing_user
-                user_to_save.registration_state = 'pending_verification'
-                user_to_save.is_email_verified = False
+            
+            # If application is in progress, reuse the record
+            user_to_save = existing_user
+            logger.info(f"Re-using existing onboarding record for {email}")
         else:
-            user_to_save = User(email=email, role='Student')
+            # Create new user record
+            user_to_save = User(email=email, role='Student', name=name)
             db.session.add(user_to_save)
-
-        # Process profile photo
-        filename = None
-        if photo:
-            filename = secure_filename(f"{email}_{photo.filename}")
-            photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles', filename))
-            user_to_save.profile_photo = f"uploads/profiles/{filename}"
+            logger.info(f"Creating new onboarding record for {email}")
 
         try:
-            # Generate fresh OTP and set registration state
+            # 3. Handle File Upload (inside transaction block)
+            if photo and photo.filename:
+                # Ensure filename is safe and unique
+                ext = photo.filename.rsplit('.', 1)[1].lower() if '.' in photo.filename else 'jpg'
+                safe_name = f"{uuid.uuid4().hex[:10]}.{ext}"
+                filename = secure_filename(f"{email.split('@')[0]}_{safe_name}")
+                
+                # Ensure directory exists (redundant but safe)
+                profile_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'profiles')
+                os.makedirs(profile_dir, exist_ok=True)
+                
+                photo.save(os.path.join(profile_dir, filename))
+                user_to_save.profile_photo = f"uploads/profiles/{filename}"
+
+            # 4. Generate fresh OTP and update state
             otp = f"{random.randint(100000, 999999)}"
-            user_to_save.name = name
+            user_to_save.name = name  # Sync name in case it changed
             user_to_save.phone = phone
             user_to_save.department = dept
             user_to_save.registration_state = 'pending_verification'
@@ -350,24 +361,24 @@ def register():
             user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
             user_to_save.verification_attempts = 0
             
-            if not existing_user:
+            # Ensure a password exists (UUID fallback if new)
+            if not user_to_save.password:
                 user_to_save.password = generate_password_hash(uuid.uuid4().hex)
             
             db.session.commit()
-            logger.info(f"Registration state saved for {email}. Sending OTP...")
+            logger.info(f"Registration committed for {email}. Sending OTP...")
             
-            # Send OTP
-            sent = send_verification_otp(user_to_save, otp)
-            if not sent:
-                logger.error(f"Failed to send OTP to {email}. Check mail server settings.")
+            # 5. Send OTP (non-blocking failure)
+            send_verification_otp(user_to_save, otp)
             
             flash('Verification code sent to your personal email.', 'info')
             return redirect(url_for('verify_email', user_id=user_to_save.id))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {e}")
-            flash('A system error occurred during registration. Our team has been notified.', 'danger')
+            logger.error(f"CRITICAL REGISTRATION ERROR for {email}: {str(e)}")
+            flash(f'System Error: {str(e)}', 'danger') if app.debug else flash('A system error occurred. Please try again or contact support.', 'danger')
             return redirect(url_for('register'))
+
 
     return render_template('register.html')
 

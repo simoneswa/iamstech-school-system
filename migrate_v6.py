@@ -171,7 +171,7 @@ def ensure_homepage_section_table():
                 id SERIAL PRIMARY KEY,
                 title VARCHAR(200) NOT NULL,
                 description TEXT,
-                image_path VARCHAR(200),
+                image_path VARCHAR(500),
                 display_order INTEGER DEFAULT 0,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
