@@ -250,7 +250,7 @@ def login():
                 return redirect(url_for('login'))
                 
             if check_password_hash(user.password, password):
-                if not user.is_email_verified:
+                if not user.is_email_verified and not user.is_superadmin:
                     flash('Please verify your personal email address first.', 'warning')
                     return redirect(url_for('verify_email', user_id=user.id))
                     

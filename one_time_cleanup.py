@@ -34,6 +34,9 @@ def cleanup():
         # 2. Delete all non-superadmin users (Resetting the system)
         cur.execute("DELETE FROM \"user\" WHERE is_superadmin = FALSE;")
         
+        # 3. Ensure SuperAdmin is verified and approved
+        cur.execute("UPDATE \"user\" SET is_email_verified = TRUE, status = 'Approved' WHERE is_superadmin = TRUE;")
+        
         conn.commit()
         print(f"Deep Cleanup Successful.")
         cur.close()
