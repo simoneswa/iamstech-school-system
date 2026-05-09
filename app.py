@@ -96,6 +96,31 @@ db.init_app(app)
 with app.app_context():
     try:
         db.create_all()
+        # --- AUTO MIGRATION (Self-Healing) ---
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Founder Table Migration
+        existing_cols = [c['name'] for c in inspector.get_columns('founder')]
+        for col in ['bio', 'vision', 'mission', 'leadership_statement']:
+            if col not in existing_cols:
+                try:
+                    db.session.execute(text(f"ALTER TABLE founder ADD COLUMN {col} TEXT"))
+                    db.session.commit()
+                    logger.info(f"Auto-Migration: Added missing column {col} to founder.")
+                except Exception:
+                    db.session.rollback()
+
+        # Developer Table Migration
+        existing_dev_cols = [c['name'] for c in inspector.get_columns('developer')]
+        if 'bio' not in existing_dev_cols:
+            try:
+                db.session.execute(text(f"ALTER TABLE developer ADD COLUMN bio TEXT"))
+                db.session.commit()
+                logger.info("Auto-Migration: Added missing column bio to developer.")
+            except Exception:
+                db.session.rollback()
+
         from seed_sa_module import seed_sa_func
         seed_sa_func()
     except Exception as e:
@@ -675,21 +700,26 @@ def admin_update_branding():
     os.makedirs(save_path, exist_ok=True)
     photo.save(os.path.join(save_path, filename))
     
-    if b_type == 'logo':
-        # Logic to update logo.png (overwriting old one for consistency)
-        logo_path = os.path.join('static', 'img', 'logo.png')
-        photo.seek(0) # Reset file pointer
-        photo.save(logo_path)
-        flash('Institutional Logo updated successfully!', 'success')
-    elif b_type == 'hero':
-        # Update homepage hero
-        flash('Homepage Hero updated successfully!', 'success')
-    elif b_type == 'founder':
-        founder = Founder.query.first() or Founder()
-        founder.image_path = f"uploads/branding/{filename}"
-        db.session.add(founder)
-        db.session.commit()
-        flash('Founder photo updated successfully!', 'success')
+    try:
+        if b_type == 'logo':
+            # Logic to update logo.png (overwriting old one for consistency)
+            logo_path = os.path.join('static', 'img', 'logo.png')
+            photo.seek(0) # Reset file pointer
+            photo.save(logo_path)
+            flash('Institutional Logo updated successfully!', 'success')
+        elif b_type == 'hero':
+            # Update homepage hero
+            flash('Homepage Hero updated successfully!', 'success')
+        elif b_type == 'founder':
+            founder = Founder.query.first() or Founder()
+            founder.image_path = f"uploads/branding/{filename}"
+            db.session.add(founder)
+            db.session.commit()
+            flash('Founder photo updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Branding update DB error: {e}")
+        flash('Image saved but database record could not be updated due to schema sync. Our team is fixing it!', 'warning')
         
     return redirect(url_for('dashboard'))
 
@@ -702,19 +732,25 @@ def admin_update_founder():
     message = request.form.get('message')
     photo = request.files.get('image')
     
-    founder = Founder.query.first() or Founder()
-    founder.name = name
-    founder.title = title
-    founder.message = message
-    
-    if photo:
-        filename = secure_filename(f"founder_{photo.filename}")
-        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
-        founder.image_path = f"uploads/branding/{filename}"
+    try:
+        founder = Founder.query.first() or Founder()
+        founder.name = name
+        founder.title = title
+        founder.message = message
         
-    db.session.add(founder)
-    db.session.commit()
-    flash('Founder information updated!', 'success')
+        if photo:
+            filename = secure_filename(f"founder_{photo.filename}")
+            photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
+            founder.image_path = f"uploads/branding/{filename}"
+            
+        db.session.add(founder)
+        db.session.commit()
+        flash('Founder information updated!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Founder update error: {e}")
+        flash('Could not update founder info in database. Please check back shortly.', 'danger')
+        
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/update-developer', methods=['POST'])
