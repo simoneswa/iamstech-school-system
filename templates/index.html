@@ -118,7 +118,7 @@
                 {% if founders and founders[0] %}
                 <div class="vision-quote">
                     <i class="fas fa-quote-left"></i>
-                    "{{ founders[0].leadership_statement if founders[0].leadership_statement else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
+                    "{{ founders[0].leadership_statement if (founders and founders[0] and founders[0].leadership_statement) else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
                 </div>
                 <div class="mt-4">
                     <h5 class="fw-black mb-0">{{ founders[0].name }}</h5>
@@ -147,7 +147,7 @@
                         </div>
                         <h2 class="profile-name">{{ f.name }}</h2>
                         <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
-                        <p class="profile-bio">{{ f.bio if f.bio else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
+                        <p class="profile-bio">{{ f.bio if (f and f.bio) else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
                         
                         <div class="mt-4 d-flex justify-content-center gap-3">
                             <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-linkedin-in"></i></a>
@@ -162,12 +162,12 @@
                         
                         <div class="mb-5">
                             <h5 class="fw-bold text-dark"><i class="fas fa-eye me-2 text-warning"></i>Our Vision</h5>
-                            <p class="text-muted lead">{{ f.vision if f.vision else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
+                            <p class="text-muted lead">{{ f.vision if (f and f.vision) else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
                         </div>
 
                         <div class="mb-0">
                             <h5 class="fw-bold text-dark"><i class="fas fa-bullseye me-2 text-warning"></i>Our Mission</h5>
-                            <p class="text-muted lead">{{ f.mission if f.mission else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
+                            <p class="text-muted lead">{{ f.mission if (f and f.mission) else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
                         </div>
                     </div>
                 </div>

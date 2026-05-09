@@ -242,16 +242,28 @@ def index():
     try:
         announcements = Announcement.query.order_by(Announcement.date.desc()).limit(3).all()
         activities = Activity.query.order_by(Activity.date.desc()).limit(4).all()
-        founders = Founder.query.all()
-        developers = Developer.query.all()
+        
+        # Defensive Query for Founder/Dev (Crash-Proof)
+        try:
+            founders = Founder.query.all()
+        except Exception as e:
+            logger.warning(f"Founder table schema mismatch: {e}")
+            founders = [] # Fallback to empty list so it doesn't crash
+            
+        try:
+            developers = Developer.query.all()
+        except Exception as e:
+            logger.warning(f"Developer table schema mismatch: {e}")
+            developers = []
+
         return render_template('index.html', 
                              announcements=announcements, 
                              activities=activities,
                              founders=founders,
                              developers=developers)
     except Exception as e:
-        logger.error(f"Index error: {e}")
-        return render_template('index.html', announcements=[], activities=[], founders=[], developers=[])
+        logger.error(f"Index route critical failure: {e}")
+        return render_template('errors/500.html', error=e), 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
