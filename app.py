@@ -277,6 +277,7 @@ def inject_now():
     except Exception as e:
         logger.error(f"Context processor error: {e}")
         
+    context['build_external_url'] = build_external_url
     return context
 
 def log_audit(action, target_id=None, target_type=None):
@@ -1139,23 +1140,29 @@ def reject_user(user_id):
 def resend_setup(user_id):
     user = User.query.get_or_404(user_id)
     
-    if user.registration_state == 'approved' and user.must_change_password:
-        import uuid
-        from datetime import datetime, timedelta
+    # Allow resending setup for any approved user who hasn't completed setup yet,
+    # or if the admin explicitly wants to trigger a password reset/re-activation.
+    if user.registration_state == 'approved':
         user.setup_token = str(uuid.uuid4())
         user.setup_token_expiration = datetime.utcnow() + timedelta(days=3)
+        user.must_change_password = True
         db.session.commit()
         
-        from email_service import send_approval_email
         try:
-            send_approval_email(user)
-            flash(f'New setup link generated and emailed to {user.name}!', 'success')
-            logger.info(f"Admin {current_user.email} regenerated setup link for {user.email}")
+            email_sent = send_approval_email(user)
+            if email_sent:
+                flash(f'Success! A new activation link has been sent to {user.email}.', 'success')
+            else:
+                flash('The activation email failed to send, but a new token has been generated.', 'warning')
         except Exception as e:
-            flash('Setup link generated, but email failed to send. You can copy the link manually.', 'warning')
-            logger.error(f"Failed to resend setup email: {e}")
+            logger.error(f"Failed to resend setup for {user.email}: {e}")
+            flash('Internal error sending setup email.', 'danger')
+            
+        # Also flash the link for manual copying
+        setup_link = build_external_url('setup_account', token=user.setup_token)
+        flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'info')
     else:
-        flash('User is not awaiting setup.', 'warning')
+        flash('This user is not in an approved state.', 'warning')
         
     return redirect(url_for('dashboard'))
 
