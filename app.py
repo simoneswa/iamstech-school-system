@@ -1398,7 +1398,6 @@ def view_eid(user_id):
     if not user.student_id:
         if user.role in ['SuperAdmin', 'Admin', 'Teacher', 'Staff'] or user.registration_state == 'approved':
             # Auto-generate ID if missing for approved/staff roles
-            from app import generate_institutional_id
             user.student_id = generate_institutional_id(user.role)
             db.session.commit()
         else:

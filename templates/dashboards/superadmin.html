@@ -398,21 +398,23 @@
                                                 <li><hr class="dropdown-divider"></li>
                                                 {% if user.registration_state == 'pending_verification' %}
                                                     <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
+                                                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="navigator.clipboard.writeText('{{ user.verification_code }}'); alert('OTP Copied: {{ user.verification_code }}');"><i class="fas fa-copy me-2"></i>Copy OTP Code</a></li>
                                                 {% endif %}
-                                                {% if user.registration_state == 'verified_awaiting_approval' or user.status == 'Pending' %}
-                                                    <li><a class="dropdown-item text-success fw-bold" href="{{ url_for('approve_user', user_id=user.id) }}"><i class="fas fa-check-circle me-2"></i>Approve User</a></li>
-                                                    <li><a class="dropdown-item text-warning fw-bold" href="{{ url_for('reject_user', user_id=user.id) }}"><i class="fas fa-times-circle me-2"></i>Reject User</a></li>
+                                                {% if user.registration_state == 'verified_awaiting_approval' or (user.status == 'Pending' and not user.is_suspended) %}
+                                                    <li><a class="dropdown-item text-success fw-bold" href="{{ url_for('approve_user', user_id=user.id) }}"><i class="fas fa-user-check me-2"></i>Approve & Generate ID</a></li>
+                                                    <li><a class="dropdown-item text-warning fw-bold" href="{{ url_for('reject_user', user_id=user.id) }}"><i class="fas fa-user-times me-2"></i>Reject Applicant</a></li>
                                                 {% endif %}
-                                                {% if user.setup_token and user.must_change_password %}
+                                                {% if user.setup_token %}
+                                                    <li><hr class="dropdown-divider"></li>
                                                     <li>
                                                         <a class="dropdown-item text-primary fw-bold" href="{{ url_for('resend_setup', user_id=user.id) }}">
-                                                            <i class="fas fa-envelope-open-text me-2"></i>Resend Setup Email
+                                                            <i class="fas fa-paper-plane me-2"></i>Resend Setup Email
                                                         </a>
                                                     </li>
                                                     <li>
                                                         <a class="dropdown-item text-success fw-bold" href="javascript:void(0);" 
                                                            onclick="navigator.clipboard.writeText('{{ url_for('setup_account', token=user.setup_token, _external=True) }}'); alert('Activation Link copied! Send this to the applicant so they can set their password.');">
-                                                           <i class="fas fa-link me-2"></i>Copy Activation Link
+                                                           <i class="fas fa-external-link-alt me-2"></i>Copy Activation Link
                                                         </a>
                                                     </li>
                                                 {% endif %}
