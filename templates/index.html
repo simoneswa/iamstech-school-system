@@ -177,34 +177,49 @@
     </div>
 </section>
 
-<!-- SYSTEM DEVELOPED BY (Developer Showcase) -->
-<section class="py-5 bg-white border-top">
-    <div class="container">
+<!-- SYSTEM DEVELOPED BY (Premium Developer Showcase) -->
+<section class="py-5 bg-light border-top">
+    <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-lg-8 text-center mb-5">
-                <p class="text-primary fw-bold small text-uppercase mb-2" style="letter-spacing: 2px;">Digital Infrastructure</p>
-                <h3 class="fw-black">System Developed By</h3>
-            </div>
-        </div>
-        <div class="row justify-content-center g-4">
-            {% if developers %}
-                {% for d in developers %}
-                <div class="col-lg-4">
-                    <div class="profile-card" style="padding: 30px;">
-                        <div class="profile-img-frame" style="width: 120px; height: 120px; padding: 5px;">
-                            <div class="profile-img-inner">
+            <div class="col-lg-10">
+                {% if developers %}
+                    {% for d in developers %}
+                    <div class="dev-showcase">
+                        <div class="dev-flex">
+                            <!-- Image Side -->
+                            <div class="dev-image-side">
                                 <img src="{{ url_for('static', filename=d.image_path) if d.image_path else 'https://via.placeholder.com/300x300?text=Dev' }}" 
                                      alt="{{ d.name }}" 
+                                     class="dev-portrait-large"
                                      onerror="this.src='https://via.placeholder.com/300x300?text=Dev';">
                             </div>
+                            <!-- Content Side -->
+                            <div class="dev-content-side">
+                                <span class="dev-tag">System Architect & Developer</span>
+                                <h2 class="display-5 fw-black text-primary mb-2">Simone Swaray</h2>
+                                <h5 class="text-warning fw-bold mb-4" style="letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem;">
+                                     <i class="fas fa-microchip me-2"></i>Informatics Engineering • <i class="fas fa-network-wired mx-2"></i>Networking Specialist
+                                </h5>
+                                
+                                <p class="dev-bio-text">
+                                    {{ d.description if d.description else 'Simone Swaray is the lead digital architect at IAMSTECH, specializing in Networking and Informatics Engineering. As a young Liberian in the diaspora, he is dedicated to building robust institutional infrastructure that shapes the future of technology and leadership in Liberia.' }}
+                                </p>
+                                
+                                <div class="d-flex gap-4 align-items-center">
+                                    <div class="d-flex gap-2">
+                                        <a href="#" class="btn btn-primary rounded-pill px-4 fw-bold">Portfolio</a>
+                                        <a href="#" class="btn btn-outline-primary rounded-pill px-4 fw-bold">LinkedIn</a>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="fas fa-check-circle text-success me-1"></i> Verified Developer
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h4 class="profile-name" style="font-size: 1.2rem;">{{ d.name }}</h4>
-                        <p class="profile-title" style="font-size: 0.75rem;">{{ d.role if d.role else 'Systems Architect' }}</p>
-                        <p class="small text-muted mb-0">{{ d.description if d.description else 'Crafting professional institutional platforms.' }}</p>
                     </div>
-                </div>
-                {% endfor %}
-            {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
         </div>
     </div>
 </section>
