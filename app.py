@@ -1219,96 +1219,146 @@ def chatbot():
     f_leadership = founder_data.leadership_statement if (founder_data and founder_data.leadership_statement) else "Cultivating the architects of Liberia's digital future."
 
     responses = {
-        "info": [
-            "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
-            "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
-        ],
-        "about": [
-            "IAMSTECH LIBERIA is a professional vocational and technology institute based in Monrovia, Liberia. We specialize in IT, Accounting, and modern business skills. Our goal is to empower Liberians with world-class technical education.",
-            "IAMSTECH stands for Institute of Advanced Management Science & Technology. We are committed to delivering quality hands-on education in Information Technology and Accounting."
-        ],
-        "location": [
-            "IAMSTECH is located on Hotel Africa Road, Monrovia, Liberia. We are easily accessible by public transport. Come visit us anytime during working hours!",
-            "You can find us on Hotel Africa Road, Monrovia, Liberia. For directions or inquiries, call us at +231 775 478 90."
-        ],
-        "motto": [
-            "Our motto is: 'Empowering Liberia Through Technology & Excellence.' We believe education is the greatest equalizer.",
-            "IAMSTECH's guiding principle is excellence in vocational and technical education — cultivating the architects of Liberia's digital future."
-        ],
-        "vision": [
-            f_vision,
-            f"Our vision as set by our leadership: {f_vision}"
-        ],
-        "mission": [
-            f_mission,
-            f"IAMSTECH's mission is to {f_mission}"
-        ],
-        "programs": [
-            "We offer professional certifications in Microsoft Office Suite, QuickBooks Accounting, AI Techniques, Computer Hardware Engineering, and more. Which one interests you?",
-            "Our programs include Microsoft Office, QuickBooks, AI applications, and Hardware Engineering. All courses are hands-on and industry-focused."
-        ],
-        "admission": [
-            "Admissions for the 2026 academic year are now open! You can register on this portal, verify your email, and wait for administrative approval.",
-            "You can join IAMSTECH today! Just head over to the Registration page to start your application process."
+        "greetings": [
+            "Hello! I'm the IAMSTECH AI Assistant. How can I help you today? Ask me about our programs, admissions, location, or founder!",
+            "Greetings from IAMSTECH LIBERIA! What would you like to know about our institute?",
+            "Hi there! Ready to start your professional journey with us? Ask me anything about IAMSTECH!",
+            "Welcome to IAMSTECH! I'm here to assist you. Ask me about our courses, fees, location, or how to apply."
         ],
         "founder": [
-            f"{f_name} is our Founder & CEO. {f_bio}",
-            f"Our institution was founded by {f_name}. {f_leadership}"
+            f"Our Founder & CEO is {f_name}. {f_bio}",
+            f"IAMSTECH LIBERIA was founded by {f_name}, a visionary leader committed to transforming technology education in Liberia. {f_leadership}",
+            f"{f_name} founded IAMSTECH with a bold vision: to bridge the digital skills gap in Liberia and create world-class IT professionals."
         ],
-        "support": [
-            "If you encounter any technical issues, please contact our support team via WhatsApp at +231 880 864 187 or visit the Technical Support Center in your dashboard.",
-            "Need help? You can reach our technical support team at +231 880 864 187 (WhatsApp) or through your student dashboard."
+        "vision": [
+            f"IAMSTECH's Vision: {f_vision}",
+            f"Our institutional vision, as set by our founder, is: {f_vision}",
+            "We envision a Liberia where every young person has access to world-class technology and vocational education."
+        ],
+        "mission": [
+            f"IAMSTECH's Mission: {f_mission}",
+            f"Our mission drives everything we do: {f_mission}",
+            "IAMSTECH is on a mission to deliver industry-relevant, hands-on education in IT, Accounting, and modern business skills."
+        ],
+        "programs": [
+            "IAMSTECH offers professional certification programs in: 🖥️ Microsoft Office Suite, 📊 QuickBooks Accounting, 🤖 AI & Machine Learning Techniques, 🔧 Computer Hardware Engineering, and 💼 Business Administration. Which program interests you?",
+            "Our programs include: Microsoft Office Suite, QuickBooks Accounting, AI Techniques, Computer Hardware Engineering, Graphic Design, and Networking. All are hands-on and industry-focused with certificates upon completion.",
+            "We offer short-term (3–6 months) professional certification courses in IT, Accounting, and Business. All programs are practical, affordable, and designed for employment readiness."
+        ],
+        "admission": [
+            "Admissions for the 2026 academic year are NOW OPEN! 🎓 Simply visit our Registration page, fill in your details, verify your email, and await administrative approval. It's that simple!",
+            "To join IAMSTECH: 1️⃣ Visit our portal and click 'Register', 2️⃣ Complete your profile, 3️⃣ Verify your email, 4️⃣ Wait for admin approval. For help, WhatsApp us at +231 880 864 187.",
+            "We accept new students every semester! Requirements: Valid ID, recent passport photo, and completion of the online registration form. Visit our campus on Hotel Africa Road for in-person assistance."
+        ],
+        "location": [
+            "IAMSTECH LIBERIA is located on Hotel Africa Road, Sinkor, Monrovia, Liberia 🇱🇷. We are easily accessible by public transport from central Monrovia.",
+            "You can find us at Hotel Africa Road, Sinkor, Monrovia, Liberia. Our campus is open Monday–Saturday, 8am–6pm. For directions, call +231 775 478 90.",
+            "Our campus is on Hotel Africa Road, Monrovia, Liberia. Come visit us — we're happy to give you a tour and walk you through our programs in person!"
         ],
         "fees": [
-            "Tuition and registration fees vary by program. Please visit the Admissions office at our Hotel Africa Road campus for a detailed fee schedule.",
-            "For the most accurate fee information, we recommend visiting our campus office or contacting the finance department through the support line."
+            "Our tuition fees are affordable and vary by program. For the exact fee schedule, please visit our Admissions office at Hotel Africa Road, Monrovia, or WhatsApp us at +231 880 864 187.",
+            "IAMSTECH offers flexible and affordable payment plans. Contact us at +231 880 864 187 (WhatsApp) for a full fee breakdown by program.",
+            "We believe quality education should be accessible. Our fees are competitively priced. Reach out via WhatsApp at +231 880 864 187 for a detailed fee schedule."
         ],
         "duration": [
-            "Most of our certificate programs run for 3 to 6 months of intensive, hands-on training.",
-            "Our professional courses typically take 3-6 months to complete, depending on the specific program."
+            "Most of our professional certificate programs run for 3 to 6 months of intensive, hands-on training — perfect for those who want to skill up fast!",
+            "Our courses are designed to get you job-ready quickly. Programs typically run 3–6 months depending on the subject. Some advanced courses may run up to 12 months.",
+            "IAMSTECH programs are short, focused, and powerful. Expect 3–6 months per certification, with options to stack multiple certificates."
         ],
-        "greetings": [
-            "Hello! I'm the IAMSTECH Assistant. How can I help you today?",
-            "Greetings from IAMSTECH! What would you like to know about our programs or admissions?",
-            "Hi there! Ready to start your professional journey with us? Ask me anything!"
+        "support": [
+            "For technical support, contact our team via WhatsApp at 📱 +231 880 864 187. You can also use the Technical Support Center inside your student dashboard.",
+            "Need help? Our support team is available Monday–Saturday, 8am–6pm. Reach us on WhatsApp: +231 880 864 187 or visit us on Hotel Africa Road, Monrovia.",
+            "If you're experiencing login issues, email delivery problems, or portal errors, our tech team is ready to help. WhatsApp: +231 880 864 187."
+        ],
+        "motto": [
+            "IAMSTECH's motto is: 'Empowering Liberia Through Technology & Excellence.' 🌟 We believe education is the greatest equalizer.",
+            "Our guiding principle: Excellence, Innovation, and Empowerment. We are committed to cultivating the architects of Liberia's digital future.",
+            "At IAMSTECH, we live by the words: 'Building Tomorrow's Leaders Today' — through hands-on technical and vocational education."
+        ],
+        "about": [
+            "IAMSTECH LIBERIA (Institute of Advanced Management Science & Technology) is a premier professional vocational and technology institute based in Monrovia, Liberia. We specialize in IT, Accounting, and modern business skills.",
+            "We are IAMSTECH LIBERIA — Liberia's dedicated center for practical technology and business education. Our programs are hands-on, industry-aligned, and designed to produce employment-ready graduates.",
+            "IAMSTECH is a specialized vocational institute in Monrovia, Liberia, focused on equipping students with cutting-edge skills in Information Technology and Accounting since its founding."
+        ],
+        "info": [
+            "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting.",
+            "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
+        ],
+        "contact": [
+            "You can reach IAMSTECH at: 📱 WhatsApp: +231 880 864 187 | 📍 Hotel Africa Road, Sinkor, Monrovia, Liberia | 🌐 Through this portal's registration page.",
+            "Contact us via WhatsApp at +231 880 864 187, visit our campus on Hotel Africa Road, Monrovia, or use the Support Center in your student dashboard."
+        ],
+        "certificate": [
+            "Yes! All IAMSTECH programs come with an official certificate upon successful completion. Our certificates are recognized by employers across Liberia and the region.",
+            "Every graduate receives a professional certificate from IAMSTECH LIBERIA. Our credentials are respected by leading employers in IT, Finance, and Business sectors."
         ]
     }
 
-    # Intent Matching
+    # Intent Matching — SPECIFIC intents checked BEFORE generic ones
     matched_intent = None
-    if re.search(r'\b(location|where|address|locate|map|situated|find you|campus)\b', msg):
-        matched_intent = "location"
-    elif re.search(r'\b(motto|slogan|saying|principle)\b', msg):
-        matched_intent = "motto"
-    elif re.search(r'\b(about|who|what|institution|iamstech|school|college|institute)\b', msg):
-        matched_intent = "about"
-    elif re.search(r'\b(vision|future|goal)\b', msg):
-        matched_intent = "vision"
-    elif re.search(r'\b(mission|purpose|aim)\b', msg):
-        matched_intent = "mission"
-    elif re.search(r'\b(program|course|study|learn|department|it|accounting|quickbooks|microsoft|ai|hardware)\b', msg):
-        matched_intent = "programs"
-    elif re.search(r'\b(admission|apply|join|enroll|register|form)\b', msg):
-        matched_intent = "admission"
-    elif re.search(r'\b(founder|ceo|leader|benaiah|kanawa|head)\b', msg):
-        matched_intent = "founder"
-    elif re.search(r'\b(support|help|contact|phone|email|whatsapp|technical|broken|error)\b', msg):
-        matched_intent = "support"
-    elif re.search(r'\b(fee|cost|price|tuition|pay|money|scholarship)\b', msg):
-        matched_intent = "fees"
-    elif re.search(r'\b(duration|time|long|period|month|week|graduate)\b', msg):
-        matched_intent = "duration"
-    elif re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo)\b', msg):
+
+    # 1. Greetings — first to avoid false matches
+    if re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo|howdy|welcome)\b', msg):
         matched_intent = "greetings"
+
+    # 2. Founder — MUST come before "about" (who/what would otherwise steal it)
+    elif re.search(r'\b(founder|ceo|director|president|leader|who started|who founded|benaiah|kanawa|simone|swaray)\b', msg) or \
+         ('who' in msg and ('start' in msg or 'found' in msg or 'creat' in msg or 'build' in msg or 'establish' in msg)):
+        matched_intent = "founder"
+
+    # 3. Vision — before "about" (goal/future could match)
+    elif re.search(r'\b(vision|future|long.?term goal)\b', msg):
+        matched_intent = "vision"
+
+    # 4. Mission — before "about"
+    elif re.search(r'\b(mission|purpose|aim|objective)\b', msg):
+        matched_intent = "mission"
+
+    # 5. Programs/Courses — before "about" (what courses/what programs)
+    elif re.search(r'\b(program|course|study|learn|department|accounting|quickbooks|microsoft|hardware|networking|graphic|ai|certificate|certification)\b', msg):
+        matched_intent = "programs"
+
+    # 6. Location
+    elif re.search(r'\b(location|where|address|locate|map|situated|campus|find you|directions?)\b', msg):
+        matched_intent = "location"
+
+    # 7. Fees/Cost
+    elif re.search(r'\b(fee|cost|price|tuition|pay|money|afford|scholarship|how much)\b', msg):
+        matched_intent = "fees"
+
+    # 8. Duration
+    elif re.search(r'\b(duration|how long|time|period|month|week|semester|graduate|finish|complete)\b', msg):
+        matched_intent = "duration"
+
+    # 9. Admission/Registration
+    elif re.search(r'\b(admission|apply|join|enroll|register|sign up|application|start|begin)\b', msg):
+        matched_intent = "admission"
+
+    # 10. Support/Contact
+    elif re.search(r'\b(support|contact|phone|whatsapp|technical|broken|error|problem|issue|call|reach)\b', msg):
+        matched_intent = "support"
+
+    # 11. Certificate
+    elif re.search(r'\b(certificate|certif|diploma|credential|qualification)\b', msg):
+        matched_intent = "certificate"
+
+    # 12. Motto/Slogan
+    elif re.search(r'\b(motto|slogan|saying|principle|tagline)\b', msg):
+        matched_intent = "motto"
+
+    # 13. Generic "about/who/what" — LAST so specific intents fire first
+    elif re.search(r'\b(about|who|what|iamstech|school|college|institute|institution|tell me|explain)\b', msg):
+        matched_intent = "about"
 
     if matched_intent and matched_intent in responses:
         response = random.choice(responses[matched_intent])
     else:
         # Contextual Fallback
         fallbacks = [
-            "I'm not quite sure about that. Would you like to know about our IT and Accounting programs?",
-            "I didn't catch that perfectly. I can help with admissions, location, or technical support. Which one do you need?",
-            "Could you please rephrase? I'm specifically trained to help with IAMSTECH institutional information."
+            "I'm not quite sure about that. Try asking me about our programs, fees, location, or how to apply! 😊",
+            "I didn't catch that. I can help with: admissions, programs, fees, location, founder info, or technical support. What do you need?",
+            "Could you rephrase that? I'm specifically trained to assist with IAMSTECH institutional information — programs, location, fees, and more.",
+            "Hmm, I'm not sure about that one. Try asking: 'What programs do you offer?' or 'Where is IAMSTECH located?'"
         ]
         response = random.choice(fallbacks)
 
