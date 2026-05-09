@@ -233,6 +233,24 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- DEVELOPER PHOTO -->
+                    <div class="media-card">
+                        <div class="media-preview">
+                            <img src="{{ url_for('static', filename=developers[0].image_path if developers else '') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
+                        </div>
+                        <div class="media-actions">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Developer</h6>
+                                <small class="text-muted">Digital Architect</small>
+                            </div>
+                            <form action="{{ url_for('admin_update_branding') }}" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="type" value="developer">
+                                <input type="file" name="image" id="dev-upload" hidden onchange="this.form.submit()">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="document.getElementById('dev-upload').click()">Replace</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="premium-card mt-4">
@@ -350,6 +368,9 @@
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li><a class="dropdown-item" href="{{ url_for('view_id_card', user_id=user.id) }}">View ID Card</a></li>
                                                 <li><hr class="dropdown-divider"></li>
+                                                {% if user.registration_state == 'pending_verification' %}
+                                                    <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
+                                                {% endif %}
                                                 {% if user.role != 'SuperAdmin' %}
                                                     <li><a class="dropdown-item text-danger" href="{{ url_for('suspend_user', user_id=user.id) }}">Suspend User</a></li>
                                                 {% endif %}

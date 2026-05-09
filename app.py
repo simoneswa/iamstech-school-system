@@ -716,6 +716,12 @@ def admin_update_branding():
             db.session.add(founder)
             db.session.commit()
             flash('Founder photo updated successfully!', 'success')
+        elif b_type == 'developer':
+            dev = Developer.query.first() or Developer()
+            dev.image_path = f"uploads/branding/{filename}"
+            db.session.add(dev)
+            db.session.commit()
+            flash('Developer spotlight photo updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Branding update DB error: {e}")
