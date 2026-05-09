@@ -1235,15 +1235,20 @@ def chatbot():
 
     responses = {
         "greetings": [
-            "Hello! I'm the IAMSTECH AI Assistant. How can I help you today? Ask me about our programs, admissions, location, or founder!",
-            "Greetings from IAMSTECH LIBERIA! What would you like to know about our institute?",
-            "Hi there! Ready to start your professional journey with us? Ask me anything about IAMSTECH!",
-            "Welcome to IAMSTECH! I'm here to assist you. Ask me about our courses, fees, location, or how to apply."
+            "Hello! I'm the IAMSTECH AI Assistant. How can I help you today? Ask me about our programs, admissions, or even how I was built!",
+            "Greetings from IAMSTECH LIBERIA! What would you like to know about our institute? I'm ready to assist!",
+            "Hi there! Ready to start your professional journey? Ask me anything about IAMSTECH—I promise I'm more helpful than a broken pencil! ✏️",
+            "Welcome! I'm here to assist you. Ask me about our courses, fees, or even how to fix those pesky OTP issues."
         ],
         "founder": [
             f"Our Founder & CEO is {f_name}. {f_bio}",
             f"IAMSTECH LIBERIA was founded by {f_name}, a visionary leader committed to transforming technology education in Liberia. {f_leadership}",
             f"{f_name} founded IAMSTECH with a bold vision: to bridge the digital skills gap in Liberia and create world-class IT professionals."
+        ],
+        "developer": [
+            "I was built with pride by a young, ambitious developer from Liberia! 🇱🇷 He is a student of Information Engineering who is passionate about solving real-world problems through technology. My creation aligns perfectly with the mission and vision of IAMSTECH Liberia to innovate and educate!",
+            "My 'parent' is a Liberian Information Engineering student! He's dedicated to building tech solutions for Liberia's future. He's the brains behind my circuits, and he's a huge believer in the IAMSTECH mission.",
+            "I'm a product of Liberian innovation! Developed by an Information Engineering student, I represent the problem-solving spirit that IAMSTECH instills in all its students."
         ],
         "vision": [
             f"IAMSTECH's Vision: {f_vision}",
@@ -1260,10 +1265,15 @@ def chatbot():
             "Our programs include: Microsoft Office Suite, QuickBooks Accounting, AI Techniques, Computer Hardware Engineering, Graphic Design, and Networking. All are hands-on and industry-focused with certificates upon completion.",
             "We offer short-term (3–6 months) professional certification courses in IT, Accounting, and Business. All programs are practical, affordable, and designed for employment readiness."
         ],
-        "admission": [
-            "Admissions for the 2026 academic year are NOW OPEN! 🎓 Simply visit our Registration page, fill in your details, verify your email, and await administrative approval. It's that simple!",
-            "To join IAMSTECH: 1️⃣ Visit our portal and click 'Register', 2️⃣ Complete your profile, 3️⃣ Verify your email, 4️⃣ Wait for admin approval. For help, WhatsApp us at +231 880 864 187.",
-            "We accept new students every semester! Requirements: Valid ID, recent passport photo, and completion of the online registration form. Visit our campus on Hotel Africa Road for in-person assistance."
+        "career_guidance": [
+            "Choosing a course is like choosing a superpower! 🦸‍♂️ For example, **MS Office** makes you an administrative wizard. **QuickBooks** turns you into a financial mastermind. **Hardware Engineering** means you can fix the systems that run the world, and **AI**? Well, that's like learning to talk to the future!",
+            "Our courses are designed for the job market. **MS Office** students often find roles as office managers or project assistants. **QuickBooks** graduates are highly sought after as bookkeepers and accountants. **Hardware** experts run IT departments, and **AI** specialists are building the next generation of software!",
+            "Skills you'll gain: Problem-solving, technical mastery, and professional confidence. Real-world applications are everywhere—from local businesses in Monrovia to global tech firms. Your future is what you build with the skills you learn here at IAMSTECH!"
+        ],
+        "otp_support": [
+            "OTP issues can be frustrating, but don't worry, I'm here to help! 🛠️ Step 1: Check your Spam or Junk folder (sometimes they like to hide there!). Step 2: Make sure your email/phone is correct. Step 3: If it's still missing, you can request a new one on the verification page. If all else fails, our Admin team can 'Force Verify' you in seconds—just ask them!",
+            "Missing your code? 🕵️‍♂️ Check your Junk folder first. If it's not there, try requesting a resend. Email delivery can sometimes be slow like a Monday morning, so give it a minute! If you're still stuck, reach out to support on WhatsApp (+231 880 864 187) and we'll get you in!",
+            "To get a new OTP, simply click 'Resend Code' on the verification screen. If you're having login trouble, ensure you're using the correct email. We're here to make sure you get in smoothly—stay positive, we've got this! 😊"
         ],
         "location": [
             "IAMSTECH LIBERIA is located on Hotel Africa Road, Sinkor, Monrovia, Liberia 🇱🇷. We are easily accessible by public transport from central Monrovia.",
@@ -1295,10 +1305,6 @@ def chatbot():
             "We are IAMSTECH LIBERIA — Liberia's dedicated center for practical technology and business education. Our programs are hands-on, industry-aligned, and designed to produce employment-ready graduates.",
             "IAMSTECH is a specialized vocational institute in Monrovia, Liberia, focused on equipping students with cutting-edge skills in Information Technology and Accounting since its founding."
         ],
-        "info": [
-            "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting.",
-            "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
-        ],
         "contact": [
             "You can reach IAMSTECH at: 📱 WhatsApp: +231 880 864 187 | 📍 Hotel Africa Road, Sinkor, Monrovia, Liberia | 🌐 Through this portal's registration page.",
             "Contact us via WhatsApp at +231 880 864 187, visit our campus on Hotel Africa Road, Monrovia, or use the Support Center in your student dashboard."
@@ -1313,70 +1319,77 @@ def chatbot():
     matched_intent = None
 
     # 1. Greetings — first to avoid false matches
-    if re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo|howdy|welcome)\b', msg):
+    if re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo|howdy|welcome|help)\b', msg):
         matched_intent = "greetings"
 
-    # 2. Founder — MUST come before "about" (who/what would otherwise steal it)
+    # 2. OTP & Login Assistance (Priority Support)
+    elif re.search(r'\b(otp|code|received|verify|login|access|setup|trouble|password|stuck)\b', msg):
+        matched_intent = "otp_support"
+
+    # 3. Career Guidance
+    elif re.search(r'\b(career|job|opportunity|skill|benefit|application|why study|value|future|work|hire|employ)\b', msg):
+        matched_intent = "career_guidance"
+
+    # 4. Developer — MUST come before "about"
+    elif re.search(r'\b(developer|who made|creator|author|build me|brain|student|information engineering)\b', msg):
+        matched_intent = "developer"
+
+    # 5. Founder
     elif re.search(r'\b(founder|ceo|director|president|leader|who started|who founded|benaiah|kanawa|simone|swaray)\b', msg) or \
          ('who' in msg and ('start' in msg or 'found' in msg or 'creat' in msg or 'build' in msg or 'establish' in msg)):
         matched_intent = "founder"
 
-    # 3. Vision — before "about" (goal/future could match)
+    # 6. Vision
     elif re.search(r'\b(vision|future|long.?term goal)\b', msg):
         matched_intent = "vision"
 
-    # 4. Mission — before "about"
+    # 7. Mission
     elif re.search(r'\b(mission|purpose|aim|objective)\b', msg):
         matched_intent = "mission"
 
-    # 5. Programs/Courses — before "about" (what courses/what programs)
+    # 8. Programs/Courses
     elif re.search(r'\b(program|course|study|learn|department|accounting|quickbooks|microsoft|hardware|networking|graphic|ai|certificate|certification)\b', msg):
         matched_intent = "programs"
 
-    # 6. Location
+    # 9. Location
     elif re.search(r'\b(location|where|address|locate|map|situated|campus|find you|directions?)\b', msg):
         matched_intent = "location"
 
-    # 7. Fees/Cost
-    elif re.search(r'\b(fee|cost|price|tuition|pay|money|afford|scholarship|how much)\b', msg):
+    # 10. Fees/Cost
+    elif re.search(r'\b(fees?|cost|price|pay|tuition|amount|dollar|money)\b', msg):
         matched_intent = "fees"
 
-    # 8. Duration
-    elif re.search(r'\b(duration|how long|time|period|month|week|semester|graduate|finish|complete)\b', msg):
+    # 11. Duration
+    elif re.search(r'\b(long|duration|time|how many months|period|length)\b', msg):
         matched_intent = "duration"
 
-    # 9. Admission/Registration
-    elif re.search(r'\b(admission|apply|join|enroll|register|sign up|application|start|begin)\b', msg):
-        matched_intent = "admission"
-
-    # 10. Support/Contact
-    elif re.search(r'\b(support|contact|phone|whatsapp|technical|broken|error|problem|issue|call|reach)\b', msg):
+    # 12. Support
+    elif re.search(r'\b(support|technical|tech|problem|error|crash|broken|help me)\b', msg):
         matched_intent = "support"
 
-    # 11. Certificate
-    elif re.search(r'\b(certificate|certif|diploma|credential|qualification)\b', msg):
-        matched_intent = "certificate"
-
-    # 12. Motto/Slogan
-    elif re.search(r'\b(motto|slogan|saying|principle|tagline)\b', msg):
+    # 13. Motto
+    elif re.search(r'\b(motto|slogan|principle|value|empower)\b', msg):
         matched_intent = "motto"
 
-    # 13. Generic "about/who/what" — LAST so specific intents fire first
-    elif re.search(r'\b(about|who|what|iamstech|school|college|institute|institution|tell me|explain)\b', msg):
+    # 14. Contact
+    elif re.search(r'\b(contact|phone|number|whatsapp|email|reach|call)\b', msg):
+        matched_intent = "contact"
+
+    # 15. About (Fallback for general info)
+    elif re.search(r'\b(about|who are you|what is iamstech|tell me more|information|info)\b', msg):
         matched_intent = "about"
 
+    # Final Selection Logic
     if matched_intent and matched_intent in responses:
         response = random.choice(responses[matched_intent])
     else:
-        # Contextual Fallback
-        fallbacks = [
-            "I'm not quite sure about that. Try asking me about our programs, fees, location, or how to apply! 😊",
-            "I didn't catch that. I can help with: admissions, programs, fees, location, founder info, or technical support. What do you need?",
-            "Could you rephrase that? I'm specifically trained to assist with IAMSTECH institutional information — programs, location, fees, and more.",
-            "Hmm, I'm not sure about that one. Try asking: 'What programs do you offer?' or 'Where is IAMSTECH located?'"
-        ]
-        response = random.choice(fallbacks)
-
+        # Slightly humorous default response
+        response = random.choice([
+            "I'm not 100% sure I caught that—my gears might need a little oil! ⚙️ But I can definitely help you with Course Info, Career Guidance, or OTP/Login issues. What's on your mind?",
+            "Hmm, that's a tough one! Even my circuits are scratching their heads. 🤖 Maybe try asking about our courses or how to fix OTP issues? I'm much better at those!",
+            "I'm sorry, I didn't quite get that. I'm still learning! (It's hard being an AI sometimes, you know? 😅) Ask me about our founder, programs, or career opportunities instead!"
+        ])
+    
     return jsonify({"response": response})
 
 @app.route('/my_eid')
