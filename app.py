@@ -367,9 +367,15 @@ def index():
 def login():
     if request.method == 'POST':
         try:
-            email = request.form.get('email')
+            email = request.form.get('email', '').strip().lower() # Normalize for case-insensitive search
             password = request.form.get('password')
-            user = User.query.filter((User.email == email) | (User.student_id == email) | (User.school_email == email)).first()
+            
+            # Search by any of the identification fields
+            user = User.query.filter(
+                (db.func.lower(User.email) == email) | 
+                (db.func.lower(User.student_id) == email) | 
+                (db.func.lower(User.school_email) == email)
+            ).first()
             
             if user:
                 if getattr(user, 'is_suspended', False):
@@ -378,18 +384,24 @@ def login():
                     return redirect(url_for('login'))
                 
             if user and user.password and check_password_hash(user.password, password):
-                if user.is_superadmin:
+                # 1. SuperAdmin bypass
+                if user.role == 'SuperAdmin' or getattr(user, 'is_superadmin', False):
                     login_user(user)
                     flash('SuperAdmin access granted.', 'success')
                     return redirect(url_for('dashboard'))
                     
+                # 2. Verification Check
                 if not getattr(user, 'is_email_verified', False):
                     flash('Please verify your personal email address first.', 'warning')
                     return redirect(url_for('verify_email', user_id=user.id))
                     
-                if user.registration_state != 'approved':
-                    flash('Your account is pending approval by the administrator.', 'warning')
-                    return redirect(url_for('login'))
+                # 3. Registration State Check (Only for students/applicants)
+                # Admins, Teachers, and Staff should be able to log in if they have credentials
+                if user.role in ['Student', 'Applicant']:
+                    if user.registration_state != 'approved':
+                        flash('Your student account is pending final approval by the administrator.', 'warning')
+                        return redirect(url_for('login'))
+                
                 login_user(user)
                 log_audit('Successful Login')
                 return redirect(url_for('dashboard'))
