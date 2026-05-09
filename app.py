@@ -1,6 +1,7 @@
 import os
 import logging
 import re
+import threading
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,35 +20,41 @@ from email_service import mail, send_approval_email, send_reset_email, send_veri
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- Non-Blocking Email Dispatcher ---
+def send_async_email(app, email_func, *args, **kwargs):
+    def send_task(app_context, func, a, k):
+        with app_context:
+            try:
+                func(*a, **k)
+            except Exception as e:
+                logger.error(f"ASYNC EMAIL FAILURE: {e}")
+
+    thread = threading.Thread(target=send_task, args=(app.app_context(), email_func, args, kwargs))
+    thread.start()
+
 # --- Flask App & Production Config ---
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
 app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB Upload Limit
 
 # --- Global Error Handlers ---
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('errors/404.html'), 404
+    return render_template('errors/404.html', title="Page Not Found"), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
     db.session.rollback()
-    return render_template('errors/500.html'), 500
+    logger.critical(f"SERVER 500 ERROR: {e}")
+    return render_template('errors/500.html', title="System Error"), 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    # Log the error
-    logger.error(f"Unhandled Exception: {e}")
-    try:
-        with open('scratch/registration_errors.txt', 'a') as f:
-            f.write(f"UNHANDLED: {str(e)}\n")
-    except:
-        pass
+    logger.error(f"UNHANDLED EXCEPTION: {e}")
     db.session.rollback()
-    # If we are in debug mode, let the default debugger handle it
-    if app.debug:
-        raise e
-    return render_template('errors/500.html', error=e), 500
+    if app.debug: raise e
+    return render_template('errors/500.html', error_info="An internal logic error occurred. Our team is investigating."), 500
 
 
 # --- Database Configuration ---
@@ -59,72 +66,62 @@ if db_url and not force_sqlite:
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 else:
-    # Priority 1: Railway Persistent Volume
-    if os.path.exists('/data'):
-        db_path = '/data/iamstech.db'
-    # Priority 2: Standard Flask Instance Folder (Preferred for local)
-    elif os.path.exists(app.instance_path):
-        db_path = os.path.join(app.instance_path, 'iamstech.db')
-    # Priority 3: Vercel Temporary Store (non-persistent)
-    elif os.path.exists('/tmp'):
-        db_path = '/tmp/iamstech.db'
-    else:
-        db_path = 'iamstech.db'
-        
-    # Ensure the directory exists
+    if os.path.exists('/data'): db_path = '/data/iamstech.db'
+    elif os.path.exists(app.instance_path): db_path = os.path.join(app.instance_path, 'iamstech.db')
+    elif os.path.exists('/tmp'): db_path = '/tmp/iamstech.db'
+    else: db_path = 'iamstech.db'
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    # Increase timeout to handle concurrency on Railway/SQLite
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}?timeout=20"
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}?timeout=30"
 
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 300
-}
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True, "pool_recycle": 280}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# --- Mail Config from Environment ---
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 
 # --- Initialize Extensions ---
 db.init_app(app)
 with app.app_context():
     try:
         db.create_all()
-        # --- AUTO MIGRATION (Self-Healing) ---
+        # --- EXHAUSTIVE AUTO-MIGRATION (Full Spectrum) ---
         from sqlalchemy import text, inspect
         inspector = inspect(db.engine)
         
-        # Founder Table Migration
-        existing_cols = [c['name'] for c in inspector.get_columns('founder')]
+        # 1. User Table Hardening
+        user_cols = [c['name'] for c in inspector.get_columns('user')]
+        user_updates = {
+            'registration_state': 'VARCHAR(30)',
+            'otp_email_status': 'VARCHAR(20)',
+            'is_suspended': 'BOOLEAN',
+            'suspension_reason': 'TEXT',
+            'is_email_verified': 'BOOLEAN'
+        }
+        for col, col_type in user_updates.items():
+            if col not in user_cols:
+                try:
+                    db.session.execute(text(f"ALTER TABLE \"user\" ADD COLUMN {col} {col_type}"))
+                    db.session.commit()
+                except Exception: db.session.rollback()
+
+        # 2. Founder Table Hardening
+        founder_cols = [c['name'] for c in inspector.get_columns('founder')]
         for col in ['bio', 'vision', 'mission', 'leadership_statement']:
-            if col not in existing_cols:
+            if col not in founder_cols:
                 try:
                     db.session.execute(text(f"ALTER TABLE founder ADD COLUMN {col} TEXT"))
                     db.session.commit()
-                    logger.info(f"Auto-Migration: Added missing column {col} to founder.")
-                except Exception:
-                    db.session.rollback()
+                except Exception: db.session.rollback()
 
-        # Developer Table Migration
-        existing_dev_cols = [c['name'] for c in inspector.get_columns('developer')]
-        if 'bio' not in existing_dev_cols:
+        # 3. Developer Table Hardening
+        dev_cols = [c['name'] for c in inspector.get_columns('developer')]
+        if 'bio' not in dev_cols:
             try:
                 db.session.execute(text(f"ALTER TABLE developer ADD COLUMN bio TEXT"))
                 db.session.commit()
-                logger.info("Auto-Migration: Added missing column bio to developer.")
-            except Exception:
-                db.session.rollback()
+            except Exception: db.session.rollback()
 
         from seed_sa_module import seed_sa_func
         seed_sa_func()
     except Exception as e:
-        print(f"Startup DB init failed: {e}")
+        logger.critical(f"STARTUP RECOVERY FAILED: {e}")
 
 mail.init_app(app)
 login_manager = LoginManager()
@@ -293,21 +290,16 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        user = User.query.filter((User.email == email) | (User.student_id == email) | (User.school_email == email)).first()
-        
-        if user:
-            if getattr(user, 'is_suspended', False):
-                reason = getattr(user, 'suspension_reason', 'Violation of platform policies.')
-                flash(f'Your account has been suspended. Reason: {reason}', 'danger')
-                try:
-                    ip = request.remote_addr
-                    db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Suspended)', ip_address=ip))
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                return redirect(url_for('login'))
+        try:
+            email = request.form.get('email')
+            password = request.form.get('password')
+            user = User.query.filter((User.email == email) | (User.student_id == email) | (User.school_email == email)).first()
+            
+            if user:
+                if getattr(user, 'is_suspended', False):
+                    reason = getattr(user, 'suspension_reason', 'Violation of platform policies.')
+                    flash(f'Your account has been suspended. Reason: {reason}', 'danger')
+                    return redirect(url_for('login'))
                 
             if check_password_hash(user.password, password):
                 if user.is_superadmin:
@@ -333,8 +325,12 @@ def login():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Critical login error: {e}")
             
         flash('Invalid credentials. Please try again.', 'danger')
+        return redirect(url_for('login'))
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -488,26 +484,32 @@ def verify_email(user_id):
         return redirect(url_for('login'))
         
     if request.method == 'POST':
-        logger.info(f"[VERIFY] Processing OTP submission for {user.email}")
-        code = request.form.get('otp')
-        
-        if user.verification_attempts >= 5:
-            flash('Too many failed attempts. Please request a new code.', 'danger')
-            return redirect(url_for('verify_email', user_id=user.id))
+        try:
+            logger.info(f"[VERIFY] Processing OTP submission for {user.email}")
+            code = request.form.get('otp')
             
-        if datetime.utcnow() > user.verification_code_expires:
-            flash('Verification code expired. Please request a new one.', 'danger')
-            return redirect(url_for('verify_email', user_id=user.id))
-            
-        if code == user.verification_code:
-            user.is_email_verified = True
-            user.registration_state = 'verified_awaiting_approval'  # Move to admin review
-            user.verification_code = None
-            db.session.commit()
-            return render_template('verification_success.html', name=user.name)
-        else:
-            user.verification_attempts += 1
-            db.session.commit()
+            if (user.verification_attempts or 0) >= 5:
+                flash('Too many failed attempts. Please request a new code.', 'danger')
+                return redirect(url_for('verify_email', user_id=user.id))
+                
+            if datetime.utcnow() > (user.verification_code_expires or datetime.min):
+                flash('Verification code expired. Please request a new one.', 'danger')
+                return redirect(url_for('verify_email', user_id=user.id))
+                
+            if code == user.verification_code:
+                user.is_email_verified = True
+                user.registration_state = 'verified_awaiting_approval'
+                user.verification_code = None
+                db.session.commit()
+                return render_template('verification_success.html', name=user.name)
+            else:
+                user.verification_attempts = (user.verification_attempts or 0) + 1
+                db.session.commit()
+                flash('Invalid verification code. Please try again.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Verification POST error: {e}")
+            flash('A technical error occurred. Please try again.', 'warning')
     if app.config['DEV_MODE']:
         flash(f'DEV MODE - Your OTP is: {user.verification_code}', 'warning')
         
@@ -544,21 +546,18 @@ def resend_verification(user_id):
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email = request.form.get('email')
-        user = User.query.filter_by(email=email).first()
-        if user:
-            user.reset_token = str(uuid.uuid4())
-            user.reset_token_expiration = datetime.utcnow() + timedelta(hours=1)
-            db.session.commit()
-            send_reset_email(user)
-            
-            # Log it
-            try:
-                ip = request.remote_addr
-                db.session.add(SystemAuditLog(user_id=user.id, action='Password Reset Requested', ip_address=ip))
+        try:
+            email = request.form.get('email')
+            user = User.query.filter_by(email=email).first()
+            if user:
+                user.reset_token = str(uuid.uuid4())
+                user.reset_token_expiration = datetime.utcnow() + timedelta(hours=1)
                 db.session.commit()
-            except Exception:
-                db.session.rollback()
+                send_reset_email(user)
+                log_audit('Password Reset Requested', target_id=user.id, target_type='User')
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Forgot password error: {e}")
             
         # Always show the same message to prevent email enumeration
         flash('If that email exists in our system, a password reset link has been sent.', 'info')
@@ -840,20 +839,23 @@ def cleanup_abandoned():
 @app.route('/superadmin/force-verify/<int:user_id>')
 @login_required
 @superadmin_required
-def force_verify(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.is_email_verified:
-        flash('User is already verified.', 'info')
-    else:
-        user.is_email_verified = True
-        user.registration_state = 'verified_awaiting_approval'
-        user.verification_code = None
-        db.session.commit()
-        try:
+def force_verify_user(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        if user.is_email_verified:
+            flash('User is already verified.', 'info')
+        else:
+            user.is_email_verified = True
+            user.registration_state = 'verified_awaiting_approval'
+            user.verification_code = None
+            db.session.commit()
             log_audit(f"Force Verified User {user.email}", target_id=user.id, target_type='User')
-        except:
-            pass
-        flash(f'Account {user.email} successfully force verified.', 'success')
+            flash(f'Account {user.email} successfully force verified.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Force Verify Error: {e}")
+        flash('Could not force verify user.', 'danger')
+        
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/approve/<int:user_id>')
