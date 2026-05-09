@@ -39,15 +39,13 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
 app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB Upload Limit
-raw_base_url = os.environ.get('IAMSTECH_BASE_URL', '').strip().rstrip('/')
-app.config['BASE_URL'] = raw_base_url or None
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB Upload Limit
+app.config['BASE_URL'] = os.environ.get('IAMSTECH_BASE_URL', '').strip().rstrip('/') or None
 app.config['PREFERRED_URL_SCHEME'] = 'https'
-if raw_base_url:
-    base_host = raw_base_url
-    if raw_base_url.startswith('http://') or raw_base_url.startswith('https://'):
-        base_host = raw_base_url.split('://', 1)[1]
-    app.config['SERVER_NAME'] = base_host
+# NOTE: SERVER_NAME is intentionally NOT set — setting it causes Flask to
+# return 404 for all routes when the configured value doesn't exactly match
+# the Host header (e.g. after a Railway domain rename). ProxyFix handles
+# correct external URL generation instead.
 
 # --- Global Error Handlers ---
 @app.errorhandler(404)
