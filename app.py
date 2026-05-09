@@ -786,7 +786,10 @@ def admin_update_branding():
             photo.save(logo_path)
             flash('Institutional Logo updated successfully!', 'success')
         elif b_type == 'hero':
-            # Update homepage hero
+            # Update homepage hero by overwriting standard location or updating a config
+            hero_path = os.path.join('static', 'uploads', 'branding', 'hero.jpg')
+            photo.seek(0)
+            photo.save(hero_path)
             flash('Homepage Hero updated successfully!', 'success')
         elif b_type == 'founder':
             founder = Founder.query.first() or Founder()

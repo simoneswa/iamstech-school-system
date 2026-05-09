@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(13, 27, 62, 0.8), rgba(7, 16, 38, 0.9)), 
+                    url("{{ url_for('static', filename='uploads/branding/hero.jpg') }}");
+        background-size: cover;
+        background-position: center;
+    }
+</style>
 <!-- HERO SECTION (Institutional) -->
 <header class="hero-section">
     <div class="container">

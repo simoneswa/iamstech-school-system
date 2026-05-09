@@ -240,7 +240,7 @@
                     <!-- DEVELOPER PHOTO -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ url_for('static', filename=developers[0].image_path if developers else '') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
+                            <img src="{{ url_for('static', filename=developers[0].image_path) if (developers and developers[0].image_path) else 'https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo' }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
                         </div>
                         <div class="media-actions">
                             <div>
