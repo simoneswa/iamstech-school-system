@@ -1390,7 +1390,27 @@ def chatbot():
 
     return jsonify({"response": response})
 
+@app.route('/my_eid')
+@login_required
+def my_eid():
+    if current_user.role == 'Applicant' or current_user.status == 'Pending Verification':
+        flash("Your E-ID is not generated yet. You must be fully approved.", "warning")
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('view_eid', user_id=current_user.id))
 
+@app.route('/view_eid/<int:user_id>')
+@login_required
+def view_eid(user_id):
+    if current_user.id != user_id and current_user.role not in ['Admin', 'SuperAdmin']:
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('dashboard'))
+        
+    user = User.query.get_or_404(user_id)
+    if not user.student_id:
+        flash("This user does not have an ID number assigned.", "warning")
+        return redirect(url_for('dashboard'))
+        
+    return render_template('dashboards/eid_card.html', user=user)
 @app.route('/logout')
 @login_required
 def logout():

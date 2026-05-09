@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}Digital E-ID - {{ user.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f0f2f5;
+    }
+    
+    .eid-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 80px);
+        padding: 2rem;
+    }
+    
+    .id-card-wrapper {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        padding: 2rem;
+        max-width: 500px;
+        width: 100%;
+    }
+    
+    .id-card {
+        width: 350px;
+        height: 550px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+        margin: 0 auto;
+        border: 1px solid #e0e0e0;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .id-card-header {
+        background: linear-gradient(135deg, #0d1b3e 0%, #1e3a8a 100%);
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    
+    .id-card-header::after {
+        content: '';
+        position: absolute;
+        bottom: -20px;
+        left: -10%;
+        width: 120%;
+        height: 40px;
+        background: #ff6f00;
+        transform: rotate(-3deg);
+        z-index: 1;
+    }
+    
+    .id-logo {
+        height: 40px;
+        margin-bottom: 5px;
+        z-index: 2;
+    }
+    
+    .id-school-name {
+        color: white;
+        font-weight: 900;
+        letter-spacing: 2px;
+        font-size: 1.1rem;
+        z-index: 2;
+    }
+    
+    .id-photo-container {
+        position: absolute;
+        top: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        background: white;
+        padding: 4px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    
+    .id-photo {
+        width: 110px;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 2px solid #f0f0f0;
+    }
+    
+    .id-body {
+        padding-top: 110px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .id-name {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0d1b3e;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+    }
+    
+    .id-role {
+        display: inline-block;
+        background: rgba(255, 111, 0, 0.1);
+        color: #ff6f00;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+    }
+    
+    .id-details {
+        width: 80%;
+        text-align: left;
+        margin-bottom: 20px;
+    }
+    
+    .id-row {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 4px;
+    }
+    
+    .id-label {
+        font-size: 0.65rem;
+        color: #888;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    
+    .id-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #333;
+    }
+    
+    .id-barcode-container {
+        width: 100%;
+        text-align: center;
+        padding: 0 20px;
+        margin-top: auto;
+    }
+    
+    .id-barcode {
+        width: 100%;
+        height: 60px;
+    }
+    
+    .id-footer {
+        background: #0d1b3e;
+        color: white;
+        text-align: center;
+        padding: 8px;
+        font-size: 0.6rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eid-container">
+    <div class="id-card-wrapper text-center">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-black text-primary mb-0"><i class="fas fa-id-card me-2"></i>Digital Identity Card</h4>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-pill"><i class="fas fa-arrow-left me-1"></i>Back</a>
+        </div>
+        
+        <!-- THE ID CARD TO BE EXPORTED -->
+        <div id="capture-area">
+            <div class="id-card">
+                <div class="id-card-header">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" class="id-logo" alt="IAMSTECH">
+                    <div class="id-school-name">IAMSTECH LIBERIA</div>
+                </div>
+                
+                <div class="id-photo-container">
+                    <img src="{{ url_for('static', filename=user.profile_photo if user.profile_photo else 'img/default-avatar.png') }}" 
+                         class="id-photo" 
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 110 130%22%3E%3Crect fill=%22%23e0e0e0%22 width=%22110%22 height=%22130%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22 font-family=%22sans-serif%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
+                </div>
+                
+                <div class="id-body">
+                    <div class="id-name">{{ user.name }}</div>
+                    <div class="id-role">{{ user.role }}</div>
+                    
+                    <div class="id-details">
+                        <div class="id-row">
+                            <span class="id-label">ID Number</span>
+                            <span class="id-value text-primary">{{ user.student_id }}</span>
+                        </div>
+                        <div class="id-row">
+                            <span class="id-label">Program / Department</span>
+                            <span class="id-value">{{ user.department or 'N/A' }}</span>
+                        </div>
+                        <div class="id-row">
+                            <span class="id-label">Issue Date</span>
+                            <span class="id-value">{{ user.created_at.strftime('%b %d, %Y') if user.created_at else '2026' }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="id-barcode-container">
+                        <svg id="barcode"></svg>
+                    </div>
+                </div>
+                
+                <div class="id-footer">
+                    PROPERTY OF IAMSTECH LIBERIA
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-5 d-flex gap-3 justify-content-center">
+            <button onclick="downloadPDF()" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
+                <i class="fas fa-file-pdf me-2"></i>Download PDF
+            </button>
+            <button onclick="downloadImage()" class="btn btn-warning fw-bold px-4 py-2 rounded-pill shadow-sm">
+                <i class="fas fa-image me-2"></i>Download Image
+            </button>
+        </div>
+        
+        <p class="small text-muted mt-4 mb-0"><i class="fas fa-info-circle me-1"></i> This is a valid digital representation of your IAMSTECH identity.</p>
+    </div>
+</div>
+
+<!-- LIBRARIES FOR BARCODE AND PDF GENERATION -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    // Generate Barcode
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            JsBarcode("#barcode", "{{ user.student_id }}", {
+                format: "CODE128",
+                width: 2,
+                height: 40,
+                displayValue: true,
+                fontSize: 12,
+                margin: 5,
+                background: "transparent",
+                lineColor: "#0d1b3e"
+            });
+        } catch (error) {
+            console.error("Barcode generation failed:", error);
+        }
+    });
+
+    // Download as PDF
+    function downloadPDF() {
+        const element = document.getElementById('capture-area');
+        const opt = {
+            margin:       0.5,
+            filename:     'IAMSTECH_E-ID_{{ user.student_id }}.pdf',
+            image:        { type: 'jpeg', quality: 1 },
+            html2canvas:  { scale: 4, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a5', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    }
+    
+    // Download as Image using HTML2Canvas (bundled inside html2pdf)
+    function downloadImage() {
+        const element = document.getElementById('capture-area');
+        html2pdf().from(element).outputImg('datauristring').then(function(imgStr) {
+            const link = document.createElement('a');
+            link.href = imgStr;
+            link.download = 'IAMSTECH_E-ID_{{ user.student_id }}.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+</script>
+{% endblock %}

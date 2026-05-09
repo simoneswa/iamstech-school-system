@@ -389,7 +389,9 @@
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Manage</button>
                                             <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" href="{{ url_for('view_id_card', user_id=user.id) }}">View ID Card</a></li>
+                                                {% if user.student_id %}
+                                                    <li><a class="dropdown-item" href="{{ url_for('view_eid', user_id=user.id) }}"><i class="fas fa-id-card me-2"></i>View E-ID</a></li>
+                                                {% endif %}
                                                 <li><hr class="dropdown-divider"></li>
                                                 {% if user.registration_state == 'pending_verification' %}
                                                     <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
