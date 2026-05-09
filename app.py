@@ -15,10 +15,11 @@ import io
 from flask import send_file
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('IAMSTECH_SYS')
 
 # --- Non-Blocking Email Dispatcher ---
 def send_async_email(app, email_func, *args, **kwargs):
@@ -34,6 +35,8 @@ def send_async_email(app, email_func, *args, **kwargs):
 
 # --- Flask App & Production Config ---
 app = Flask(__name__)
+# CRITICAL: ProxyFix for Railway (Fixes invalid _external=True URLs)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
 app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB Upload Limit

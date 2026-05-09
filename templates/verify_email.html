@@ -39,9 +39,22 @@
                         </form>
 
                         <div class="text-center mt-5">
-                            <p class="small text-muted mb-2">Didn't receive the code?</p>
-                            <div id="resend-timer-wrapper">
-                                <a href="{{ url_for('resend_verification', user_id=user_id) }}" class="btn btn-link text-primary fw-bold text-decoration-none" id="resend-btn">Resend Verification Code</a>
+                            <p class="small text-muted mb-3">Having trouble receiving your verification code?</p>
+                            
+                            <div class="support-escalation bg-light border rounded-3 p-3 text-start">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="text-primary mt-1"><i class="fas fa-headset fa-2x"></i></div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-dark">Technical Support Assistance</h6>
+                                        <p class="small text-muted mb-3">If you are not receiving your OTP or are experiencing email delays, please contact our Technical Support Team via WhatsApp for immediate account verification.</p>
+                                        <a href="https://wa.me/231880864187" target="_blank" class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm hover-lift px-3">
+                                            <i class="fab fa-whatsapp me-2 fa-lg"></i>Contact Support
+                                        </a>
+                                        <a href="{{ url_for('resend_verification', user_id=user_id) }}" class="btn btn-sm btn-outline-secondary rounded-pill ms-2 hover-lift px-3">
+                                            <i class="fas fa-sync-alt me-2"></i>Resend OTP
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

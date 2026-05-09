@@ -377,14 +377,15 @@ img {
 }
 
 .dev-portrait-large {
-    width: 130px; /* Precise Passport Scale */
-    height: 130px;
+    width: 110px; /* Precise Passport Scale */
+    height: 110px;
     border-radius: 50%;
-    padding: 5px;
+    padding: 4px;
     background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255,255,255,0.2);
     box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+    object-fit: cover; /* Fixes distortion and cropping */
 }
 
 /* Founder Specific Prominence */
