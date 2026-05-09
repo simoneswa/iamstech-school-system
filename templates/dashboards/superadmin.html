@@ -357,7 +357,7 @@
                                     <td>
                                         {% if user.is_suspended %}
                                             <span class="badge bg-danger text-white">Suspended</span>
-                                        {% elif user.registration_state == 'approved' and getattr(user, 'must_change_password', False) %}
+                                        {% elif user.registration_state == 'approved' and user.must_change_password %}
                                             <span class="badge bg-warning text-dark"><i class="fas fa-key me-1"></i>Awaiting Setup</span>
                                         {% elif user.registration_state == 'approved' %}
                                             <span class="badge bg-success text-white">Active</span>
@@ -387,7 +387,7 @@
                                                 {% if user.registration_state == 'pending_verification' %}
                                                     <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
                                                 {% endif %}
-                                                {% if user.registration_state == 'approved' and getattr(user, 'must_change_password', False) and getattr(user, 'setup_token', None) %}
+                                                {% if user.registration_state == 'approved' and user.must_change_password and user.setup_token %}
                                                     <li>
                                                         <a class="dropdown-item text-success fw-bold" href="javascript:void(0);" 
                                                            onclick="navigator.clipboard.writeText('{{ url_for('setup_account', token=user.setup_token, _external=True) }}'); alert('Activation Link copied! Send this to the applicant so they can set their password.');">
