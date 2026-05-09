@@ -14,7 +14,7 @@ import random
 import io
 from flask import send_file
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
-from email_service import mail, send_approval_email, send_reset_email, send_verification_otp
+from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # --- Professional Logging ---
@@ -40,6 +40,14 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "iamstech_secret_2026")
 app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB Upload Limit
+raw_base_url = os.environ.get('IAMSTECH_BASE_URL', '').strip().rstrip('/')
+app.config['BASE_URL'] = raw_base_url or None
+app.config['PREFERRED_URL_SCHEME'] = 'https'
+if raw_base_url:
+    base_host = raw_base_url
+    if raw_base_url.startswith('http://') or raw_base_url.startswith('https://'):
+        base_host = raw_base_url.split('://', 1)[1]
+    app.config['SERVER_NAME'] = base_host
 
 # --- Global Error Handlers ---
 @app.errorhandler(404)
@@ -131,6 +139,12 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# --- Role Configuration ---
+ROLE_CHOICES = ['SuperAdmin', 'Admin', 'Teacher', 'Student', 'Staff', 'Applicant']
+SUPERADMIN_ASSIGNABLE_ROLES = ['Admin', 'Teacher', 'Student', 'Staff', 'Applicant']
+ADMIN_ASSIGNABLE_ROLES = ['Teacher', 'Student', 'Staff', 'Applicant']
+DEFAULT_APPROVAL_ROLE = 'Student'
+
 # --- Security Decorators ---
 def admin_required(f):
     @wraps(f)
@@ -138,6 +152,9 @@ def admin_required(f):
         if current_user.role not in ['Admin', 'SuperAdmin']:
             flash('Admin access required.', 'danger')
             return redirect(url_for('dashboard'))
+        if getattr(current_user, 'is_suspended', False):
+            flash('Your account is suspended. Contact administration.', 'danger')
+            return redirect(url_for('logout'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -409,6 +426,8 @@ def register():
             user_to_save.phone = phone
             user_to_save.department = dept
             user_to_save.registration_state = 'pending_verification'
+            user_to_save.role = user_to_save.role or 'Applicant'
+            user_to_save.status = 'Pending'
             user_to_save.is_email_verified = False
             user_to_save.verification_code = otp
             user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
@@ -529,7 +548,7 @@ def verify_email(user_id):
         flash(f'DEV MODE - Your OTP is: {user.verification_code}', 'warning')
         
     if getattr(user, 'otp_email_status', None) == 'failed':
-        flash('Notice: We encountered an issue sending the verification email. If you have your OTP through other means, enter it below.', 'danger')
+        flash('We are currently unable to deliver the verification email. Please contact our Technical Support Team on WhatsApp for immediate assistance with your account verification.', 'danger')
 
     return render_template('verify_email.html', user_id=user.id, email=user.email)
 
@@ -659,7 +678,7 @@ def dashboard():
         meetings = Meeting.query.filter_by(teacher_id=current_user.id).all()
         return render_template('dashboards/teacher.html', meetings=meetings)
         
-    else:
+    elif current_user.role in ['Student', 'Staff']:
         # Gamification: Daily Login Reward
         today = datetime.utcnow().date()
         if getattr(current_user, 'last_login_reward_date', None) != today:
@@ -681,8 +700,11 @@ def dashboard():
         enrolled_course_ids = [e.course_id for e in enrollments]
         assignments = Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else []
 
-        # All meetings (students see all published meetings)
+        # All meetings (students and staff see published meetings)
         meetings = Meeting.query.order_by(Meeting.date.desc()).all()
+
+        # Announcements for portal updates
+        announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
 
         # Leaderboard
         top_students = User.query.filter_by(role='Student', status='Approved').order_by(User.points.desc()).limit(10).all()
@@ -695,7 +717,16 @@ def dashboard():
                                assignments=assignments,
                                meetings=meetings,
                                top_students=top_students,
-                               my_rank=rank)
+                               my_rank=rank,
+                               announcements=announcements,
+                               user_role=current_user.role)
+    elif current_user.role == 'Applicant':
+        announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
+        return render_template('dashboards/applicant.html', announcements=announcements)
+    else:
+        flash('Your role does not have a dashboard yet. Please contact administration.', 'warning')
+        announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
+        return render_template('dashboards/applicant.html', announcements=announcements)
 
 # --- Admin Controls ---
 @app.route('/admin/update-branding', methods=['POST'])
@@ -873,13 +904,25 @@ def force_verify_user(user_id):
         
     return redirect(url_for('dashboard'))
 
-@app.route('/admin/approve/<int:user_id>')
-@app.route('/approve/<int:user_id>') # Alias for compatibility
+@app.route('/admin/approve/<int:user_id>', methods=['GET','POST'])
+@app.route('/approve/<int:user_id>', methods=['GET','POST']) # Alias for compatibility
 @login_required
 @admin_required
 def approve_user(user_id):
     user = User.query.get_or_404(user_id)
+    requested_role = request.form.get('role') if request.method == 'POST' else None
+    new_role = requested_role or DEFAULT_APPROVAL_ROLE
+
+    if new_role not in ROLE_CHOICES:
+        new_role = DEFAULT_APPROVAL_ROLE
+
+    if current_user.role != 'SuperAdmin' and new_role not in ADMIN_ASSIGNABLE_ROLES:
+        flash('You are not authorized to approve a user with that role.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    user.role = new_role
     user.registration_state = 'approved'
+    user.status = 'Approved'
     user.student_id = generate_institutional_id(user.role)
     user.school_email = generate_institutional_email(user.name, user.role)
     
@@ -911,7 +954,7 @@ def approve_user(user_id):
     except Exception:
         db.session.rollback()
 
-    setup_link = url_for('setup_account', token=user.setup_token, _external=True)
+    setup_link = build_external_url('setup_account', token=user.setup_token)
     if email_sent:
         flash(f'Success! {user.name} approved and institutional email sent.', 'success')
         flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'info')
@@ -921,6 +964,7 @@ def approve_user(user_id):
 
     return redirect(url_for('dashboard'))
 
+@app.route('/setup-password/<token>', methods=['GET', 'POST'])
 @app.route('/setup-account/<token>', methods=['GET', 'POST'])
 def setup_account(token):
     user = User.query.filter_by(setup_token=token).first()
@@ -1050,23 +1094,37 @@ def reactivate_user(user_id):
     flash(f'Account {user.email} reactivated.', 'success')
     return redirect(url_for('dashboard'))
 
+@app.route('/admin/change-role/<int:user_id>', methods=['POST'])
 @app.route('/superadmin/change-role/<int:user_id>', methods=['POST'])
 @login_required
-@superadmin_required
 def change_role(user_id):
+    if current_user.role not in ['Admin', 'SuperAdmin']:
+        flash('Admin access required.', 'danger')
+        return redirect(url_for('dashboard'))
+
     user = User.query.get_or_404(user_id)
     if user.is_superadmin:
-        flash("Cannot modify SuperAdmin role.", "danger")
+        flash('Cannot modify SuperAdmin role.', 'danger')
         return redirect(url_for('dashboard'))
-        
+
     new_role = request.form.get('role')
-    if new_role in ['Admin', 'Teacher', 'Student']:
-        old_role = user.role
-        user.role = new_role
-        # Optional: regenerate ID based on new role
-        db.session.commit()
-        log_audit(f"Changed role from {old_role} to {new_role}", target_id=user.id, target_type='User')
-        flash(f'Role updated to {new_role}.', 'success')
+    permitted_roles = SUPERADMIN_ASSIGNABLE_ROLES if current_user.role == 'SuperAdmin' else ADMIN_ASSIGNABLE_ROLES
+
+    if new_role not in permitted_roles:
+        flash('You are not authorized to assign that role.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    old_role = user.role
+    user.role = new_role
+    if user.registration_state == 'approved':
+        user.status = 'Approved'
+    db.session.commit()
+
+    if current_user.id == user.id:
+        login_user(user, remember=True, fresh=True)
+
+    log_audit(f'Changed role from {old_role} to {new_role}', target_id=user.id, target_type='User')
+    flash(f'Role updated to {new_role}.', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/superadmin/broadcast', methods=['POST'])

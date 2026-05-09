@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Applicant Portal - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="applicant-portal" style="min-height: 100vh; background: #f4f7fb; padding: 4rem 2rem;">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="fw-black">Application Status</h1>
+            <p class="lead text-muted">Thank you for completing your registration. Your application is under review and will be updated shortly.</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="p-5 rounded-4 shadow-sm bg-white border">
+                    <div class="mb-4 text-center">
+                        <span class="badge bg-primary rounded-pill py-2 px-4">Applicant Access</span>
+                    </div>
+                    <h2 class="fw-bold mb-3">Hello, {{ current_user.name }}</h2>
+                    <p class="text-muted mb-4">Your account is currently assigned the <strong>Applicant</strong> role. Once approved, you will receive a notification and be redirected to the student dashboard automatically.</p>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-4 rounded-4 border bg-light">
+                                <p class="small text-muted mb-1">Registration</p>
+                                <p class="fw-bold mb-0">{{ current_user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 rounded-4 border bg-light">
+                                <p class="small text-muted mb-1">Current Role</p>
+                                <p class="fw-bold mb-0">Applicant</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4">
+                        <h5 class="fw-bold mb-3">What happens next?</h5>
+                        <ul class="list-unstyled text-muted lh-lg">
+                            <li>• Our admissions team will review your profile.</li>
+                            <li>• You will receive an email when your account is approved.</li>
+                            <li>• Once approved, you can access your full student dashboard.</li>
+                        </ul>
+                        <p class="small text-muted mb-0">If you need help, contact support at <a href="mailto:support@iamstech.edu">support@iamstech.edu</a>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

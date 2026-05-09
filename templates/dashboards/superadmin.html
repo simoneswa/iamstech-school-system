@@ -352,7 +352,14 @@
                                         <div class="small text-muted">{{ user.email }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge {% if user.role == 'SuperAdmin' %}bg-danger{% elif user.role == 'Admin' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{ user.role }}</span>
+                                        <form action="{{ url_for('change_role', user_id=user.id) }}" method="POST" class="d-flex gap-2 align-items-center justify-content-end">
+                                            <select name="role" class="form-select form-select-sm">
+                                                {% for role in ['Admin', 'Teacher', 'Student', 'Staff', 'Applicant'] %}
+                                                <option value="{{ role }}" {% if user.role == role %}selected{% endif %}>{{ role }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3">Save</button>
+                                        </form>
                                     </td>
                                     <td>
                                         {% if user.is_suspended %}

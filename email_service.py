@@ -41,6 +41,18 @@ def send_async_email(app, msg, user_id=None, otp_code=None):
                     user.otp_email_status = 'failed'
                     db.session.commit()
 
+def build_external_url(endpoint, **values):
+    app = current_app._get_current_object()
+    base_url = app.config.get('BASE_URL') or os.environ.get('IAMSTECH_BASE_URL') or app.config.get('SERVER_NAME')
+    if base_url:
+        base_url = base_url.strip().rstrip('/')
+        if not base_url.startswith('http'):
+            base_url = 'https://' + base_url
+        path = url_for(endpoint, _external=False, **values)
+        return base_url + path
+    return url_for(endpoint, _external=True, **values)
+
+
 def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None, otp_code=None):
     """
     Core wrapper for sending emails asynchronously.
@@ -54,7 +66,7 @@ def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None, 
             print(f"INFO: [SAFE_MODE] Skipping email dispatch to {recipients} (OTP: {otp_code})")
             return True
 
-        sender_email = app.config.get("MAIL_USERNAME")
+        sender_email = app.config.get("MAIL_DEFAULT_SENDER") or app.config.get("MAIL_USERNAME") or os.environ.get('MAIL_DEFAULT_SENDER')
         msg = Message(subject=subject, sender=sender_email, recipients=recipients)
         msg.body = text_body
         msg.html = html_body
@@ -70,7 +82,7 @@ def send_approval_email(user):
     """
     Sends an official welcome email to the approved user with their setup link.
     """
-    setup_link = url_for('setup_account', token=user.setup_token, _external=True)
+    setup_link = build_external_url('setup_account', token=user.setup_token)
     subject = f"Welcome to IAMSTECH LIBERIA - Your {user.role} Credentials"
     
     text_body = f"""
@@ -124,7 +136,7 @@ def render_approval_html(user, setup_link):
             </p>
             
             <p style="text-align: center; margin-top: 15px;">
-                <small>Once setup is complete, you can <a href="{url_for('login', _external=True)}">log in to the portal here</a>.</small>
+                <small>Once setup is complete, you can <a href="{build_external_url('login')}">log in to the portal here</a>.</small>
             </p>
             
             <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
@@ -141,7 +153,7 @@ def send_reset_email(user):
     """
     Sends a password reset email with a secure token.
     """
-    reset_link = url_for('reset_password', token=user.reset_token, _external=True)
+    reset_link = build_external_url('reset_password', token=user.reset_token)
     subject = "IAMSTECH LIBERIA - Password Reset Request"
     
     text_body = f"""

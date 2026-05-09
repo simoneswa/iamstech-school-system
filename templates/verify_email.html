@@ -41,16 +41,16 @@
                         <div class="text-center mt-5">
                             <p class="small text-muted mb-3">Having trouble receiving your verification code?</p>
                             
-                            <div class="support-escalation bg-light border rounded-3 p-3 text-start">
+                            <div class="support-escalation bg-white border-start border-4 border-primary rounded-4 p-4 text-start shadow-sm">
                                 <div class="d-flex align-items-start gap-3">
                                     <div class="text-primary mt-1"><i class="fas fa-headset fa-2x"></i></div>
                                     <div>
-                                        <h6 class="fw-bold mb-1 text-dark">Technical Support Assistance</h6>
-                                        <p class="small text-muted mb-3">If you are not receiving your OTP or are experiencing email delays, please contact our Technical Support Team via WhatsApp for immediate account verification.</p>
-                                        <a href="https://wa.me/231880864187" target="_blank" class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm hover-lift px-3">
-                                            <i class="fab fa-whatsapp me-2 fa-lg"></i>Contact Support
+                                        <h6 class="fw-bold mb-2 text-dark">Having trouble receiving your verification code?</h6>
+                                        <p class="small text-muted mb-3">If your OTP does not arrive shortly, our Technical Support Team is available on WhatsApp to assist with account verification and onboarding.</p>
+                                        <a href="https://wa.me/231880864187" target="_blank" class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm hover-lift px-4">
+                                            <i class="fab fa-whatsapp me-2 fa-lg"></i>WhatsApp Support
                                         </a>
-                                        <a href="{{ url_for('resend_verification', user_id=user_id) }}" class="btn btn-sm btn-outline-secondary rounded-pill ms-2 hover-lift px-3">
+                                        <a id="resend-btn" href="{{ url_for('resend_verification', user_id=user_id) }}" class="btn btn-sm btn-outline-secondary rounded-pill ms-2 hover-lift px-4">
                                             <i class="fas fa-sync-alt me-2"></i>Resend OTP
                                         </a>
                                     </div>
