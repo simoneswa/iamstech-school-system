@@ -1030,18 +1030,26 @@ def chatbot():
     data = request.json
     msg = data.get('message', '').lower()
     
+    # Dynamic Context from Database
+    founder_data = Founder.query.first()
+    f_name = founder_data.name if founder_data else "Beniah Success Kanawa"
+    f_vision = founder_data.vision if (founder_data and founder_data.vision) else "To become Liberia’s premier center of excellence for technology and business education."
+    f_mission = founder_data.mission if (founder_data and founder_data.mission) else "To deliver industry-relevant, hands-on education in Information Technology and Accounting."
+    f_bio = founder_data.bio if (founder_data and founder_data.bio) else "Our founder is a visionary leader dedicated to bridging the technological gap in Liberia."
+    f_leadership = founder_data.leadership_statement if (founder_data and founder_data.leadership_statement) else "Cultivating the architects of Liberia's digital future."
+
     responses = {
         "info": [
             "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
             "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
         ],
         "vision": [
-            "To become Liberia’s premier center of excellence for technology and business education, producing globally competitive professionals who lead digital transformation.",
-            "Our vision is to lead digital transformation in Liberia by producing world-class tech and business professionals."
+            f_vision,
+            f"Our vision as set by our leadership: {f_vision}"
         ],
         "mission": [
-            "To deliver industry-relevant, hands-on education in Information Technology and Accounting, empowering students with technical competence and ethical leadership.",
-            "Our mission is simple: empower students through hands-on technical training and ethical leadership development."
+            f_mission,
+            f"IAMSTECH's mission is to {f_mission}"
         ],
         "programs": [
             "We offer professional certifications in Microsoft Office Suite, QuickBooks Accounting, AI Techniques, Computer Hardware Engineering, and more. Which one interests you?",
@@ -1052,8 +1060,8 @@ def chatbot():
             "You can join IAMSTECH today! Just head over to the Registration page to start your application process."
         ],
         "founder": [
-            "Mr. Benaiah Kanawa is our Founder & CEO. He is a visionary leader dedicated to bridging the technological gap in Liberia.",
-            "Our institution was founded by Mr. Benaiah Kanawa, who serves as the CEO and Lead Visionary."
+            f"{f_name} is our Founder & CEO. {f_bio}",
+            f"Our institution was founded by {f_name}. {f_leadership}"
         ],
         "support": [
             "If you encounter any technical issues, please contact our support team via WhatsApp at +231 880 864 187 or visit the Technical Support Center in your dashboard.",

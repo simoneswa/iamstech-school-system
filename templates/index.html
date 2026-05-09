@@ -110,73 +110,68 @@
         </div>
     </div>
 </section>
-<!-- LEADERSHIP & VISION (Premium Founder Section) -->
-<style>
-    .founder-card .image-wrapper {
-        border: 10px solid rgba(255,255,255,0.1);
-        border-radius: 20px;
-        overflow: hidden;
-        transform: rotate(-2deg);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    .founder-card:hover .image-wrapper {
-        transform: rotate(0deg) scale(1.03);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-        border-color: rgba(255,111,0,0.3);
-    }
-</style>
-<section class="py-5" style="background: linear-gradient(135deg, #0d1250 0%, #1a237e 100%); color: white; position: relative; overflow: hidden;">
-    <!-- Abstract Background Decor -->
-    <div style="position: absolute; top: -10%; right: -5%; width: 400px; height: 400px; background: rgba(255,111,0,0.1); border-radius: 50%; filter: blur(80px);"></div>
-    <div style="position: absolute; bottom: -10%; left: -5%; width: 300px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 50%; filter: blur(60px);"></div>
+<!-- LEADERSHIP & VISION (Premium Institutional Section) -->
+<section class="vision-banner">
+    <div class="container text-center py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                {% if founders and founders[0] %}
+                <div class="vision-quote">
+                    <i class="fas fa-quote-left"></i>
+                    "{{ founders[0].leadership_statement if founders[0].leadership_statement else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
+                </div>
+                <div class="mt-4">
+                    <h5 class="fw-black mb-0">{{ founders[0].name }}</h5>
+                    <p class="text-warning small fw-bold mb-0 text-uppercase letter-spacing-1">Founder & CEO, IAMSTECH</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
 
+<!-- THE FOUNDER (Professional Profile) -->
+<section class="py-5 bg-light">
     <div class="container py-5">
         <div class="row align-items-center g-5">
             {% if founders %}
                 {% for f in founders %}
                 <div class="col-lg-5">
-                    <div class="founder-card" style="position: relative; z-index: 2;">
-                        <div class="image-wrapper shadow-lg">
-                            <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600' }}" 
-                                 class="img-fluid w-100" 
-                                 alt="{{ f.name }}" 
-                                 style="min-height: 450px; object-fit: cover;"
-                                 onerror="this.src='https://via.placeholder.com/600x800?text=Founder+Photo';">
+                    <div class="profile-card">
+                        <div class="profile-img-frame">
+                            <div class="profile-img-inner">
+                                <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600x600?text=Founder' }}" 
+                                     alt="{{ f.name }}" 
+                                     onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
+                            </div>
                         </div>
-                        <div style="position: absolute; bottom: -20px; right: -20px; background: var(--accent-orange); color: white; padding: 15px 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(255,111,0,0.3); z-index: 3;">
-                            <h5 class="fw-black mb-0">IAMSTECH</h5>
-                            <small class="opacity-75">Leadership 2026</small>
+                        <h2 class="profile-name">{{ f.name }}</h2>
+                        <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
+                        <p class="profile-bio">{{ f.bio if f.bio else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
+                        
+                        <div class="mt-4 d-flex justify-content-center gap-3">
+                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-twitter"></i></a>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-7" style="position: relative; z-index: 2;">
+                <div class="col-lg-7">
                     <div class="ps-lg-5">
-                        <span class="badge bg-warning text-dark px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">MESSAGE FROM THE FOUNDER</span>
-                        <h2 class="display-4 fw-black mb-3" style="color: white;">{{ f.name }}</h2>
-                        <h4 class="text-warning fw-bold mb-4 opacity-75">{{ f.title if f.title else 'Founder & CEO' }}</h4>
+                        <span class="badge bg-primary px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">INSTITUTIONAL VISION</span>
+                        <h2 class="display-4 fw-black text-primary mb-4">Shaping Liberia's Digital Future</h2>
                         
-                        <div class="founder-message mb-5" style="font-size: 1.15rem; line-height: 1.8; color: rgba(255,255,255,0.85); font-style: italic;">
-                            <i class="fas fa-quote-left text-warning fa-2x mb-3 d-block opacity-50"></i>
-                            {{ f.message if f.message else 'At IAMSTECH, we are dedicated to bridging the technology gap in Liberia. Our mission is to empower professionals with industry-standard certifications and hands-on vocational training.' }}
+                        <div class="mb-5">
+                            <h5 class="fw-bold text-dark"><i class="fas fa-eye me-2 text-warning"></i>Our Vision</h5>
+                            <p class="text-muted lead">{{ f.vision if f.vision else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
                         </div>
-                        
-                        <div class="d-flex align-items-center gap-4">
-                            <div class="bg-white p-1 rounded-circle">
-                                <img src="{{ url_for('static', filename='img/logo.png') }}" style="height: 40px; width: 40px; object-fit: contain;">
-                            </div>
-                            <div>
-                                <p class="mb-0 fw-bold">Official Executive Statement</p>
-                                <p class="small opacity-50 mb-0">IAMSTECH Institutional Registry</p>
-                            </div>
+
+                        <div class="mb-0">
+                            <h5 class="fw-bold text-dark"><i class="fas fa-bullseye me-2 text-warning"></i>Our Mission</h5>
+                            <p class="text-muted lead">{{ f.mission if f.mission else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
-            {% else %}
-                <!-- Placeholder if no founder seeded -->
-                <div class="col-12 text-center py-5">
-                    <p class="opacity-50 italic">Founder information currently being updated by the administration.</p>
-                </div>
             {% endif %}
         </div>
     </div>
@@ -191,22 +186,21 @@
                 <h3 class="fw-black">System Developed By</h3>
             </div>
         </div>
-        <div class="row justify-content-center">
+        <div class="row justify-content-center g-4">
             {% if developers %}
                 {% for d in developers %}
-                <div class="col-lg-5">
-                    <div class="dev-card p-4 rounded-4 shadow-sm border d-flex align-items-center gap-4 transition-all hover-translate-up">
-                        <div class="flex-shrink-0">
-                            <img src="{{ url_for('static', filename=d.image_path) if d.image_path else 'https://via.placeholder.com/150' }}" 
-                                 class="rounded-3 shadow-sm" 
-                                 style="width: 100px; height: 100px; object-fit: cover;"
-                                 onerror="this.src='https://via.placeholder.com/150?text=Dev';">
+                <div class="col-lg-4">
+                    <div class="profile-card" style="padding: 30px;">
+                        <div class="profile-img-frame" style="width: 120px; height: 120px; padding: 5px;">
+                            <div class="profile-img-inner">
+                                <img src="{{ url_for('static', filename=d.image_path) if d.image_path else 'https://via.placeholder.com/300x300?text=Dev' }}" 
+                                     alt="{{ d.name }}" 
+                                     onerror="this.src='https://via.placeholder.com/300x300?text=Dev';">
+                            </div>
                         </div>
-                        <div>
-                            <h5 class="fw-black text-primary mb-1">{{ d.name }}</h5>
-                            <p class="text-warning small fw-bold mb-2">{{ d.role if d.role else 'Senior Systems Architect' }}</p>
-                            <p class="text-muted small mb-0">{{ d.description if d.description else 'Crafting professional institutional platforms for Liberia\'s technological advancement.' }}</p>
-                        </div>
+                        <h4 class="profile-name" style="font-size: 1.2rem;">{{ d.name }}</h4>
+                        <p class="profile-title" style="font-size: 0.75rem;">{{ d.role if d.role else 'Systems Architect' }}</p>
+                        <p class="small text-muted mb-0">{{ d.description if d.description else 'Crafting professional institutional platforms.' }}</p>
                     </div>
                 </div>
                 {% endfor %}

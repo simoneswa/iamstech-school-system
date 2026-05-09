@@ -115,6 +115,9 @@ class Founder(db.Model):
     image_path = db.Column(db.String(500))
     message = db.Column(db.Text)
     bio = db.Column(db.Text)
+    vision = db.Column(db.Text)
+    mission = db.Column(db.Text)
+    leadership_statement = db.Column(db.Text)
 
 class Developer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -122,6 +125,7 @@ class Developer(db.Model):
     role = db.Column(db.String(100), default="Senior Developer")
     image_path = db.Column(db.String(500))
     description = db.Column(db.Text)
+    bio = db.Column(db.Text) # Professional bio for devs
 
 class AdminAuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
