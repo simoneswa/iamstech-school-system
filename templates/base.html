@@ -40,13 +40,31 @@
                     <li class="nav-item"><a class="nav-link" href="#programs">PROGRAMS</a></li>
                     
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item position-relative d-flex align-items-center mx-2">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-bell"></i></a>
-                            {% if notifications %}
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; transform: translate(-30%, 30%)!important;">
-                                    {{ notifications|length }}
-                                </span>
-                            {% endif %}
+                        <!-- Notifications Dropdown -->
+                        <li class="nav-item dropdown mx-2">
+                            <a class="nav-link position-relative" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if notifications %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; transform: translate(-30%, 30%)!important;">
+                                        {{ notifications|length }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-3" aria-labelledby="notifDropdown" style="width: 300px;">
+                                <h6 class="dropdown-header fw-bold text-primary px-0 mb-2">Notifications center</h6>
+                                {% if notifications %}
+                                    {% for n in notifications %}
+                                    <li>
+                                        <a class="dropdown-item p-2 rounded-3 mb-1 {% if not n.is_read %}bg-light{% endif %}" href="{{ url_for('mark_notification_read', n_id=n.id) }}">
+                                            <div class="small fw-bold text-dark" style="white-space: normal;">{{ n.message }}</div>
+                                            <div class="x-small text-muted">{{ n.created_at.strftime('%H:%M - %b %d') }}</div>
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-center py-3 text-muted small">No new notifications</li>
+                                {% endif %}
+                            </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">DASHBOARD</a></li>
                     {% else %}

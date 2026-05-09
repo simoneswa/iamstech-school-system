@@ -680,11 +680,13 @@ def dashboard():
         except Exception:
             audit_logs = []
             
+        notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(10).all()
         return render_template('dashboards/superadmin.html', 
                              users=users, 
                              admins=admins,
                              applicants=applicants,
-                             audit_logs=audit_logs)
+                             audit_logs=audit_logs,
+                             notifications=notifications)
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         applicants = User.query.filter_by(status='Pending').all()
@@ -918,6 +920,35 @@ def cleanup_abandoned():
         
     return redirect(url_for('dashboard'))
 
+@app.route('/admin/request-otp-help/<int:user_id>')
+@login_required
+@admin_required
+def request_otp_help(user_id):
+    target_user = User.query.get_or_404(user_id)
+    superadmins = User.query.filter_by(role='SuperAdmin').all()
+    
+    for sa in superadmins:
+        n = Notification(
+            user_id=sa.id,
+            message=f"Admin {current_user.name} requested OTP support for applicant {target_user.name} ({target_user.email}).",
+            type='warning',
+            link=f"/dashboard?search={target_user.email}"
+        )
+        db.session.add(n)
+    
+    db.session.commit()
+    flash(f"OTP Support request for {target_user.name} has been sent to the SuperAdmin.", "success")
+    return redirect(url_for('dashboard'))
+
+@app.route('/notification/read/<int:n_id>')
+@login_required
+def mark_notification_read(n_id):
+    n = Notification.query.get_or_404(n_id)
+    if n.user_id == current_user.id:
+        n.is_read = True
+        db.session.commit()
+    return redirect(n.link if n.link else url_for('dashboard'))
+
 @app.route('/superadmin/force-verify/<int:user_id>')
 @login_required
 @superadmin_required
@@ -932,7 +963,7 @@ def force_verify_user(user_id):
             user.verification_code = None
             db.session.commit()
             log_audit(f"Force Verified User {user.email}", target_id=user.id, target_type='User')
-            flash(f'Account {user.email} successfully force verified.', 'success')
+            flash(f'Account {user.email} successfully force verified. You can now approve them.', 'success')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Force Verify Error: {e}")
@@ -1003,6 +1034,10 @@ def approve_user(user_id):
 @app.route('/setup-password/<token>', methods=['GET', 'POST'])
 @app.route('/setup-account/<token>', methods=['GET', 'POST'])
 def setup_account(token):
+    # Clear any existing session to prevent "fails to recognize" conflicts
+    if current_user.is_authenticated:
+        logout_user()
+        
     user = User.query.filter_by(setup_token=token).first()
     
     if not user:

@@ -77,6 +77,35 @@
                     </div>
                 </div>
 
+                <!-- NOTIFICATION CENTER -->
+                {% if notifications %}
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="premium-card" style="border-left: 5px solid var(--accent-orange);">
+                            <h5 class="fw-bold mb-3 text-warning"><i class="fas fa-bell me-2"></i>Urgent Admin Requests</h5>
+                            <div class="row g-3">
+                                {% for n in notifications %}
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-4 d-flex align-items-center justify-content-between border">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-exclamation-circle"></i>
+                                            </div>
+                                            <div>
+                                                <div class="small fw-bold text-dark">{{ n.message }}</div>
+                                                <div class="x-small text-muted">{{ n.created_at.strftime('%H:%M - %b %d') }}</div>
+                                            </div>
+                                        </div>
+                                        <a href="{{ url_for('mark_notification_read', n_id=n.id) }}" class="btn btn-sm btn-primary rounded-pill px-3">View</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="row g-4 mb-5">
                     <div class="col-md-3">
                         <div class="premium-card h-100">
