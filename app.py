@@ -933,8 +933,20 @@ def admin_add_activity():
         flash('Activity uploaded to gallery!', 'success')
     return redirect(url_for('dashboard'))
 
+@app.route('/superadmin/view-id/<int:user_id>')
+@login_required
+@admin_required
+def view_id_card(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('e_id_template.html', user=user)
+
+@app.route('/view-my-id')
+@login_required
+def view_eid():
+    return render_template('e_id_template.html', user=current_user)
+
 # --- SuperAdmin Controls ---
-@app.route('/superadmin/suspend/<int:user_id>', methods=['POST'])
+@app.route('/superadmin/suspend/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 @superadmin_required
 def suspend_user(user_id):
@@ -943,7 +955,11 @@ def suspend_user(user_id):
         flash("Cannot suspend another SuperAdmin.", "danger")
         return redirect(url_for('dashboard'))
     
-    reason = request.form.get('reason', 'Violation of platform policies.')
+    if request.method == 'POST':
+        reason = request.form.get('reason', 'Violation of platform policies.')
+    else:
+        reason = 'Administrative Suspension.'
+
     user.is_suspended = True
     user.suspension_reason = reason
     db.session.commit()
