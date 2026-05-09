@@ -394,7 +394,12 @@
                                                 {% if user.registration_state == 'pending_verification' %}
                                                     <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
                                                 {% endif %}
-                                                {% if user.registration_state == 'approved' and user.must_change_password and user.setup_token %}
+                                                {% if user.registration_state == 'approved' and user.must_change_password %}
+                                                    <li>
+                                                        <a class="dropdown-item text-primary fw-bold" href="{{ url_for('resend_setup', user_id=user.id) }}">
+                                                            <i class="fas fa-envelope-open-text me-2"></i>Resend Setup Email
+                                                        </a>
+                                                    </li>
                                                     <li>
                                                         <a class="dropdown-item text-success fw-bold" href="javascript:void(0);" 
                                                            onclick="navigator.clipboard.writeText('{{ url_for('setup_account', token=user.setup_token, _external=True) }}'); alert('Activation Link copied! Send this to the applicant so they can set their password.');">

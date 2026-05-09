@@ -1051,6 +1051,32 @@ def reject_user(user_id):
     flash('Application rejected and removed.', 'info')
     return redirect(url_for('dashboard'))
 
+@app.route('/admin/resend_setup/<int:user_id>')
+@login_required
+@admin_required
+def resend_setup(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    if user.registration_state == 'approved' and user.must_change_password:
+        import uuid
+        from datetime import datetime, timedelta
+        user.setup_token = str(uuid.uuid4())
+        user.setup_token_expiration = datetime.utcnow() + timedelta(days=3)
+        db.session.commit()
+        
+        from email_service import send_approval_email
+        try:
+            send_approval_email(user)
+            flash(f'New setup link generated and emailed to {user.name}!', 'success')
+            logger.info(f"Admin {current_user.email} regenerated setup link for {user.email}")
+        except Exception as e:
+            flash('Setup link generated, but email failed to send. You can copy the link manually.', 'warning')
+            logger.error(f"Failed to resend setup email: {e}")
+    else:
+        flash('User is not awaiting setup.', 'warning')
+        
+    return redirect(url_for('dashboard'))
+
 @app.route('/admin/courses', methods=['POST'])
 @login_required
 @admin_required
