@@ -399,7 +399,11 @@
                                                 {% if user.registration_state == 'pending_verification' %}
                                                     <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('force_verify_user', user_id=user.id) }}"><i class="fas fa-bolt me-2"></i>Force Verify</a></li>
                                                 {% endif %}
-                                                {% if user.registration_state == 'approved' and user.must_change_password %}
+                                                {% if user.registration_state == 'verified_awaiting_approval' or user.status == 'Pending' %}
+                                                    <li><a class="dropdown-item text-success fw-bold" href="{{ url_for('approve_user', user_id=user.id) }}"><i class="fas fa-check-circle me-2"></i>Approve User</a></li>
+                                                    <li><a class="dropdown-item text-warning fw-bold" href="{{ url_for('reject_user', user_id=user.id) }}"><i class="fas fa-times-circle me-2"></i>Reject User</a></li>
+                                                {% endif %}
+                                                {% if user.setup_token and user.must_change_password %}
                                                     <li>
                                                         <a class="dropdown-item text-primary fw-bold" href="{{ url_for('resend_setup', user_id=user.id) }}">
                                                             <i class="fas fa-envelope-open-text me-2"></i>Resend Setup Email
@@ -413,7 +417,7 @@
                                                     </li>
                                                 {% endif %}
                                                 {% if user.role != 'SuperAdmin' %}
-                                                    <li><a class="dropdown-item text-danger" href="{{ url_for('suspend_user', user_id=user.id) }}">Suspend User</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="{{ url_for('suspend_user', user_id=user.id) }}"><i class="fas fa-ban me-2"></i>Suspend User</a></li>
                                                 {% endif %}
                                             </ul>
                                         </div>
