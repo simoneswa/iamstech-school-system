@@ -99,7 +99,7 @@
                     <div class="col-lg-6">
                         <div class="dash-card p-4 rounded-4">
                             <h5 class="fw-bold mb-3">Recent Registrations</h5>
-                            {% for user in users|reverse|first(5) %}
+                            {% for user in users[-5:]|reverse %}
                             <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                                 <div>
                                     <p class="fw-bold small mb-0">{{ user.name }}</p>
@@ -267,7 +267,7 @@
                                 <tr>
                                     <td class="fw-bold">{{ teacher.name }}</td>
                                     <td class="small">{{ teacher.email }}</td>
-                                    <td>{{ teacher.assigned_courses|length }} courses</td>
+                                    <td>{{ teacher.courses_taught|length }} courses</td>
                                     <td><span class="badge bg-success">Active</span></td>
                                 </tr>
                                 {% endfor %}
@@ -417,7 +417,7 @@
                 <h2 class="fw-black text-primary mb-4">System Announcements</h2>
                 <div class="dash-card p-4 rounded-4">
                     <h5 class="fw-bold mb-3">Recent Announcements</h5>
-                    {% for ann in announcements|slice(5) %}
+                    {% for ann in announcements[:5] %}
                     <div class="p-3 border rounded-3 mb-2">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>

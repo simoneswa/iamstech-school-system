@@ -706,9 +706,18 @@ def dashboard():
         # Announcements for portal updates
         announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
 
-        # Leaderboard
-        top_students = User.query.filter_by(role='Student', status='Approved').order_by(User.points.desc()).limit(10).all()
-        rank = User.query.filter_by(role='Student', status='Approved').filter(User.points > (current_user.points or 0)).count() + 1
+        # Leaderboard — Students ONLY (excludes Admin, SuperAdmin, Teacher, Staff, technical accounts)
+        top_students = User.query.filter(
+            User.role == 'Student',
+            User.registration_state == 'approved',
+            User.is_superadmin == False
+        ).order_by(User.points.desc()).limit(10).all()
+        rank = User.query.filter(
+            User.role == 'Student',
+            User.registration_state == 'approved',
+            User.is_superadmin == False,
+            User.points > (current_user.points or 0)
+        ).count() + 1
 
         return render_template('dashboards/student.html',
                                enrollments=enrollments,
@@ -990,8 +999,10 @@ def setup_account(token):
             return redirect(url_for('setup_account', token=token))
             
         user.password = generate_password_hash(password)
-        user.setup_token = None # Invalidate token
+        user.setup_token = None  # Invalidate token
         user.must_change_password = False
+        user.is_email_verified = True   # FIX: approved users bypass OTP verification flow
+        user.registration_state = 'approved'  # FIX: ensure state is correct after setup
         db.session.commit()
         
         flash('Account setup complete! You can now log in.', 'success')
@@ -1188,6 +1199,18 @@ def chatbot():
             "IAMSTECH LIBERIA is a specialized institution dedicated to equipping students with cutting-edge skills in Information Technology and Accounting. We pride ourselves on hands-on vocational training.",
             "We are a premier technical institute in Liberia, focusing on practical IT and Accounting education to build the next generation of professionals."
         ],
+        "about": [
+            "IAMSTECH LIBERIA is a professional vocational and technology institute based in Monrovia, Liberia. We specialize in IT, Accounting, and modern business skills. Our goal is to empower Liberians with world-class technical education.",
+            "IAMSTECH stands for Institute of Advanced Management Science & Technology. We are committed to delivering quality hands-on education in Information Technology and Accounting."
+        ],
+        "location": [
+            "IAMSTECH is located on Hotel Africa Road, Monrovia, Liberia. We are easily accessible by public transport. Come visit us anytime during working hours!",
+            "You can find us on Hotel Africa Road, Monrovia, Liberia. For directions or inquiries, call us at +231 775 478 90."
+        ],
+        "motto": [
+            "Our motto is: 'Empowering Liberia Through Technology & Excellence.' We believe education is the greatest equalizer.",
+            "IAMSTECH's guiding principle is excellence in vocational and technical education — cultivating the architects of Liberia's digital future."
+        ],
         "vision": [
             f_vision,
             f"Our vision as set by our leadership: {f_vision}"
@@ -1213,7 +1236,7 @@ def chatbot():
             "Need help? You can reach our technical support team at +231 880 864 187 (WhatsApp) or through your student dashboard."
         ],
         "fees": [
-            "Tuition and registration fees vary by program. Please visit the Admissions office at our Banjor campus for a detailed fee schedule.",
+            "Tuition and registration fees vary by program. Please visit the Admissions office at our Hotel Africa Road campus for a detailed fee schedule.",
             "For the most accurate fee information, we recommend visiting our campus office or contacting the finance department through the support line."
         ],
         "duration": [
@@ -1229,9 +1252,9 @@ def chatbot():
 
     # Intent Matching
     matched_intent = None
-    if re.search(r'\b(location|where|address|locate|map|situated)\b', msg):
+    if re.search(r'\b(location|where|address|locate|map|situated|find you|campus)\b', msg):
         matched_intent = "location"
-    elif re.search(r'\b(motto|slogan|saying)\b', msg):
+    elif re.search(r'\b(motto|slogan|saying|principle)\b', msg):
         matched_intent = "motto"
     elif re.search(r'\b(about|who|what|institution|iamstech|school|college|institute)\b', msg):
         matched_intent = "about"
@@ -1241,7 +1264,7 @@ def chatbot():
         matched_intent = "mission"
     elif re.search(r'\b(program|course|study|learn|department|it|accounting|quickbooks|microsoft|ai|hardware)\b', msg):
         matched_intent = "programs"
-    elif re.search(r'\b(admission|apply|join|enroll|register|form|apply)\b', msg):
+    elif re.search(r'\b(admission|apply|join|enroll|register|form)\b', msg):
         matched_intent = "admission"
     elif re.search(r'\b(founder|ceo|leader|benaiah|kanawa|head)\b', msg):
         matched_intent = "founder"
@@ -1254,7 +1277,7 @@ def chatbot():
     elif re.search(r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening|yo)\b', msg):
         matched_intent = "greetings"
 
-    if matched_intent:
+    if matched_intent and matched_intent in responses:
         response = random.choice(responses[matched_intent])
     else:
         # Contextual Fallback

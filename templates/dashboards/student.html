@@ -1,197 +1,294 @@
 {% extends 'base.html' %}
 
-{% block title %}Student Dashboard - IAMSTECH{% endblock %}
+{% block title %}{{ user_role|default(current_user.role) }} Dashboard - IAMSTECH{% endblock %}
 
 {% block content %}
 <div class="student-dashboard">
-    <div class="dashboard-wrapper d-flex min-vh-100">
-        <!-- Sidebar Navigation -->
-        <nav class="dashboard-sidebar bg-dark text-white p-0" style="width: 280px; min-height: 100vh;">
-            <div class="sidebar-header p-4 border-bottom border-secondary text-center">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo mb-3"
-                     onerror="this.style.display='none';">
-                <h6 class="fw-black mb-0">STUDENT PORTAL</h6>
+    <div class="dashboard-wrapper d-flex flex-column flex-lg-row gap-4">
+        <aside class="dashboard-sidebar bg-dark text-white p-4">
+            <div class="sidebar-brand text-center mb-4">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="IAMSTECH" class="sidebar-logo mb-3" onerror="this.style.display='none';">
+                <h5 class="fw-black mb-1">{{ user_role|default(current_user.role) }} Portal</h5>
+                <p class="small text-white-50 mb-0">{{ current_user.name }}</p>
             </div>
+            <nav class="sidebar-menu d-flex flex-column gap-2">
+                <a href="{{ url_for('dashboard') }}" class="nav-link active"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="#courses" class="nav-link"><i class="fas fa-book-open"></i> Courses</a>
+                <a href="#attendance" class="nav-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+                <a href="#assignments" class="nav-link"><i class="fas fa-tasks"></i> Assignments</a>
+                <a href="#updates" class="nav-link"><i class="fas fa-bullhorn"></i> Updates</a>
+                <a href="#schedule" class="nav-link"><i class="fas fa-calendar-alt"></i> Schedule</a>
+                <a href="{{ url_for('view_eid') }}" class="nav-link"><i class="fas fa-id-card"></i> Digital ID</a>
+                <a href="{{ url_for('logout') }}" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </nav>
+        </aside>
 
-            <div class="sidebar-menu p-3">
-                <a href="{{ url_for('dashboard') }}" class="nav-link active rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
-                    <i class="fas fa-home"></i> <span>Dashboard</span>
-                </a>
-                <a href="#courses" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
-                    <i class="fas fa-book-open"></i> <span>My Courses</span>
-                </a>
-                <a href="{{ url_for('view_eid') }}" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
-                    <i class="fas fa-id-card"></i> <span>Digital E-ID</span>
-                </a>
-                <a href="#attendance" class="nav-link rounded-3 mb-2 d-flex align-items-center gap-3 p-3">
-                    <i class="fas fa-calendar-check"></i> <span>Attendance</span>
-                </a>
-                <hr class="border-secondary">
-                <a href="{{ url_for('logout') }}" class="nav-link rounded-3 d-flex align-items-center gap-3 p-3 text-danger">
-                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
-                </a>
-            </div>
-        </nav>
-
-        <!-- Main Content Area -->
-        <main class="flex-grow-1 bg-light p-5">
-            <!-- Welcome Card -->
-            <div class="dash-card p-5 mb-5 text-white position-relative overflow-hidden shadow-lg" 
-                 style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%); border-radius: 20px;">
-                <div class="position-absolute" style="right: -5%; top: -20%; opacity: 0.1; font-size: 15rem;">
-                    <i class="fas fa-graduation-cap"></i>
+        <main class="flex-grow-1 bg-light p-4 p-lg-5 rounded-4 shadow-sm">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-4 mb-4">
+                <div>
+                    <h1 class="fw-black mb-2">Hello, {{ current_user.name.split(' ')[0] }}</h1>
+                    <p class="lead text-muted mb-0">Welcome to your {{ user_role|default(current_user.role) }} portal. Stay on top of courses, attendance, and announcements.</p>
                 </div>
-                <div class="position-relative z-1">
-                    <h2 class="fw-black mb-2" style="font-size: 2.5rem; letter-spacing: -1px;">Welcome Back, {{ current_user.name.split(' ')[0] }}!</h2>
-                    <p class="lead opacity-75 mb-0">{{ current_user.student_id }} • {{ current_user.department }}</p>
-                    <div class="mt-4 d-flex gap-3 align-items-center">
-                        <span class="badge bg-warning text-dark px-4 py-2 fw-bold shadow" style="font-size: 1.1rem; border-radius: 12px;">
-                            <i class="fas fa-star me-2"></i>{{ current_user.points }} XP
-                        </span>
-                        <span class="badge bg-success px-4 py-2 fw-bold shadow" style="font-size: 1.1rem; border-radius: 12px;">
-                            <i class="fas fa-trophy me-2"></i>Rank #{{ my_rank }}
-                        </span>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="status-pill bg-white rounded-4 px-4 py-3 shadow-sm">
+                        <div class="small text-muted">Role</div>
+                        <div class="fw-bold">{{ current_user.role }}</div>
+                    </div>
+                    <div class="status-pill bg-white rounded-4 px-4 py-3 shadow-sm">
+                        <div class="small text-muted">ID</div>
+                        <div class="fw-bold">{{ current_user.student_id or 'Pending' }}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Dashboard Grid -->
-            <div class="row g-4 mb-5">
-                <div class="col-md-4">
-                    <div class="dash-card p-4 text-center">
-                        <h4 class="fw-black text-primary mb-1">{{ enrollments|length }}</h4>
-                        <p class="text-muted small mb-0">ENROLLED COURSES</p>
-                    </div>
+            <section class="row g-4 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <article class="portal-card p-4">
+                        <div class="card-icon bg-primary text-white mb-3"><i class="fas fa-book-open"></i></div>
+                        <h3 class="h4 fw-bold mb-1">{{ enrollments|length }}</h3>
+                        <p class="small text-muted mb-0">Active Courses</p>
+                    </article>
                 </div>
-                <div class="col-md-4">
-                    <div class="dash-card p-4 text-center">
-                        <h4 class="fw-black text-success mb-1">{{ att_percent|round(1) }}%</h4>
-                        <p class="text-muted small mb-0">ATTENDANCE RATE</p>
-                    </div>
+                <div class="col-sm-6 col-xl-3">
+                    <article class="portal-card p-4">
+                        <div class="card-icon bg-success text-white mb-3"><i class="fas fa-calendar-check"></i></div>
+                        <h3 class="h4 fw-bold mb-1">{{ att_percent|round(1) }}%</h3>
+                        <p class="small text-muted mb-0">Attendance Rate</p>
+                    </article>
                 </div>
-                <div class="col-md-4">
-                    <div class="dash-card p-4 text-center">
-                        <h4 class="fw-black text-warning mb-1">{{ assignments|length }}</h4>
-                        <p class="text-muted small mb-0">PENDING ASSIGNMENTS</p>
-                    </div>
+                <div class="col-sm-6 col-xl-3">
+                    <article class="portal-card p-4">
+                        <div class="card-icon bg-warning text-dark mb-3"><i class="fas fa-tasks"></i></div>
+                        <h3 class="h4 fw-bold mb-1">{{ assignments|length }}</h3>
+                        <p class="small text-muted mb-0">Pending Assignments</p>
+                    </article>
                 </div>
-            </div>
+                <div class="col-sm-6 col-xl-3">
+                    <article class="portal-card p-4">
+                        <div class="card-icon bg-info text-white mb-3"><i class="fas fa-bullhorn"></i></div>
+                        <h3 class="h4 fw-bold mb-1">{{ notifications|length }}</h3>
+                        <p class="small text-muted mb-0">Unread Notifications</p>
+                    </article>
+                </div>
+            </section>
 
-            <div class="row g-4">
-                <div class="col-lg-8">
-                    <!-- ID Card Mini Preview -->
-                    <div class="dash-card p-4 mb-4 border-start border-warning border-4">
+            <section class="row g-4 mb-4">
+                <div class="col-xl-4">
+                    <article class="profile-panel p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="profile-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center">
+                                <span class="fs-4 fw-bold">{{ current_user.name[0] }}</span>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-1">{{ current_user.name }}</h5>
+                                <p class="small text-muted mb-0">{{ current_user.department or 'General Studies' }}</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <p class="small text-muted mb-1">Institutional Email</p>
+                            <p class="fw-semibold mb-0">{{ current_user.school_email or current_user.email }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <p class="small text-muted mb-1">Next Action</p>
+                            <p class="fw-semibold mb-0">{{ 'Awaiting approval and role assignment.' if current_user.role == 'Applicant' else 'Review your upcoming classes and assignment deadlines.' }}</p>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <a href="{{ url_for('view_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill">View Digital ID</a>
+                            <a href="#schedule" class="btn btn-primary btn-sm rounded-pill">View Schedule</a>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-xl-8">
+                    <article class="timeline-panel p-4 bg-white rounded-4 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0"><i class="fas fa-id-card text-primary me-2"></i>Institutional E-ID Preview</h5>
-                            <a href="{{ url_for('view_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill px-4">Print ID</a>
+                            <div>
+                                <h5 class="fw-bold mb-1">Academic Progress</h5>
+                                <p class="small text-muted mb-0">Keep your performance moving forward.</p>
+                            </div>
+                            <span class="badge bg-success rounded-pill px-3 py-2">Rank #{{ my_rank }}</span>
                         </div>
-                        <div class="p-4 bg-light rounded-4 border">
-                            <div class="row align-items-center">
-                                <div class="col-md-4 text-center mb-3 mb-md-0">
-                                    <div class="rounded-3 border border-3 border-white shadow-sm overflow-hidden" style="width: 120px; height: 150px; margin: 0 auto;">
-                                        <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/logo.png') }}" class="w-100 h-100" style="object-fit: cover;">
-                                    </div>
-                                </div>
-                                <div class="col-md-8">
-                                    <h4 class="fw-black text-primary mb-1">{{ current_user.name.upper() }}</h4>
-                                    <p class="text-warning fw-bold mb-3">{{ current_user.student_id }}</p>
-                                    <div class="row g-3">
-                                        <div class="col-6">
-                                            <p class="text-muted x-small mb-0">PROGRAM</p>
-                                            <p class="fw-bold small mb-0">{{ current_user.department }}</p>
-                                        </div>
-                                        <div class="col-6">
-                                            <p class="text-muted x-small mb-0">VALID THRU</p>
-                                            <p class="fw-bold small mb-0">DEC 2026</p>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="progress rounded-pill mb-3" style="height: 14px;">
+                            <div class="progress-bar bg-primary" style="width: {{ att_percent|round(0) }}%;"></div>
+                        </div>
+                        <div class="row g-3 text-center">
+                            <div class="col-sm-4">
+                                <p class="small text-muted mb-1">Attendance</p>
+                                <h6 class="fw-bold mb-0">{{ att_percent|round(1) }}%</h6>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="small text-muted mb-1">Courses</p>
+                                <h6 class="fw-bold mb-0">{{ enrollments|length }}</h6>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="small text-muted mb-1">XP Points</p>
+                                <h6 class="fw-bold mb-0">{{ current_user.points or 0 }}</h6>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Course List -->
-                    <div id="courses" class="dash-card p-4">
-                        <h5 class="fw-bold mb-4"><i class="fas fa-book text-primary me-2"></i>My Enrolled Courses</h5>
-                        <div class="row g-3">
-                            {% for enr in enrollments %}
-                            <div class="col-md-6">
-                                <div class="p-3 border rounded-3 hover-shadow-sm transition">
-                                    <div class="fw-bold mb-1">{{ enr.course.name }}</div>
-                                    <div class="small text-muted">{{ enr.course.code }} • Prof. {{ enr.course.teacher.name }}</div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+                    </article>
                 </div>
+            </section>
 
-                <div class="col-lg-4">
-                    <!-- Academic Leaderboard -->
-                    <div class="dash-card p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(to bottom, #ffffff, #fcfdff); border-radius: 16px;">
-                        <h5 class="fw-black mb-4 text-dark"><i class="fas fa-medal text-warning me-2 fa-lg"></i>Top Performers</h5>
-                        <div class="leaderboard-list">
-                            {% for student in top_students %}
-                            <div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded-4 transition" style="background: {% if loop.index == 1 %}rgba(255,193,7,0.1){% else %}#f8f9fa{% endif %}; border-left: 4px solid {% if loop.index == 1 %}#ffc107{% elif loop.index == 2 %}#e0e0e0{% elif loop.index == 3 %}#cd7f32{% else %}transparent{% endif %};">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="fw-black text-muted" style="width: 25px;">#{{ loop.index }}</div>
-                                    <div class="avatar-circle rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
-                                        {{ student.name[0] }}
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold {{ 'text-primary' if current_user.id == student.id else 'text-dark' }}">{{ student.name.split(' ')[0] }} {% if loop.index == 1 %}<i class="fas fa-crown text-warning small ms-1"></i>{% endif %}</h6>
-                                        <small class="text-muted" style="font-size: 0.75rem;">{{ student.department[:15] }}...</small>
+            <section id="updates" class="row g-4 mb-4">
+                <div class="col-xl-8">
+                    <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Latest Announcements</h5>
+                            <span class="small text-muted">Campus News</span>
+                        </div>
+                        {% if announcements %}
+                            <div class="row g-3">
+                                {% for ann in announcements[:4] %}
+                                <div class="col-12">
+                                    <div class="announcement-card p-4 rounded-4 border bg-light">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="fw-bold mb-1">{{ ann.title }}</h6>
+                                                <p class="small text-muted mb-0">{{ ann.date.strftime('%b %d, %Y') }}</p>
+                                            </div>
+                                            <span class="badge bg-info text-dark">Update</span>
+                                        </div>
+                                        <p class="small text-muted mb-0">{{ ann.content[:120] }}{% if ann.content|length > 120 %}...{% endif %}</p>
                                     </div>
                                 </div>
-                                <div class="fw-bold text-success">{{ student.points }} <span class="small text-muted fw-normal">XP</span></div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <!-- Virtual Classes -->
-                    <div class="dash-card p-4 mb-4 shadow-sm border-0" style="border-radius: 16px;">
-                        <h5 class="fw-bold mb-4"><i class="fas fa-video text-danger me-2"></i>Upcoming Virtual Classes</h5>
-                        {% if meetings %}
-                            {% for m in meetings %}
-                            <div class="p-3 bg-white rounded-4 mb-3 border shadow-sm position-relative overflow-hidden transition hover-lift">
-                                <div class="position-absolute top-0 start-0 w-100 bg-danger" style="height: 4px;"></div>
-                                <h6 class="fw-bold mb-1 mt-1 text-dark">{{ m.title }}</h6>
-                                <p class="small text-muted mb-3"><i class="far fa-clock me-1"></i>{{ m.date }} • {{ m.time }}</p>
-                                <a href="{{ m.meet_link }}" target="_blank" class="btn btn-outline-danger btn-sm w-100 rounded-pill fw-bold">
-                                    <i class="fas fa-play-circle me-1"></i> Join Session
-                                </a>
-                            </div>
-                            {% endfor %}
                         {% else %}
-                            <div class="text-center p-4 bg-light rounded-4 border border-dashed">
-                                <div class="text-muted mb-2"><i class="fas fa-calendar-times fa-2x opacity-50"></i></div>
-                                <p class="small text-muted mb-0">No virtual classes scheduled at this time.</p>
-                            </div>
+                            <div class="p-4 rounded-4 bg-light text-center text-muted">No announcements yet. Check back soon.</div>
                         {% endif %}
-                    </div>
+                    </article>
                 </div>
-            </div>
+                <div class="col-xl-4">
+                    <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="quick-action-list d-flex flex-column gap-3">
+                            <a href="#courses" class="quick-action-item">
+                                <i class="fas fa-book-open"></i>
+                                <div>
+                                    <div class="fw-bold">Review Courses</div>
+                                    <div class="small text-muted">See enrolled subjects</div>
+                                </div>
+                            </a>
+                            <a href="#assignments" class="quick-action-item">
+                                <i class="fas fa-tasks"></i>
+                                <div>
+                                    <div class="fw-bold">Open Assignments</div>
+                                    <div class="small text-muted">Track what’s due</div>
+                                </div>
+                            </a>
+                            <a href="#schedule" class="quick-action-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <div>
+                                    <div class="fw-bold">View Schedule</div>
+                                    <div class="small text-muted">Upcoming sessions</div>
+                                </div>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section id="assignments" class="row g-4 mb-4">
+                <div class="col-xl-8">
+                    <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Assignment Tracker</h5>
+                            <span class="small text-muted">In progress</span>
+                        </div>
+                        {% if assignments %}
+                            <div class="row g-3">
+                                {% for task in assignments[:5] %}
+                                <div class="col-12">
+                                    <div class="assignment-card p-4 rounded-4 border bg-light d-flex justify-content-between align-items-center gap-3">
+                                        <div>
+                                            <div class="fw-bold">{{ task.title }}</div>
+                                            <p class="small text-muted mb-0">{{ task.course.name }}</p>
+                                        </div>
+                                        <span class="badge bg-warning text-dark rounded-pill">Due {{ task.due_date or 'soon' }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="p-4 rounded-4 bg-light border text-center text-muted">No active assignments assigned yet.</div>
+                        {% endif %}
+                    </article>
+                </div>
+                <div class="col-xl-4">
+                    <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Fees Summary</h5>
+                        </div>
+                        <div class="p-4 bg-light rounded-4 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small text-muted">Outstanding</span>
+                                <span class="fw-bold">0.00 USD</span>
+                            </div>
+                            <div class="small text-muted">No fees due at this time. Contact finance if you need a statement.</div>
+                        </div>
+                        <a href="#" class="btn btn-outline-primary w-100 rounded-pill">Request Fee Statement</a>
+                    </article>
+                </div>
+            </section>
+
+            <section id="schedule" class="row g-4 mb-4">
+                <div class="col-xl-12">
+                    <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h5 class="fw-bold mb-1">Timetable & Schedule</h5>
+                                <p class="small text-muted mb-0">Upcoming classroom sessions and virtual classes.</p>
+                            </div>
+                        </div>
+                        {% if meetings %}
+                            <div class="row g-3">
+                                {% for meeting in meetings[:6] %}
+                                <div class="col-md-6">
+                                    <div class="schedule-card p-4 rounded-4 border bg-light">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="fw-bold mb-1">{{ meeting.title }}</h6>
+                                                <p class="small text-muted mb-0">{{ meeting.date }} • {{ meeting.time }}</p>
+                                            </div>
+                                            <span class="badge bg-primary text-white">Live</span>
+                                        </div>
+                                        <p class="small text-muted mb-3">Instructor: {{ meeting.teacher.name if meeting.teacher else 'TBA' }}</p>
+                                        <a href="{{ meeting.meet_link }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill">Join Now</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="p-4 rounded-4 bg-light border text-center text-muted">No meetings scheduled. Check back later.</div>
+                        {% endif %}
+                    </article>
+                </div>
+            </section>
         </main>
     </div>
 </div>
 
 <style>
-.dashboard-sidebar .nav-link {
-    color: rgba(255,255,255,0.7);
-    transition: all 0.3s;
-}
-.dashboard-sidebar .nav-link:hover, .dashboard-sidebar .nav-link.active {
-    background: rgba(255,111,0,0.2);
-    color: white !important;
-    border-left: 4px solid var(--accent-orange);
-    padding-left: calc(1rem - 4px);
-}
-.x-small { font-size: 0.7rem; letter-spacing: 1px; }
-.hover-shadow-sm:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-2px); }
-.hover-lift:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important; }
-.transition { transition: all 0.3s ease; }
-.border-dashed { border-style: dashed !important; border-width: 2px !important; }
-.leaderboard-list > div:hover { transform: scale(1.02); }
+    .student-dashboard { background: #f1f5f9; min-height: 100vh; }
+    .dashboard-wrapper { gap: 1.5rem; }
+    .dashboard-sidebar { min-width: 260px; border-radius: 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); }
+    .sidebar-logo { width: 90px; height: auto; }
+    .sidebar-brand h5 { font-size: 1rem; letter-spacing: 0.5px; }
+    .sidebar-brand p { color: rgba(255,255,255,0.75); }
+    .sidebar-menu { display: flex; flex-direction: column; gap: 0.6rem; }
+    .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.95rem 1rem; border-radius: 18px; color: rgba(255,255,255,0.8); background: transparent; transition: all 0.25s ease; text-decoration: none; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.12); color: white !important; transform: translateX(2px); }
+    .portal-card { border-radius: 24px; background: white; border: 1px solid rgba(15, 23, 42, 0.06); box-shadow: 0 20px 50px rgba(15, 23, 42, 0.04); }
+    .status-pill { background: white; border-radius: 18px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); }
+    .profile-panel, .timeline-panel, .announcement-card, .assignment-card, .schedule-card, .quick-action-item { border-radius: 24px; }
+    .profile-panel { min-height: 320px; }
+    .profile-avatar { width: 64px; height: 64px; border-radius: 50%; font-size: 1.3rem; }
+    .quick-action-list { display: flex; flex-direction: column; gap: 1rem; }
+    .quick-action-item { display: flex; align-items: center; gap: 1rem; background: #f8fafc; padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.05); transition: all 0.25s ease; color: #102142; text-decoration: none; }
+    .quick-action-item:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08); }
+    .announcement-card, .assignment-card, .schedule-card { border: 1px solid rgba(15, 23, 42, 0.06); }
+    @media (max-width: 1199px) { .dashboard-wrapper { flex-direction: column; } .dashboard-sidebar { width: 100%; min-width: auto; } main { margin: 0; } }
+    @media (max-width: 767px) { .sidebar-menu .nav-link { font-size: 0.95rem; } }
 </style>
 {% endblock %}
