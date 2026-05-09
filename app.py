@@ -47,35 +47,31 @@ app.config['PREFERRED_URL_SCHEME'] = 'https'
 # the Host header (e.g. after a Railway domain rename). ProxyFix handles
 # correct external URL generation instead.
 
-@app.errorhandler(500)
-def handle_500(e):
-    import traceback
-    error_details = traceback.format_exc()
-    logger.critical(f"INTERNAL SERVER ERROR (500):\n{error_details}")
-    try:
-        os.makedirs('scratch', exist_ok=True)
-        with open('scratch/last_500_error.txt', 'w') as f:
-            f.write(error_details)
-    except: pass
-    return "Internal Server Error. Diagnostic log captured.", 500
-
-# --- Global Error Handlers ---
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('errors/404.html', title="Page Not Found"), 404
 
 @app.errorhandler(500)
-def internal_server_error(e):
+def handle_500(e):
+    import traceback
     db.session.rollback()
-    logger.critical(f"SERVER 500 ERROR: {e}")
-    return render_template('errors/500.html', title="System Error"), 500
+    error_details = traceback.format_exc()
+    logger.critical(f"INTERNAL SERVER ERROR (500):\n{error_details}")
+    
+    # Capture to diagnostic file
+    try:
+        os.makedirs('scratch', exist_ok=True)
+        with open('scratch/last_500_error.txt', 'w') as f:
+            f.write(error_details)
+    except: pass
+    
+    # Return professional error page with diagnostic info
+    return render_template('errors/500.html', error=e, error_details=error_details), 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    logger.error(f"UNHANDLED EXCEPTION: {e}")
-    db.session.rollback()
-    if app.debug: raise e
-    return render_template('errors/500.html', error_info="An internal logic error occurred. Our team is investigating."), 500
+    # This catches unhandled exceptions that aren't explicitly 500s
+    return handle_500(e)
 
 
 # --- Database Configuration ---
@@ -132,21 +128,36 @@ with app.app_context():
         from sqlalchemy import text, inspect
         inspector = inspect(db.engine)
         
-        # 1. User Table Hardening
+        # 1. User Table Hardening (Comprehensive Spectrum)
         user_cols = [c['name'] for c in inspector.get_columns('user')]
         user_updates = {
             'registration_state': 'VARCHAR(30)',
             'otp_email_status': 'VARCHAR(20)',
             'is_suspended': 'BOOLEAN',
             'suspension_reason': 'TEXT',
-            'is_email_verified': 'BOOLEAN'
+            'is_email_verified': 'BOOLEAN',
+            'points': 'INTEGER',
+            'must_change_password': 'BOOLEAN',
+            'setup_token': 'VARCHAR(100)',
+            'setup_token_expiration': 'TIMESTAMP',
+            'is_superadmin': 'BOOLEAN',
+            'verification_code': 'VARCHAR(6)',
+            'verification_code_expires': 'TIMESTAMP',
+            'verification_attempts': 'INTEGER',
+            'last_login_reward_date': 'DATE',
+            'resend_cooldown': 'TIMESTAMP',
+            'reset_token': 'VARCHAR(100)',
+            'reset_token_expiration': 'TIMESTAMP'
         }
         for col, col_type in user_updates.items():
             if col not in user_cols:
                 try:
+                    logger.info(f"MIGRATION: Adding column {col} to 'user' table...")
                     db.session.execute(text(f"ALTER TABLE \"user\" ADD COLUMN {col} {col_type}"))
                     db.session.commit()
-                except Exception: db.session.rollback()
+                except Exception as e: 
+                    logger.error(f"MIGRATION FAILED for {col}: {e}")
+                    db.session.rollback()
 
         # 2. Founder Table Hardening
         founder_cols = [c['name'] for c in inspector.get_columns('founder')]
@@ -406,11 +417,12 @@ def login():
                 log_audit('Successful Login')
                 return redirect(url_for('dashboard'))
                 
-            # Incorrect password - log it but don't crash
+            # Incorrect password or user not found - log it safely
             try:
-                ip = request.remote_addr
-                db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login (Wrong Password)', ip_address=ip))
-                db.session.commit()
+                if user:
+                    ip = request.remote_addr
+                    db.session.add(SystemAuditLog(user_id=user.id, action='Failed Login Attempt', ip_address=ip))
+                    db.session.commit()
             except Exception:
                 db.session.rollback()
         except Exception as e:
@@ -728,14 +740,18 @@ def dashboard():
         return render_template('dashboards/teacher.html', meetings=meetings)
         
     elif current_user.role in ['Student', 'Staff']:
-        # Gamification: Daily Login Reward
-        today = datetime.utcnow().date()
-        if getattr(current_user, 'last_login_reward_date', None) != today:
-            current_user.points = (current_user.points or 0) + 10
-            current_user.last_login_reward_date = today
-            db.session.commit()
-            flash('🎉 +10 XP for logging in today! Keep up the great work.', 'success')
-
+        # Gamification: Daily Login Reward (Hardened)
+        try:
+            today = datetime.utcnow().date()
+            if getattr(current_user, 'last_login_reward_date', None) != today:
+                current_user.points = (current_user.points or 0) + 10
+                current_user.last_login_reward_date = today
+                db.session.commit()
+                flash('🎉 +10 XP for logging in today! Keep up the great work.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            logger.warning(f"Gamification update failed: {e}")
+            
         # Fetch student data
         enrollments = Enrollment.query.filter_by(student_id=current_user.id).all()
         courses = Course.query.all()
@@ -761,12 +777,17 @@ def dashboard():
             User.registration_state == 'approved',
             User.is_superadmin == False
         ).order_by(User.points.desc()).limit(10).all()
-        rank = User.query.filter(
-            User.role == 'Student',
-            User.registration_state == 'approved',
-            User.is_superadmin == False,
-            User.points > (current_user.points or 0)
-        ).count() + 1
+        # Rank calculation
+        try:
+            current_points = getattr(current_user, 'points', 0) or 0
+            rank = User.query.filter(
+                User.role == 'Student',
+                User.registration_state == 'approved',
+                User.is_superadmin == False,
+                User.points > current_points
+            ).count() + 1
+        except Exception:
+            rank = "N/A"
 
         return render_template('dashboards/student.html',
                                enrollments=enrollments,
