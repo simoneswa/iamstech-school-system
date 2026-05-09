@@ -47,6 +47,18 @@ app.config['PREFERRED_URL_SCHEME'] = 'https'
 # the Host header (e.g. after a Railway domain rename). ProxyFix handles
 # correct external URL generation instead.
 
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+    error_details = traceback.format_exc()
+    logger.critical(f"INTERNAL SERVER ERROR (500):\n{error_details}")
+    try:
+        os.makedirs('scratch', exist_ok=True)
+        with open('scratch/last_500_error.txt', 'w') as f:
+            f.write(error_details)
+    except: pass
+    return "Internal Server Error. Diagnostic log captured.", 500
+
 # --- Global Error Handlers ---
 @app.errorhandler(404)
 def page_not_found(e):
@@ -234,21 +246,26 @@ def inject_now():
     context = {'datetime': datetime, 'notifications': [], 'global_alerts': []}
     try:
         if current_user.is_authenticated:
-            unread_notifications = Notification.query.filter_by(
-                user_id=current_user.id, is_read=False
-            ).order_by(Notification.created_at.desc()).all()
-            context['notifications'] = unread_notifications
-    except Exception:
-        pass
-
-    try:
-        active_alerts = GlobalAlert.query.filter_by(is_active=True).order_by(
-            GlobalAlert.created_at.desc()
-        ).all()
-        context['global_alerts'] = active_alerts
-    except Exception:
-        pass
-
+            # Safer query for notifications to prevent crashes if table is missing or partially migrated
+            try:
+                unread_notifications = Notification.query.filter_by(
+                    user_id=current_user.id, is_read=False
+                ).order_by(Notification.created_at.desc()).limit(10).all()
+                context['notifications'] = unread_notifications
+            except Exception as e:
+                logger.error(f"Notification context error: {e}")
+                
+        try:
+            active_alerts = GlobalAlert.query.filter_by(is_active=True).order_by(
+                GlobalAlert.created_at.desc()
+            ).all()
+            context['global_alerts'] = active_alerts
+        except Exception as e:
+            logger.error(f"GlobalAlert context error: {e}")
+            
+    except Exception as e:
+        logger.error(f"Context processor error: {e}")
+        
     return context
 
 def log_audit(action, target_id=None, target_type=None):
@@ -426,15 +443,19 @@ def register():
             user_to_save = existing_user
             logger.info(f"[REG] Re-using existing onboarding record for {email} (ID: {user_to_save.id})")
         else:
-            # Create new user record
-            user_to_save = User(email=email, role='Student', name=name)
+            # Create new user record with all required fields set immediately to avoid validation 500s
+            user_to_save = User(
+                email=email, 
+                role='Applicant', 
+                name=name,
+                password=generate_password_hash(uuid.uuid4().hex)
+            )
             db.session.add(user_to_save)
             logger.info(f"[REG] Creating new onboarding record for {email}")
 
         try:
-            # 3. Handle File Upload (inside transaction block)
+            logger.info(f"[REG] Step 1: Handling File Upload for {email}")
             if photo and photo.filename:
-                logger.info(f"[REG] Saving profile photo for {email}")
                 ext = photo.filename.rsplit('.', 1)[1].lower() if '.' in photo.filename else 'jpg'
                 safe_name = f"{uuid.uuid4().hex[:10]}.{ext}"
                 filename = secure_filename(f"{email.split('@')[0]}_{safe_name}")
@@ -442,9 +463,9 @@ def register():
                 os.makedirs(profile_dir, exist_ok=True)
                 photo.save(os.path.join(profile_dir, filename))
                 user_to_save.profile_photo = f"uploads/profiles/{filename}"
-                logger.info(f"[REG] Photo saved: {user_to_save.profile_photo}")
+                logger.info(f"[REG] Photo saved to: {user_to_save.profile_photo}")
 
-            # 4. Generate fresh OTP and update state
+            logger.info(f"[REG] Step 2: Preparing User Record for {email}")
             otp = f"{random.randint(100000, 999999)}"
             user_to_save.name = name
             user_to_save.phone = phone
@@ -456,29 +477,19 @@ def register():
             user_to_save.verification_code = otp
             user_to_save.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
             user_to_save.verification_attempts = 0
-            # Safe attribute set for otp_email_status
+            
             if hasattr(user_to_save, 'otp_email_status'):
                 user_to_save.otp_email_status = 'pending'
             
-            if not getattr(user_to_save, 'password', None):
-                user_to_save.password = generate_password_hash(uuid.uuid4().hex)
-            
-            logger.info(f"[REG] Finalizing DB save for {email}...")
+            logger.info(f"[REG] Step 3: Committing to Database for {email}...")
             db.session.commit()
-            logger.info(f"[REG] DB commit SUCCESS for {email}. New/Current ID: {user_to_save.id}")
+            logger.info(f"[REG] Step 4: DB commit SUCCESS for {email}. ID: {getattr(user_to_save, 'id', 'NEW')}")
             
-            # CRITICAL: Re-verify record exists in current session scope
-            # This helps debug SQLite invisibility issues on Railway
-            verify_user = db.session.get(User, user_to_save.id)
-            if not verify_user:
-                 logger.error(f"[REG] POST-COMMIT FATAL: User ID {user_to_save.id} not found in DB immediately after commit!")
-            else:
-                 logger.info(f"[REG] Verified record exists: {verify_user.email}")
-
         except Exception as e:
             db.session.rollback()
-            logger.error(f"[REG] CRITICAL REGISTRATION ERROR for {email}: {str(e)}", exc_info=True)
-            flash('A system error occurred during registration.', 'danger')
+            err_msg = f"[REG] STEP FAILURE for {email}: {str(e)}"
+            logger.error(err_msg, exc_info=True)
+            flash(f'Registration error: {str(e)}', 'danger')
             return redirect(url_for('register'))
 
         # SAFE_MODE: skip email logic if env var is set
