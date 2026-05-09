@@ -45,6 +45,9 @@
             <a href="#" class="nav-link" data-section="audit">
                 <i class="fas fa-history"></i> <span>Activity Logs</span>
             </a>
+            <a href="{{ url_for('my_eid') }}" class="nav-link text-info fw-bold">
+                <i class="fas fa-id-card"></i> <span>My Digital E-ID</span>
+            </a>
             <hr class="border-secondary mx-3 opacity-25">
             <a href="{{ url_for('index') }}" class="nav-link text-warning">
                 <i class="fas fa-external-link-alt"></i> <span>View Website</span>
@@ -389,8 +392,8 @@
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Manage</button>
                                             <ul class="dropdown-menu dropdown-menu-end">
-                                                {% if user.student_id %}
-                                                    <li><a class="dropdown-item" href="{{ url_for('view_eid', user_id=user.id) }}"><i class="fas fa-id-card me-2"></i>View E-ID</a></li>
+                                                {% if user.student_id or user.registration_state == 'approved' or user.role in ['Admin', 'SuperAdmin', 'Teacher', 'Staff'] %}
+                                                    <li><a class="dropdown-item fw-bold text-info" href="{{ url_for('view_eid', user_id=user.id) }}"><i class="fas fa-id-card me-2"></i>View E-ID</a></li>
                                                 {% endif %}
                                                 <li><hr class="dropdown-divider"></li>
                                                 {% if user.registration_state == 'pending_verification' %}

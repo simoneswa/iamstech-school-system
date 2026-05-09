@@ -1382,7 +1382,7 @@ def chatbot():
 @app.route('/my_eid')
 @login_required
 def my_eid():
-    if current_user.role == 'Applicant' or current_user.status == 'Pending Verification':
+    if current_user.role == 'Applicant' and current_user.registration_state != 'approved':
         flash("Your E-ID is not generated yet. You must be fully approved.", "warning")
         return redirect(url_for('dashboard'))
     return redirect(url_for('view_eid', user_id=current_user.id))
@@ -1396,8 +1396,14 @@ def view_eid(user_id):
         
     user = User.query.get_or_404(user_id)
     if not user.student_id:
-        flash("This user does not have an ID number assigned.", "warning")
-        return redirect(url_for('dashboard'))
+        if user.role in ['SuperAdmin', 'Admin', 'Teacher', 'Staff'] or user.registration_state == 'approved':
+            # Auto-generate ID if missing for approved/staff roles
+            from app import generate_institutional_id
+            user.student_id = generate_institutional_id(user.role)
+            db.session.commit()
+        else:
+            flash("This user does not have an ID number assigned.", "warning")
+            return redirect(url_for('dashboard'))
         
     return render_template('dashboards/eid_card.html', user=user)
 @app.route('/logout')
