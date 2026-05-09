@@ -316,7 +316,7 @@ def login():
                     flash(f'Your account has been suspended. Reason: {reason}', 'danger')
                     return redirect(url_for('login'))
                 
-            if check_password_hash(user.password, password):
+            if user and user.password and check_password_hash(user.password, password):
                 if user.is_superadmin:
                     login_user(user)
                     flash('SuperAdmin access granted.', 'success')

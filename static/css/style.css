@@ -377,23 +377,23 @@ img {
 }
 
 .dev-portrait-large {
-    width: 160px; /* Sharp Passport Scale */
-    height: 160px;
+    width: 130px; /* Precise Passport Scale */
+    height: 130px;
     border-radius: 50%;
-    padding: 6px;
+    padding: 5px;
     background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255,255,255,0.2);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
 }
 
 /* Founder Specific Prominence */
 .founder-portrait {
-    width: 210px; /* Leadership Scale */
-    height: 210px;
+    width: 180px; /* Refined Leadership Scale */
+    height: 180px;
     border-radius: 50%;
-    border: 5px solid white;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    border: 4px solid white;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.1);
     object-fit: cover;
 }
 
