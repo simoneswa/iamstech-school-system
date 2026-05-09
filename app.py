@@ -69,22 +69,48 @@ def handle_exception(e):
 
 
 # --- Database Configuration ---
-db_url = os.environ.get("DATABASE_URL")
+db_url = os.environ.get("DATABASE_URL", "").strip()
 force_sqlite = os.environ.get("FORCE_SQLITE", "False").lower() == "true"
 
-if db_url and not force_sqlite:
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-else:
-    if os.path.exists('/data'): db_path = '/data/iamstech.db'
-    elif os.path.exists(app.instance_path): db_path = os.path.join(app.instance_path, 'iamstech.db')
-    elif os.path.exists('/tmp'): db_path = '/tmp/iamstech.db'
-    else: db_path = 'iamstech.db'
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}?timeout=30"
+def _get_db_uri():
+    """Parse DATABASE_URL safely. Returns a valid SQLAlchemy URI or falls back to SQLite."""
+    if db_url and not force_sqlite:
+        try:
+            # Fix legacy postgres:// scheme
+            url = db_url
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            # Validate it looks like a real URL (has @host:port pattern)
+            if "@" not in url or "://" not in url:
+                raise ValueError(f"DATABASE_URL appears malformed (missing @ or ://): {url[:60]}")
+            logger.info(f"DB: Using PostgreSQL (host={url.split('@')[-1].split('/')[0]})")
+            return url
+        except Exception as e:
+            logger.critical(f"DATABASE_URL PARSE ERROR: {e} — falling back to SQLite")
 
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True, "pool_recycle": 280}
+    # SQLite fallback
+    if os.path.exists('/data'):
+        db_path = '/data/iamstech.db'
+    elif os.path.exists(app.instance_path):
+        db_path = os.path.join(app.instance_path, 'iamstech.db')
+    elif os.path.exists('/tmp'):
+        db_path = '/tmp/iamstech.db'
+    else:
+        db_path = 'iamstech.db'
+
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    logger.warning(f"DB: Using SQLite fallback at {db_path}")
+    return f"sqlite:///{db_path}?timeout=30"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = _get_db_uri()
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+    "pool_timeout": 30,
+    "connect_args": {"connect_timeout": 10} if "postgresql" in app.config['SQLALCHEMY_DATABASE_URI'] else {},
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # --- Initialize Extensions ---
