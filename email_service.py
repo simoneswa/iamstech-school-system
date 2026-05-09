@@ -10,28 +10,38 @@ socket.setdefaulttimeout(15)
 
 mail = Mail()
 
-def send_async_email(app, msg, user_id=None):
+def send_async_email(app, msg, user_id=None, otp_code=None):
     with app.app_context():
         try:
+            # 1. Immediate Log for Admin Visibility (Visible in Railway)
+            print("\n" + "="*50)
+            print(f"[OTP SYSTEM] Dispatching to: {msg.recipients}")
+            if otp_code:
+                print(f"[OTP FALLBACK]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code}\nDelivery Status: ATTEMPTING")
+            print("="*50 + "\n")
+
             mail.send(msg)
-            print(f"INFO: Email sent successfully to {msg.recipients}")
+            print(f"INFO: SMTP Delivery SUCCESS for {msg.recipients}")
+            
+            if user_id:
+                from models import db, User
+                user = db.session.get(User, user_id)
+                if user and hasattr(user, 'otp_email_status'):
+                    user.otp_email_status = 'sent'
+                    db.session.commit()
+        except Exception as e:
+            print("\n" + "!"*50)
+            print(f"[OTP FALLBACK]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code if otp_code else 'N/A'}\nDelivery Status: FAILED\nReason: {str(e)}")
+            print("!"*50 + "\n")
+            
             if user_id:
                 from models import db, User
                 user = db.session.get(User, user_id)
                 if user:
-                    if hasattr(user, 'otp_email_status'):
-                        user.otp_email_status = 'sent'
-                    db.session.commit()
-        except Exception as e:
-            print(f"ERROR: SMTP delivery failed for {msg.recipients}: {e}")
-            if user_id:
-                from models import db, User
-                user = User.query.get(user_id)
-                if user:
                     user.otp_email_status = 'failed'
                     db.session.commit()
 
-def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None):
+def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None, otp_code=None):
     """
     Core wrapper for sending emails asynchronously.
     """
@@ -41,21 +51,16 @@ def send_email_wrapper(subject, recipients, text_body, html_body, user_id=None):
         # Respect SAFE_MODE globally
         is_safe_mode = os.environ.get('IAMSTECH_REG_SAFE_MODE', '').lower() == 'true'
         if is_safe_mode:
-            print(f"INFO: [SAFE_MODE] Skipping email dispatch to {recipients}")
+            print(f"INFO: [SAFE_MODE] Skipping email dispatch to {recipients} (OTP: {otp_code})")
             return True
 
         sender_email = app.config.get("MAIL_USERNAME")
-        print(f"DEBUG: Initiating email from {sender_email} to {recipients}")
-        msg = Message(
-            subject=subject,
-            sender=sender_email,
-            recipients=recipients
-        )
+        msg = Message(subject=subject, sender=sender_email, recipients=recipients)
         msg.body = text_body
         msg.html = html_body
         
         # Start background thread
-        threading.Thread(target=send_async_email, args=(app, msg, user_id)).start()
+        threading.Thread(target=send_async_email, args=(app, msg, user_id, otp_code)).start()
         return True
     except Exception as e:
         print(f"ERROR: Failed to initiate async email: {e}")
@@ -223,4 +228,4 @@ IAMSTECH Admissions Team
         </div>
     </div>
     """
-    return send_email_wrapper(subject, [user.email], text_body, html_body, user_id=user.id)
+    return send_email_wrapper(subject, [user.email], text_body, html_body, user_id=user.id, otp_code=code)

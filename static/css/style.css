@@ -377,20 +377,20 @@ img {
 }
 
 .dev-portrait-large {
-    width: 180px; /* Reduced to professional passport scale */
-    height: 180px;
+    width: 160px; /* Sharp Passport Scale */
+    height: 160px;
     border-radius: 50%;
-    padding: 8px;
+    padding: 6px;
     background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255,255,255,0.2);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
 /* Founder Specific Prominence */
 .founder-portrait {
-    width: 220px; /* Slightly more prominent than developer */
-    height: 220px;
+    width: 210px; /* Leadership Scale */
+    height: 210px;
     border-radius: 50%;
     border: 5px solid white;
     box-shadow: 0 15px 35px rgba(0,0,0,0.1);

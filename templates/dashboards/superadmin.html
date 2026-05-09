@@ -339,6 +339,7 @@
                                     <th>User</th>
                                     <th>Role</th>
                                     <th>Status</th>
+                                    <th>Verification & OTP</th>
                                     <th class="text-end">Controls</th>
                                 </tr>
                             </thead>
@@ -360,6 +361,19 @@
                                             <span class="badge bg-success text-white">Approved</span>
                                         {% else %}
                                             <span class="badge bg-secondary">{{ user.registration_state|title if user.registration_state else 'Pending' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_email_verified %}
+                                            <span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-check-circle me-1"></i>Verified</span>
+                                        {% else %}
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="badge rounded-pill bg-warning text-dark border">OTP: {{ user.verification_code or '----' }}</div>
+                                                <small class="x-small {% if user.otp_email_status == 'failed' %}text-danger{% else %}text-muted{% endif %}" style="font-size: 0.7rem;">
+                                                    <i class="fas {% if user.otp_email_status == 'failed' %}fa-exclamation-triangle{% else %}fa-envelope{% endif %} me-1"></i>
+                                                    {{ user.otp_email_status|upper if user.otp_email_status else 'PENDING' }}
+                                                </small>
+                                            </div>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
