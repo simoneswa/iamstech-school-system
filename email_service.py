@@ -1,7 +1,7 @@
 import threading
 import os
 import socket
-from flask import current_app
+from flask import current_app, request as flask_request
 from flask_mail import Mail, Message
 from flask import url_for
 
@@ -42,14 +42,36 @@ def send_async_email(app, msg, user_id=None, otp_code=None):
                     db.session.commit()
 
 def build_external_url(endpoint, **values):
+    """
+    Build an absolute URL for the given endpoint.
+    Priority: live request host > IAMSTECH_BASE_URL env var > SERVER_NAME config.
+    Using the live request host ensures links always point to the correct
+    Railway domain even after renames or custom domain changes.
+    """
     app = current_app._get_current_object()
-    base_url = app.config.get('BASE_URL') or os.environ.get('IAMSTECH_BASE_URL') or app.config.get('SERVER_NAME')
+
+    # 1. Best source: the actual host from the current HTTP request
+    try:
+        req = flask_request._get_current_object()
+        scheme = req.scheme if req.scheme else 'https'
+        # Honour X-Forwarded-Proto from Railway's proxy
+        scheme = req.headers.get('X-Forwarded-Proto', scheme)
+        host = req.headers.get('X-Forwarded-Host', req.host)
+        path = url_for(endpoint, _external=False, **values)
+        return f"{scheme}://{host}{path}"
+    except RuntimeError:
+        pass  # No active request context (e.g. background thread)
+
+    # 2. Fallback: configured BASE_URL / IAMSTECH_BASE_URL env var
+    base_url = app.config.get('BASE_URL') or os.environ.get('IAMSTECH_BASE_URL', '').strip()
     if base_url:
         base_url = base_url.strip().rstrip('/')
         if not base_url.startswith('http'):
             base_url = 'https://' + base_url
         path = url_for(endpoint, _external=False, **values)
         return base_url + path
+
+    # 3. Last resort: Flask's built-in external URL (requires SERVER_NAME)
     return url_for(endpoint, _external=True, **values)
 
 
