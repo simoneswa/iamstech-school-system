@@ -367,9 +367,9 @@ img {
 }
 
 .dev-image-side {
-    flex: 0 0 350px;
+    flex: 0 0 280px;
     background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
-    padding: 60px;
+    padding: 40px;
     text-align: center;
     display: flex;
     justify-content: center;
@@ -377,14 +377,24 @@ img {
 }
 
 .dev-portrait-large {
-    width: 280px;
-    height: 280px;
+    width: 180px; /* Reduced to professional passport scale */
+    height: 180px;
     border-radius: 50%;
-    padding: 12px;
+    padding: 8px;
     background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255,255,255,0.2);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+/* Founder Specific Prominence */
+.founder-portrait {
+    width: 220px; /* Slightly more prominent than developer */
+    height: 220px;
+    border-radius: 50%;
+    border: 5px solid white;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    object-fit: cover;
 }
 
 .dev-content-side {

@@ -258,6 +258,21 @@ def generate_institutional_email(name, role):
         counter += 1
     return email
 
+# --- Auth State Guard ---
+def check_auth_state(user, current_step):
+    """
+    Intelligently redirects user based on their current onboarding state.
+    """
+    if not user: return None
+    
+    if user.is_email_verified and current_step == 'verify':
+        return redirect(url_for('login'))
+    
+    if user.registration_state == 'approved' and current_step in ['verify', 'pending']:
+        return redirect(url_for('login'))
+        
+    return None
+
 # --- Routes ---
 @app.route('/')
 def index():
@@ -466,18 +481,15 @@ def verify_email(user_id):
         user = User.query.filter_by(id=user_id).first()
     
     if not user:
-        # DEEP DIAGNOSTICS: Why is this user missing?
+        # DEEP DIAGNOSTICS
         total_users = User.query.count()
         db_type = "PostgreSQL" if "postgresql" in app.config['SQLALCHEMY_DATABASE_URI'].lower() else "SQLite"
-        logger.error(f"[VERIFY] 404 FATAL: User ID {user_id} not found. DB Type: {db_type}, Total Users in DB: {total_users}")
-        
-        # If it's a small number of users, log their IDs for debugging
-        if total_users < 20:
-             all_ids = [u.id for u in User.query.all()]
-             logger.info(f"[VERIFY] Current DB IDs: {all_ids}")
-
         return render_template('errors/404.html', 
-                             message=f"Verification record (ID: {user_id}) not found in the current {db_type} database. Total users: {total_users}."), 404
+                             message=f"Verification record (ID: {user_id}) not found. DB Type: {db_type}"), 404
+
+    # State Guard
+    state_redirect = check_auth_state(user, 'verify')
+    if state_redirect: return state_redirect
 
     if user.is_email_verified:
         logger.info(f"[VERIFY] User {user.email} already verified, redirecting to login.")

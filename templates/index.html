@@ -138,12 +138,11 @@
                 {% for f in founders %}
                 <div class="col-lg-5">
                     <div class="profile-card">
-                        <div class="profile-img-frame">
-                            <div class="profile-img-inner">
-                                <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600x600?text=Founder' }}" 
-                                     alt="{{ f.name }}" 
-                                     onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
-                            </div>
+                        <div class="text-center mb-4">
+                            <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600x600?text=Founder' }}" 
+                                 alt="{{ f.name }}" 
+                                 class="founder-portrait"
+                                 onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
                         </div>
                         <h2 class="profile-name">{{ f.name }}</h2>
                         <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
