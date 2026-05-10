@@ -1070,23 +1070,47 @@ def dashboard():
             logger.warning(f"Gamification update failed: {e}")
             
         # Fetch student data
-        enrollments = Enrollment.query.filter_by(student_id=current_user.id).all()
-        courses = Course.query.all()
+        try:
+            enrollments = Enrollment.query.filter_by(student_id=current_user.id).all()
+        except Exception as e:
+            logger.warning(f"Enrollment query failed: {e}")
+            enrollments = []
+
+        try:
+            courses = Course.query.all()
+        except Exception:
+            courses = []
 
         # Attendance calculation
-        total_att = Attendance.query.filter_by(student_id=current_user.id).count()
-        present_att = Attendance.query.filter_by(student_id=current_user.id, status='Present').count()
-        att_percent = (present_att / total_att * 100) if total_att > 0 else 0
+        try:
+            total_att = Attendance.query.filter_by(student_id=current_user.id).count()
+            present_att = Attendance.query.filter_by(student_id=current_user.id, status='Present').count()
+            att_percent = (present_att / total_att * 100) if total_att > 0 else 0
+        except Exception as e:
+            logger.warning(f"Attendance calculation failed: {e}")
+            att_percent = 0
 
         # Assignments from enrolled courses
-        enrolled_course_ids = [e.course_id for e in enrollments]
-        assignments = Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else []
+        try:
+            enrolled_course_ids = [e.course_id for e in enrollments]
+            assignments = Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else []
+        except Exception as e:
+            logger.warning(f"Assignment query failed: {e}")
+            assignments = []
 
         # All meetings (students and staff see published meetings)
-        meetings = Meeting.query.order_by(Meeting.date.desc()).all()
+        try:
+            meetings = Meeting.query.order_by(Meeting.date.desc()).all()
+        except Exception as e:
+            logger.warning(f"Meeting query failed: {e}")
+            meetings = []
 
         # Announcements for portal updates
-        announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
+        try:
+            announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
+        except Exception as e:
+            logger.warning(f"Announcement query failed: {e}")
+            announcements = []
 
         # Leaderboard — Students ONLY (excludes Admin, SuperAdmin, Teacher, Staff, technical accounts)
         try:

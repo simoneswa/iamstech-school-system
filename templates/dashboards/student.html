@@ -147,7 +147,7 @@
                                             </div>
                                             <span class="badge bg-info text-dark">Update</span>
                                         </div>
-                                        <p class="small text-muted mb-0">{{ ann.content[:120] }}{% if ann.content|length > 120 %}...{% endif %}</p>
+                                        <p class="small text-muted mb-0">{{ (ann.content or "")[:120] }}{% if (ann.content or "")|length > 120 %}...{% endif %}</p>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -157,33 +157,28 @@
                         {% endif %}
                     </article>
                 </div>
-                <div class="col-xl-4">
                     <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Quick Actions</h5>
+                            <h5 class="fw-bold mb-0">Student Leaderboard</h5>
+                            <i class="fas fa-trophy text-warning"></i>
                         </div>
-                        <div class="quick-action-list d-flex flex-column gap-3">
-                            <a href="#courses" class="quick-action-item">
-                                <i class="fas fa-book-open"></i>
-                                <div>
-                                    <div class="fw-bold">Review Courses</div>
-                                    <div class="small text-muted">See enrolled subjects</div>
+                        <div class="leaderboard-list">
+                            {% for s in top_students %}
+                                <div class="d-flex align-items-center gap-3 mb-3 pb-2 border-bottom border-light">
+                                    <div class="rank-circle d-flex align-items-center justify-content-center bg-light fw-bold" style="width: 32px; height: 32px; border-radius: 50%; font-size: 0.8rem;">
+                                        {{ loop.index }}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small">{{ s.name }}</div>
+                                        <div class="x-small text-muted">{{ s.department or 'General' }}</div>
+                                    </div>
+                                    <div class="badge bg-soft-primary text-primary rounded-pill">
+                                        {{ s.points or 0 }} XP
+                                    </div>
                                 </div>
-                            </a>
-                            <a href="#assignments" class="quick-action-item">
-                                <i class="fas fa-tasks"></i>
-                                <div>
-                                    <div class="fw-bold">Open Assignments</div>
-                                    <div class="small text-muted">Track what’s due</div>
-                                </div>
-                            </a>
-                            <a href="#schedule" class="quick-action-item">
-                                <i class="fas fa-calendar-alt"></i>
-                                <div>
-                                    <div class="fw-bold">View Schedule</div>
-                                    <div class="small text-muted">Upcoming sessions</div>
-                                </div>
-                            </a>
+                            {% else %}
+                                <p class="small text-muted text-center py-3">Leaderboard updating...</p>
+                            {% endfor %}
                         </div>
                     </article>
                 </div>
