@@ -232,30 +232,6 @@
 </section>
 
 
-<!-- CAMPUS ACTIVITIES -->
-<section class="py-5 bg-light">
-    <div class="container py-5">
-        <div class="text-center mb-5">
-            <p class="section-title">CAMPUS LIFE</p>
-            <h2 class="section-header">Activity Highlights</h2>
-        </div>
-        <div class="row g-4 mt-4">
-            {% if activities %}
-                {% for act in activities %}
-                <div class="col-lg-3 col-md-6">
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 transition-all hover-translate-up">
-                        <img src="{{ media_url(act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Activity';">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-1">{{ act.title }}</h6>
-                            <p class="x-small text-muted mb-0">{{ act.description[:80] }}...</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-    </div>
-</section>
 
 <!-- ANNOUNCEMENTS -->
 <section class="py-5 bg-white">
@@ -263,8 +239,8 @@
         <div class="row g-5">
             <div class="col-lg-12">
                 <div class="text-center mb-5">
-                    <p class="section-title">NEWS & UPDATES</p>
-                    <h2 class="section-header">Latest Announcements</h2>
+                    <p class="section-title">INSTITUTIONAL UPDATES</p>
+                    <h2 class="section-header">Overall Announcements</h2>
                 </div>
                 {% if announcements %}
                     <div class="row g-4">

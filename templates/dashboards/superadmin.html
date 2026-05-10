@@ -48,6 +48,9 @@
             <a href="#" class="nav-link" data-section="monitoring">
                 <i class="fas fa-shield-alt"></i> <span>Auth & Monitoring</span>
             </a>
+            <a href="#" class="nav-link" data-section="announcements">
+                <i class="fas fa-bullhorn"></i> <span>Announcements</span>
+            </a>
             <a href="#" class="nav-link" data-section="audit">
                 <i class="fas fa-history"></i> <span>Activity Logs</span>
             </a>
@@ -589,6 +592,62 @@
                                                 {% endif %}
                                             </ul>
                                         </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <!-- Announcements Section -->
+            <section id="section-announcements" class="dash-section">
+                <h2 class="fw-black text-primary mb-4">Institutional Announcements</h2>
+                
+                <div class="premium-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3 text-success"><i class="fas fa-plus-circle me-2"></i>Post Overall Announcement</h5>
+                    <form action="{{ url_for('admin_post_announcement') }}" method="POST" class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Title</label>
+                            <input type="text" name="title" class="form-control rounded-3" placeholder="Announcement Title" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Announcement Content</label>
+                            <textarea name="content" class="form-control rounded-3" rows="4" placeholder="Type your message here..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success fw-bold rounded-pill px-4">Post Announcement</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="premium-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Existing Announcements</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ann in announcements %}
+                                <tr>
+                                    <td class="small text-muted">{{ ann.date.strftime('%Y-%m-%d') }}</td>
+                                    <td><div class="fw-bold small">{{ ann.title }}</div></td>
+                                    <td>
+                                        {% if not ann.course_id %}
+                                            <span class="badge bg-info text-dark">Overall</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">Course: {{ ann.course.code if ann.course else 'N/A' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form action="{{ url_for('admin_delete_announcement', ann_id=ann.id) }}" method="POST" onsubmit="return confirm('Delete?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"><i class="fas fa-trash-alt"></i></button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% endfor %}

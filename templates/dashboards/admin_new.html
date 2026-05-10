@@ -468,20 +468,69 @@
 
             <!-- Announcements Section -->
             <section id="section-announcements" class="section-admin d-none">
-                <h2 class="fw-black text-primary mb-4">System Announcements</h2>
-                <div class="dash-card p-4 rounded-4">
-                    <h5 class="fw-bold mb-3">Recent Announcements</h5>
-                    {% for ann in announcements[:5] %}
-                    <div class="p-3 border rounded-3 mb-2">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="fw-bold small mb-1">{{ ann.title }}</h6>
-                                <p class="x-small text-muted mb-0">{{ ann.date.strftime('%B %d, %Y') }}</p>
-                            </div>
-                            <span class="badge bg-primary">Posted</span>
+                <h2 class="fw-black text-primary mb-4">Institutional Announcements</h2>
+                
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2 text-success"></i>Post Overall Announcement</h5>
+                    <p class="small text-muted mb-4">Overall announcements are visible on the public homepage and to all registered students.</p>
+                    
+                    <form action="{{ url_for('admin_post_announcement') }}" method="POST" class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Title</label>
+                            <input type="text" name="title" class="form-control rounded-3" placeholder="Announcement Title" required>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Announcement Content</label>
+                            <textarea name="content" class="form-control rounded-3" rows="4" placeholder="Type your message here..." required></textarea>
+                        </div>
+                        <input type="hidden" name="is_overall" value="true">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success fw-bold rounded-pill px-4">
+                                <i class="fas fa-bullhorn me-2"></i>Post to Homepage & Portal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Manage Recent Announcements</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ann in announcements %}
+                                <tr>
+                                    <td class="small text-muted">{{ ann.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="fw-bold small">{{ ann.title }}</div>
+                                        <div class="x-small text-muted">{{ ann.content[:60] }}...</div>
+                                    </td>
+                                    <td>
+                                        {% if not ann.course_id %}
+                                            <span class="badge bg-info text-dark">Overall</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">Course: {{ ann.course.code if ann.course else 'N/A' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form action="{{ url_for('admin_delete_announcement', ann_id=ann.id) }}" method="POST" onsubmit="return confirm('Delete this announcement?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    {% endfor %}
                 </div>
             </section>
         </main>

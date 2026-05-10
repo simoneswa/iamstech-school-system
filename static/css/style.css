@@ -14,6 +14,27 @@ body {
     background-color: var(--pure-white);
     color: var(--primary-blue);
     overflow-x: hidden;
+    line-height: 1.6; /* Improved readability */
+}
+
+/* Landscape & Spacing Improvements */
+.container {
+    max-width: 1320px; /* Wider landscape layout */
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+section {
+    padding-top: 5rem !important; /* Increased vertical spacing */
+    padding-bottom: 5rem !important;
+}
+
+.gap-v-large {
+    margin-bottom: 4rem !important;
+}
+
+.premium-card {
+    margin-bottom: 2rem;
 }
 
 /* ===== NAVBAR RESTORATION (Match Screenshot 2) ===== */
@@ -96,10 +117,11 @@ body {
 }
 
 .hero-title {
-    font-size: 4rem;
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: 30px;
+    font-size: 4.5rem; /* Slightly larger */
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 40px;
+    letter-spacing: -2px;
 }
 
 .hero-desc {

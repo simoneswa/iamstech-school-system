@@ -620,8 +620,8 @@ def check_auth_state(user, current_step):
 @app.route('/')
 def index():
     try:
-        announcements = Announcement.query.order_by(Announcement.date.desc()).limit(3).all()
-        activities = Activity.query.order_by(Activity.date.desc()).limit(4).all()
+        # Only show OVERALL announcements (where course_id is None)
+        announcements = Announcement.query.filter_by(course_id=None).order_by(Announcement.date.desc()).limit(3).all()
         
         # Defensive Query for Founder/Dev (Crash-Proof)
         try:
@@ -1134,9 +1134,12 @@ def dashboard():
             logger.warning(f"Meeting query failed: {e}")
             meetings = []
 
-        # Announcements for portal updates
+        # Announcements for portal: Overall + Enrolled Courses
         try:
-            announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
+            enrolled_course_ids = [e.course_id for e in current_user.enrollments]
+            announcements = Announcement.query.filter(
+                (Announcement.course_id == None) | (Announcement.course_id.in_(enrolled_course_ids))
+            ).order_by(Announcement.date.desc()).limit(10).all()
         except Exception as e:
             logger.warning(f"Announcement query failed: {e}")
             announcements = []
@@ -1291,6 +1294,8 @@ def upload_material():
         flash('Could not upload material.', 'danger')
     return redirect(url_for('dashboard'))
 
+    return redirect(url_for('dashboard'))
+
 @app.route('/teacher/post_announcement', methods=['POST'])
 @login_required
 @teacher_required
@@ -1313,6 +1318,45 @@ def post_announcement():
         db.session.rollback()
         logger.error(f'Announcement creation failed: {e}')
         flash('Could not post announcement.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/post_announcement', methods=['POST'])
+@login_required
+@admin_required
+def admin_post_announcement():
+    title = request.form.get('title')
+    content = request.form.get('content')
+    is_overall = request.form.get('is_overall') == 'true'
+
+    try:
+        # Admin can post overall (course_id=None)
+        announcement = Announcement(
+            title=title, 
+            content=content, 
+            posted_by=current_user.id, 
+            course_id=None
+        )
+        db.session.add(announcement)
+        db.session.commit()
+        flash('Overall institutional announcement posted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Admin Announcement creation failed: {e}')
+        flash('Could not post institutional announcement.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/delete_announcement/<int:ann_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_announcement(ann_id):
+    ann = Announcement.query.get_or_404(ann_id)
+    try:
+        db.session.delete(ann)
+        db.session.commit()
+        flash('Announcement deleted.', 'info')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting announcement.', 'danger')
     return redirect(url_for('dashboard'))
 
 @app.route('/teacher/download_resource/<int:resource_id>')
