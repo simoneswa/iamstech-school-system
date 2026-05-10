@@ -13,3 +13,4 @@ flask-mail==0.9.1
 supabase==2.3.5
 email-validator==2.1.1
 pillow
+resend==0.8.0

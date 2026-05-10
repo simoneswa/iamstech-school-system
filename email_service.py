@@ -5,25 +5,51 @@ from flask import current_app, request as flask_request
 from flask_mail import Mail, Message
 from flask import url_for
 
+import resend
+
 # Set a global timeout for socket operations to prevent SMTP hangs
 socket.setdefaulttimeout(15)
 
 mail = Mail()
+
+# Initialize Resend
+resend.api_key = os.environ.get("RESEND_API_KEY")
 
 def send_async_email(app, msg, user_id=None, otp_code=None):
     with app.app_context():
         try:
             # 1. Immediate Log for Admin Visibility (Visible in Railway)
             print("\n" + "="*50)
-            print(f"[OTP SYSTEM] Dispatching to: {msg.recipients}")
+            print(f"[EMAIL SYSTEM] Dispatching to: {msg.recipients}")
             if otp_code:
-                print(f"[OTP FALLBACK]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code}\nDelivery Status: ATTEMPTING")
+                print(f"[OTP STATUS]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code}\nDelivery Method: ATTEMPTING")
             print("="*50 + "\n")
 
-            mail.send(msg)
-            print(f"INFO: SMTP Delivery SUCCESS for {msg.recipients}")
+            email_sent_successfully = False
             
-            if user_id:
+            # 2. Try Resend First (Production Preferred)
+            if resend.api_key:
+                try:
+                    params = {
+                        "from": msg.sender or "IamsTech <noreply@iamstech.com>",
+                        "to": msg.recipients,
+                        "subject": msg.subject,
+                        "html": msg.html,
+                        "text": msg.body
+                    }
+                    resend.Emails.send(params)
+                    print(f"INFO: [RESEND] Delivery SUCCESS for {msg.recipients}")
+                    email_sent_successfully = True
+                except Exception as resend_error:
+                    print(f"WARNING: [RESEND] Failed, falling back to SMTP. Error: {resend_error}")
+
+            # 3. Fallback to SMTP (Flask-Mail)
+            if not email_sent_successfully:
+                mail.send(msg)
+                print(f"INFO: [SMTP] Delivery SUCCESS for {msg.recipients}")
+                email_sent_successfully = True
+            
+            if user_id and email_sent_successfully:
                 from models import db, User
                 user = db.session.get(User, user_id)
                 if user and hasattr(user, 'otp_email_status'):
@@ -31,7 +57,7 @@ def send_async_email(app, msg, user_id=None, otp_code=None):
                     db.session.commit()
         except Exception as e:
             print("\n" + "!"*50)
-            print(f"[OTP FALLBACK]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code if otp_code else 'N/A'}\nDelivery Status: FAILED\nReason: {str(e)}")
+            print(f"[EMAIL FAILURE]\nApplicant: {msg.recipients[0]}\nOTP: {otp_code if otp_code else 'N/A'}\nReason: {str(e)}")
             print("!"*50 + "\n")
             
             if user_id:
