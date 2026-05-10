@@ -257,7 +257,11 @@
                     <!-- FOUNDER PHOTO -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ media_url('uploads/branding/founder.jpg', 'https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo'" alt="Founder">
+                            {% if founders and founders[0] %}
+                                <img src="{{ media_url(founders[0].image_path, 'https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo'" alt="Founder">
+                            {% else %}
+                                <img src="https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo" alt="Founder">
+                            {% endif %}
                         </div>
                         <div class="media-actions">
                             <div>
@@ -275,7 +279,11 @@
                     <!-- DEVELOPER PHOTO -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ media_url(developers[0].image_path, 'https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
+                            {% if developers and developers[0] %}
+                                <img src="{{ media_url(developers[0].image_path, 'https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
+                            {% else %}
+                                <img src="https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo" alt="Developer">
+                            {% endif %}
                         </div>
                         <div class="media-actions">
                             <div>

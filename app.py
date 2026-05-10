@@ -957,6 +957,19 @@ def dashboard():
         except Exception:
             audit_logs = []
             
+        # Defensive Query for Founder/Dev (Crash-Proof)
+        try:
+            founders = Founder.query.all()
+        except Exception as e:
+            logger.warning(f"Founder table query error in dashboard: {e}")
+            founders = []
+            
+        try:
+            developers = Developer.query.all()
+        except Exception as e:
+            logger.warning(f"Developer table query error in dashboard: {e}")
+            developers = []
+
         notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(10).all()
         return render_template('dashboards/superadmin.html', 
                              users=users, 
@@ -964,7 +977,9 @@ def dashboard():
                              applicants=applicants,
                              otp_requests=otp_requests,
                              audit_logs=audit_logs,
-                             notifications=notifications)
+                             notifications=notifications,
+                             founders=founders,
+                             developers=developers)
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         applicants = User.query.filter_by(status='Pending').all()
