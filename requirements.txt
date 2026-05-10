@@ -10,7 +10,7 @@ itsdangerous==2.1.2
 click==8.1.7
 sqlalchemy>=2.0.35
 flask-mail==0.9.1
-supabase==2.3.5
+supabase==2.4.0
 email-validator==2.1.1
 pillow
 resend==0.8.0
