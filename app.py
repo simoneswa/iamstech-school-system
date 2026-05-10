@@ -368,6 +368,7 @@ def find_brand_media_path(prefix):
 
     if app.config['SUPABASE_STORAGE_ENABLED']:
         try:
+            # Consistent with lib/storage folder structure
             listing = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).list('branding')
             if isinstance(listing, list):
                 for item in sorted(listing, key=lambda x: x.get('name', ''), reverse=True):
@@ -378,6 +379,28 @@ def find_brand_media_path(prefix):
             logger.warning(f"Could not list Supabase branding objects: {e}")
 
     return None
+
+@app.route('/api/upload', methods=['POST'])
+@login_required
+def api_upload():
+    """
+    Unified API endpoint for uploading media.
+    Follows the pattern suggested by the user.
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+        
+    try:
+        # Use our hardened save_media_file which now uses cloud-native storage
+        public_url = save_media_file(file, 'uploads')
+        return jsonify({"url": public_url, "success": True})
+    except Exception as e:
+        logger.error(f"API Upload Failure: {e}")
+        return jsonify({"error": str(e), "success": False}), 500
 
 
 def save_media_file(uploaded_file, folder, prefix=None, filename=None):
