@@ -18,7 +18,7 @@
                 <a href="#assignments" class="nav-link"><i class="fas fa-tasks"></i> Assignments</a>
                 <a href="#updates" class="nav-link"><i class="fas fa-bullhorn"></i> Updates</a>
                 <a href="#schedule" class="nav-link"><i class="fas fa-calendar-alt"></i> Schedule</a>
-                <a href="{{ url_for('view_eid') }}" class="nav-link"><i class="fas fa-id-card"></i> Digital ID</a>
+                <a href="{{ url_for('my_eid') }}" class="nav-link"><i class="fas fa-id-card"></i> Digital ID</a>
                 <a href="{{ url_for('logout') }}" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </nav>
         </aside>
@@ -93,7 +93,7 @@
                             <p class="fw-semibold mb-0">{{ 'Awaiting approval and role assignment.' if current_user.role == 'Applicant' else 'Review your upcoming classes and assignment deadlines.' }}</p>
                         </div>
                         <div class="d-flex flex-column gap-2">
-                            <a href="{{ url_for('view_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill">View Digital ID</a>
+                            <a href="{{ url_for('my_eid') }}" class="btn btn-outline-primary btn-sm rounded-pill">View Digital ID</a>
                             <a href="#schedule" class="btn btn-primary btn-sm rounded-pill">View Schedule</a>
                         </div>
                     </article>
