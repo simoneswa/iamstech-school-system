@@ -642,7 +642,6 @@ def index():
 
         return render_template('index.html', 
                              announcements=announcements, 
-                             activities=activities,
                              founders=founders,
                              developers=developers)
     except Exception as e:
