@@ -4,7 +4,7 @@
 <style>
     .hero-section {
         background: linear-gradient(rgba(13, 27, 62, 0.8), rgba(7, 16, 38, 0.9)), 
-                    url("{{ url_for('static', filename='uploads/branding/hero.jpg') }}");
+                    url("{{ media_url(brand_hero_path, 'img/hero.jpg') }}");
         background-size: cover;
         background-position: center;
     }
@@ -147,7 +147,7 @@
                 <div class="col-lg-5">
                     <div class="profile-card">
                         <div class="text-center mb-4">
-                            <img src="{{ url_for('static', filename=f.image_path) if f.image_path else 'https://via.placeholder.com/600x600?text=Founder' }}" 
+                            <img src="{{ media_url(f.image_path, 'https://via.placeholder.com/600x600?text=Founder') }}" 
                                  alt="{{ f.name }}" 
                                  class="founder-portrait"
                                  onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
@@ -195,7 +195,7 @@
                         <div class="dev-flex">
                             <!-- Image Side -->
                             <div class="dev-image-side">
-                                <img src="{{ url_for('static', filename=d.image_path) if d.image_path else 'https://via.placeholder.com/300x300?text=Dev' }}" 
+                                <img src="{{ media_url(d.image_path, 'https://via.placeholder.com/300x300?text=Dev') }}" 
                                      alt="{{ d.name }}" 
                                      class="dev-portrait-large"
                                      onerror="this.src='https://via.placeholder.com/300x300?text=Dev';">
@@ -244,7 +244,7 @@
                 {% for act in activities %}
                 <div class="col-lg-3 col-md-6">
                     <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 transition-all hover-translate-up">
-                        <img src="{{ url_for('static', filename=act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Activity';">
+                        <img src="{{ media_url(act.image_path) }}" class="card-img-top" alt="{{ act.title }}" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x300?text=Activity';">
                         <div class="card-body">
                             <h6 class="fw-bold mb-1">{{ act.title }}</h6>
                             <p class="x-small text-muted mb-0">{{ act.description[:80] }}...</p>

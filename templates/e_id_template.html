@@ -62,13 +62,13 @@
 <body>
     <div class="id-card">
         <div class="id-header">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" class="id-logo" onerror="this.style.display='none';">
+            <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" class="id-logo" onerror="this.style.display='none';">
             <h6 class="mb-0 fw-black" style="letter-spacing: 1px;">IAMSTECH LIBERIA</h6>
             <p class="small mb-0 opacity-75">Professional Technology Institute</p>
         </div>
         <div class="id-body">
             <div class="photo-frame">
-                <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/logo.png') }}">
+                <img src="{{ media_url(current_user.profile_photo, 'img/logo.png') }}">
             </div>
             <div class="id-name">{{ current_user.name }}</div>
             <div class="id-badge">{{ current_user.student_id }}</div>

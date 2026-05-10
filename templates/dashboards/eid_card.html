@@ -195,7 +195,7 @@
                 </div>
                 
                 <div class="id-photo-container">
-                    <img src="{{ url_for('static', filename=user.profile_photo if user.profile_photo else 'img/default-avatar.png') }}" 
+                    <img src="{{ media_url(user.profile_photo, 'img/default-avatar.png') }}" 
                          class="id-photo" 
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 110 130%22%3E%3Crect fill=%22%23e0e0e0%22 width=%22110%22 height=%22130%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22 font-family=%22sans-serif%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
                 </div>

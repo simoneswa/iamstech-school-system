@@ -361,7 +361,7 @@
         <a href="#" title="Wallet/Points"><i class="fas fa-wallet"></i></a>
         <a href="#" title="Notifications"><i class="fas fa-bell"></i></a>
         <div class="dropdown">
-            <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/default-avatar.png') }}" 
+            <img src="{{ media_url(current_user.profile_photo, 'img/default-avatar.png') }}" 
                  class="uni-profile-img dropdown-toggle" role="button" data-bs-toggle="dropdown"
                  onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 35 35%22%3E%3Ccircle cx=%2217.5%22 cy=%2217.5%22 r=%2217.5%22 fill=%22%23e0e0e0%22/%3E%3C/svg%3E'">
             <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
@@ -569,7 +569,7 @@
             <!-- Profile & Quests Sidebar -->
             <div class="col-lg-4">
                 <div class="uni-card profile-card">
-                    <img src="{{ url_for('static', filename=current_user.profile_photo if current_user.profile_photo else 'img/default-avatar.png') }}" 
+                    <img src="{{ media_url(current_user.profile_photo, 'img/default-avatar.png') }}" 
                          class="profile-card-img shadow-sm"
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22%3E%3Ccircle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%23e0e0e0%22/%3E%3C/svg%3E'">
                     

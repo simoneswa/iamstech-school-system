@@ -16,7 +16,7 @@
     <!-- ENTERPRISE SIDEBAR -->
     <aside class="dash-sidebar">
         <div class="p-4 border-bottom border-secondary mb-3 text-center">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" style="height: 40px; width: auto;" alt="Logo">
+            <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" style="height: 40px; width: auto;" alt="Logo">
             <div class="mt-2">
                 <h6 class="text-white fw-bold mb-0">IAMSTECH</h6>
                 <small class="text-white-50 small uppercase">Control Center</small>
@@ -239,7 +239,7 @@
                     <!-- HERO IMAGE -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ url_for('static', filename='uploads/branding/hero.jpg') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Hero+Image'" alt="Hero">
+                            <img src="{{ media_url(brand_hero_path, 'https://placehold.co/600x400/0d1b3e/white?text=Hero+Image') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Hero+Image'" alt="Hero">
                         </div>
                         <div class="media-actions">
                             <div>
@@ -257,7 +257,7 @@
                     <!-- FOUNDER PHOTO -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ url_for('static', filename='uploads/branding/founder.jpg') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo'" alt="Founder">
+                            <img src="{{ media_url('uploads/branding/founder.jpg', 'https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Founder+Photo'" alt="Founder">
                         </div>
                         <div class="media-actions">
                             <div>
@@ -275,7 +275,7 @@
                     <!-- DEVELOPER PHOTO -->
                     <div class="media-card">
                         <div class="media-preview">
-                            <img src="{{ url_for('static', filename=developers[0].image_path) if (developers and developers[0].image_path) else 'https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo' }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
+                            <img src="{{ media_url(developers[0].image_path, 'https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo') }}" onerror="this.src='https://placehold.co/600x400/0d1b3e/white?text=Dev+Photo'" alt="Developer">
                         </div>
                         <div class="media-actions">
                             <div>

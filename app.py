@@ -2,7 +2,7 @@ import os
 import logging
 import re
 import threading
-from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -13,6 +13,7 @@ import csv
 import random
 import io
 from flask import send_file
+from supabase import create_client
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -281,17 +282,165 @@ def health_check():
     }), 200
 
 # --- File Upload Config ---
-# Use Railway Volume if available, else fallback to static
-UPLOAD_BASE = '/data' if os.path.exists('/data') else os.path.join(app.root_path, 'static')
+# Prefer persistent media storage configured via MEDIA_ROOT, else use /data if present, else fallback to static uploads.
+UPLOAD_BASE = os.environ.get('MEDIA_ROOT') or ('/data' if os.path.exists('/data') else os.path.join(app.root_path, 'static'))
 app.config['UPLOAD_FOLDER'] = os.path.join(UPLOAD_BASE, 'uploads')
+app.config['MEDIA_URL_PATH'] = os.environ.get('MEDIA_URL_PATH', '/media')
+app.config['ALLOWED_RESOURCE_EXTENSIONS'] = {'pdf', 'docx', 'pptx', 'xlsx', 'zip', 'png', 'jpg', 'jpeg', 'mp4', 'mp3', 'txt'}
+
+# Supabase storage integration (optional, enables persistent object storage across deploys)
+app.config['SUPABASE_URL'] = os.environ.get('SUPABASE_URL')
+app.config['SUPABASE_KEY'] = os.environ.get('SUPABASE_SERVICE_KEY') or os.environ.get('SUPABASE_KEY') or os.environ.get('SUPABASE_ANON_KEY')
+app.config['SUPABASE_BUCKET'] = os.environ.get('SUPABASE_BUCKET', 'iamstech-media')
+app.config['SUPABASE_STORAGE_PUBLIC'] = os.environ.get('SUPABASE_STORAGE_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
+app.config['SUPABASE_STORAGE_ENABLED'] = bool(app.config['SUPABASE_URL'] and app.config['SUPABASE_KEY'])
+app.config['SUPABASE_CLIENT'] = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY']) if app.config['SUPABASE_STORAGE_ENABLED'] else None
+
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'activities'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'resources'), exist_ok=True)
-app.config['ALLOWED_RESOURCE_EXTENSIONS'] = {'pdf', 'docx', 'pptx', 'xlsx', 'zip', 'png', 'jpg', 'jpeg', 'mp4', 'mp3', 'txt'}
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'branding'), exist_ok=True)
 
-def allowed_resource_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_RESOURCE_EXTENSIONS']
+
+# --- Media helpers ---
+def get_media_url(path, fallback=None):
+    if not path:
+        if fallback:
+            return fallback if fallback.lower().startswith('http') else url_for('static', filename=fallback)
+        return url_for('static', filename='img/default-avatar.png')
+
+    if isinstance(path, str) and path.startswith(('http://', 'https://')):
+        return path
+
+    if path.startswith('uploads/') or path.startswith('resources/') or path.startswith('profiles/') or path.startswith('activities/') or path.startswith('branding/'):
+        storage_path = path[len('uploads/'):] if path.startswith('uploads/') else path
+        if app.config['SUPABASE_STORAGE_ENABLED']:
+            try:
+                if app.config['SUPABASE_STORAGE_PUBLIC']:
+                    return f"{app.config['SUPABASE_URL']}/storage/v1/object/public/{app.config['SUPABASE_BUCKET']}/{storage_path}"
+                response = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).create_signed_url(storage_path, 3600)
+                return response.get('signedURL') or url_for('media_file', filepath=path)
+            except Exception as e:
+                logger.warning(f"Supabase media URL generation failed: {e}")
+                return url_for('media_file', filepath=path)
+        return url_for('media_file', filepath=path)
+
+    if path.startswith('/'):
+        return url_for('static', filename=path.lstrip('/'))
+
+    if any(path.startswith(prefix) for prefix in ('img/', 'css/', 'js/', 'fonts/')):
+        return url_for('static', filename=path)
+
+    return url_for('static', filename=path)
+
+
+def find_brand_media_path(prefix):
+    branding_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'branding')
+    if os.path.isdir(branding_folder):
+        candidates = sorted(os.listdir(branding_folder), reverse=True)
+        for filename in candidates:
+            if filename.startswith(prefix):
+                return f"uploads/branding/{filename}"
+
+    if app.config['SUPABASE_STORAGE_ENABLED']:
+        try:
+            listing = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).list('branding')
+            if isinstance(listing, list):
+                for item in sorted(listing, key=lambda x: x.get('name', ''), reverse=True):
+                    name = item.get('name') if isinstance(item, dict) else None
+                    if name and name.startswith(prefix):
+                        return f"uploads/branding/{name}"
+        except Exception as e:
+            logger.warning(f"Could not list Supabase branding objects: {e}")
+
+    return None
+
+
+def save_media_file(uploaded_file, folder, prefix=None, filename=None):
+    if not uploaded_file or not uploaded_file.filename:
+        return None
+
+    ext = uploaded_file.filename.rsplit('.', 1)[1].lower() if '.' in uploaded_file.filename else 'jpg'
+    if filename:
+        safe_name = secure_filename(filename)
+    else:
+        safe_name = secure_filename(f"{prefix or uuid.uuid4().hex[:10]}_{uuid.uuid4().hex[:10]}.{ext}")
+    storage_path = f"{folder}/{safe_name}".lstrip('/')
+
+    # Save a local fallback copy always
+    local_folder = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+    os.makedirs(local_folder, exist_ok=True)
+    local_path = os.path.join(local_folder, safe_name)
+    uploaded_file.seek(0)
+    uploaded_file.save(local_path)
+
+    if app.config['SUPABASE_STORAGE_ENABLED']:
+        try:
+            uploaded_file.seek(0)
+            data = uploaded_file.read()
+            result = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).upload(storage_path, data)
+            if result and result.get('error'):
+                logger.warning(f"Supabase upload warning: {result.get('error')}")
+        except Exception as e:
+            logger.error(f"Supabase upload failed for {storage_path}: {e}")
+
+    return f"uploads/{storage_path}"
+
+
+@app.route('/media/<path:filepath>')
+def media_file(filepath):
+    filepath = filepath.lstrip('/')
+    if filepath.startswith('uploads/'):
+        filepath = filepath[len('uploads/'):]
+
+    safe_root = os.path.abspath(app.config['UPLOAD_FOLDER'])
+    full_path = os.path.abspath(os.path.join(safe_root, filepath))
+
+    if not full_path.startswith(safe_root):
+        abort(404)
+    if os.path.exists(full_path):
+        return send_file(full_path)
+
+    if app.config['SUPABASE_STORAGE_ENABLED']:
+        storage_path = filepath.replace('\\', '/')
+        try:
+            signed = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).create_signed_url(storage_path, 3600)
+            if signed and signed.get('signedURL'):
+                return redirect(signed['signedURL'])
+        except Exception as e:
+            logger.warning(f"Supabase media file redirect failed: {e}")
+
+    abort(404)
+
+
+@app.template_global()
+def media_url(path, fallback=None):
+    return get_media_url(path, fallback)
+
+
+def sync_local_media_to_supabase():
+    if not app.config['SUPABASE_STORAGE_ENABLED']:
+        return
+
+    bucket = app.config['SUPABASE_BUCKET']
+    storage_client = app.config['SUPABASE_CLIENT']
+    for root, _, files in os.walk(app.config['UPLOAD_FOLDER']):
+        for filename in files:
+            local_file = os.path.join(root, filename)
+            relpath = os.path.relpath(local_file, app.config['UPLOAD_FOLDER']).replace('\\', '/')
+            try:
+                with open(local_file, 'rb') as f:
+                    data = f.read()
+                storage_client.storage.from_(bucket).upload(relpath, data)
+            except Exception as e:
+                logger.warning(f"Could not sync local media to Supabase for {relpath}: {e}")
+
+
+@app.before_first_request
+def ensure_media_storage():
+    if app.config['SUPABASE_STORAGE_ENABLED']:
+        sync_local_media_to_supabase()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -299,7 +448,13 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    context = {'datetime': datetime, 'notifications': [], 'global_alerts': []}
+    context = {
+        'datetime': datetime,
+        'notifications': [],
+        'global_alerts': [],
+        'brand_logo_path': find_brand_media_path('logo') or 'img/logo.png',
+        'brand_hero_path': find_brand_media_path('hero') or 'img/hero.jpg'
+    }
     try:
         if current_user.is_authenticated:
             # Safer query for notifications to prevent crashes if table is missing or partially migrated
@@ -531,13 +686,7 @@ def register():
         try:
             logger.info(f"[REG] Step 1: Handling File Upload for {email}")
             if photo and photo.filename:
-                ext = photo.filename.rsplit('.', 1)[1].lower() if '.' in photo.filename else 'jpg'
-                safe_name = f"{uuid.uuid4().hex[:10]}.{ext}"
-                filename = secure_filename(f"{email.split('@')[0]}_{safe_name}")
-                profile_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'profiles')
-                os.makedirs(profile_dir, exist_ok=True)
-                photo.save(os.path.join(profile_dir, filename))
-                user_to_save.profile_photo = f"uploads/profiles/{filename}"
+                user_to_save.profile_photo = save_media_file(photo, 'profiles', prefix=email.split('@')[0])
                 logger.info(f"[REG] Photo saved to: {user_to_save.profile_photo}")
 
             logger.info(f"[REG] Step 2: Preparing User Record for {email}")
@@ -998,13 +1147,10 @@ def upload_material():
         flash('Invalid resource upload. Please choose a valid course file.', 'danger')
         return redirect(url_for('dashboard'))
 
-    filename = secure_filename(f"{uuid.uuid4().hex[:8]}_{file.filename}")
-    resource_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'resources')
-    os.makedirs(resource_dir, exist_ok=True)
-    file.save(os.path.join(resource_dir, filename))
+    saved_path = save_media_file(file, 'resources')
 
     try:
-        material = LessonMaterial(course_id=course.id, teacher_id=current_user.id, title=title, description=description, file_name=file.filename, file_path=f"resources/{filename}")
+        material = LessonMaterial(course_id=course.id, teacher_id=current_user.id, title=title, description=description, file_name=file.filename, file_path=saved_path.replace('uploads/', '') if saved_path else None)
         db.session.add(material)
         db.session.commit()
         flash('Lesson material uploaded successfully.', 'success')
@@ -1047,8 +1193,20 @@ def download_resource(resource_id):
         flash('Resource access denied.', 'danger')
         return redirect(url_for('dashboard'))
 
-    path = os.path.join(app.config['UPLOAD_FOLDER'], material.file_path)
-    return send_file(path, as_attachment=True, download_name=material.file_name)
+    local_path = os.path.join(app.config['UPLOAD_FOLDER'], material.file_path)
+    if os.path.exists(local_path):
+        return send_file(local_path, as_attachment=True, download_name=material.file_name)
+
+    if app.config['SUPABASE_STORAGE_ENABLED']:
+        try:
+            signed = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).create_signed_url(material.file_path, 3600)
+            if signed and signed.get('signedURL'):
+                return redirect(signed['signedURL'])
+        except Exception as e:
+            logger.error(f'Lesson material download failed via Supabase: {e}')
+
+    flash('Resource file is unavailable.', 'danger')
+    return redirect(url_for('dashboard'))
 
 # --- Admin Controls ---
 @app.route('/admin/update-branding', methods=['POST'])
@@ -1062,33 +1220,30 @@ def admin_update_branding():
         flash('No image selected.', 'warning')
         return redirect(url_for('dashboard'))
 
-    filename = secure_filename(f"{b_type}_{photo.filename}")
-    save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'branding')
-    os.makedirs(save_path, exist_ok=True)
-    photo.save(os.path.join(save_path, filename))
-    
     try:
         if b_type == 'logo':
-            # Logic to update logo.png (overwriting old one for consistency)
-            logo_path = os.path.join('static', 'img', 'logo.png')
-            photo.seek(0) # Reset file pointer
-            photo.save(logo_path)
-            flash('Institutional Logo updated successfully!', 'success')
+            saved_path = save_media_file(photo, 'branding', prefix='logo')
+            if saved_path:
+                flash('Institutional Logo updated successfully!', 'success')
+            else:
+                flash('Logo uploaded, but storage failed.', 'warning')
         elif b_type == 'hero':
-            # Update homepage hero by overwriting standard location or updating a config
-            hero_path = os.path.join('static', 'uploads', 'branding', 'hero.jpg')
-            photo.seek(0)
-            photo.save(hero_path)
-            flash('Homepage Hero updated successfully!', 'success')
+            hero_path = save_media_file(photo, 'branding', prefix='hero')
+            if hero_path:
+                flash('Homepage Hero updated successfully!', 'success')
+            else:
+                flash('Hero image uploaded, but storage failed.', 'warning')
         elif b_type == 'founder':
+            saved_path = save_media_file(photo, 'branding', prefix='founder')
             founder = Founder.query.first() or Founder()
-            founder.image_path = f"uploads/branding/{filename}"
+            founder.image_path = saved_path
             db.session.add(founder)
             db.session.commit()
             flash('Founder photo updated successfully!', 'success')
         elif b_type == 'developer':
+            saved_path = save_media_file(photo, 'branding', prefix='developer')
             dev = Developer.query.first() or Developer()
-            dev.image_path = f"uploads/branding/{filename}"
+            dev.image_path = saved_path
             db.session.add(dev)
             db.session.commit()
             flash('Developer spotlight photo updated successfully!', 'success')
@@ -1115,9 +1270,7 @@ def admin_update_founder():
         founder.message = message
         
         if photo:
-            filename = secure_filename(f"founder_{photo.filename}")
-            photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
-            founder.image_path = f"uploads/branding/{filename}"
+            founder.image_path = save_media_file(photo, 'branding', prefix='founder')
             
         db.session.add(founder)
         db.session.commit()
@@ -1144,9 +1297,7 @@ def admin_update_developer():
     dev.description = desc
     
     if photo:
-        filename = secure_filename(f"dev_{photo.filename}")
-        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'branding', filename))
-        dev.image_path = f"uploads/branding/{filename}"
+        dev.image_path = save_media_file(photo, 'branding', prefix='developer')
         
     db.session.add(dev)
     db.session.commit()
@@ -1451,9 +1602,8 @@ def admin_add_activity():
     photo = request.files.get('image')
     
     if photo:
-        filename = secure_filename(f"activity_{photo.filename}")
-        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], 'activities', filename))
-        new_act = Activity(title=title, description=desc, image_path=f"uploads/activities/{filename}")
+        saved_path = save_media_file(photo, 'activities', prefix='activity')
+        new_act = Activity(title=title, description=desc, image_path=saved_path)
         db.session.add(new_act)
         db.session.commit()
         flash('Activity uploaded to gallery!', 'success')

@@ -7,7 +7,7 @@
     <div class="dashboard-wrapper d-flex flex-column flex-lg-row gap-4">
         <aside class="dashboard-sidebar bg-dark text-white p-4">
             <div class="sidebar-brand text-center mb-4">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="IAMSTECH" class="sidebar-logo mb-3" onerror="this.style.display='none';">
+                <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" alt="IAMSTECH" class="sidebar-logo mb-3" onerror="this.style.display='none';">
                 <h5 class="fw-black mb-1">{{ user_role|default(current_user.role) }} Portal</h5>
                 <p class="small text-white-50 mb-0">{{ current_user.name }}</p>
             </div>
