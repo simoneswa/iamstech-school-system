@@ -163,18 +163,27 @@
                                     <td><span class="badge bg-light text-dark">{{ app.department }}</span></td>
                                     <td>
                                         <div class="d-flex flex-column gap-2">
-                                            <form action="{{ url_for('approve_user', user_id=app.id) }}" method="POST" class="d-flex gap-2 align-items-center">
-                                                <select name="role" class="form-select form-select-sm" style="width: 120px;">
-                                                    {% for role in ['Student', 'Teacher', 'Staff'] %}
-                                                    <option value="{{ role }}" {% if app.role == role %}selected{% endif %}>{{ role }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">Approve</button>
-                                            </form>
-                                            <div class="d-flex gap-2">
-                                                <a href="{{ url_for('request_otp_help', user_id=app.id) }}" class="btn btn-warning btn-sm rounded-pill px-3"><i class="fas fa-key me-1"></i>Request OTP Support</a>
-                                                <a href="{{ url_for('reject_user', user_id=app.id) }}" class="btn btn-danger btn-sm rounded-pill px-3">Reject</a>
+                                            {% if app.registration_state == 'pending_verification' %}
+                                            <div class="d-flex flex-column gap-2">
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Awaiting Email OTP</span>
+                                                <div class="d-flex gap-2">
+                                                    <a href="{{ url_for('request_otp_help', user_id=app.id) }}" class="btn btn-warning btn-sm rounded-pill px-3"><i class="fas fa-key me-1"></i>Request OTP Support</a>
+                                                    <a href="{{ url_for('reject_user', user_id=app.id) }}" class="btn btn-danger btn-sm rounded-pill px-3">Reject</a>
+                                                </div>
                                             </div>
+                                            {% else %}
+                                            <div class="d-flex flex-column gap-2">
+                                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Email Verified</span>
+                                                <form action="{{ url_for('approve_user', user_id=app.id) }}" method="POST" class="d-flex gap-2 align-items-center">
+                                                    <select name="role" class="form-select form-select-sm" style="width: 120px;">
+                                                        {% for role in ['Student', 'Teacher', 'Staff'] %}
+                                                        <option value="{{ role }}" {% if app.role == role %}selected{% endif %}>{{ role }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">Approve</button>
+                                                </form>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>

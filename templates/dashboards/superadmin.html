@@ -374,9 +374,61 @@
 
             <!-- SECTION: OTP RECOVERY REQUESTS -->
             <section id="section-otp" class="dash-section">
-                <h1 class="dash-title">Password Recovery OTP Requests</h1>
-                <p class="dash-subtitle">Monitor and assist users with password reset requests.</p>
+                <h1 class="dash-title">OTP & Recovery Assistance</h1>
+                <p class="dash-subtitle">Monitor unverified registrations and password reset requests.</p>
 
+                <!-- NEW: Unverified Registrations (OTP Backup) -->
+                <div class="premium-card mb-4" style="border-top: 4px solid var(--accent-orange);">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-user-clock me-2 text-warning"></i>Unverified Registrations (OTP Backup)</h5>
+                    <p class="small text-muted mb-3">Applicants stuck on the email verification step. You can securely view their OTP here to assist them manually.</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-muted small text-uppercase">
+                                    <th>Applicant</th>
+                                    <th>Contact</th>
+                                    <th>OTP Code</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in unverified_applicants %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-envelope-open-text"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ app.name }}</div>
+                                                <div class="small text-muted">{{ app.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><div class="small">{{ app.phone }}</div></td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark border border-warning px-3 py-2" style="font-size: 14px; letter-spacing: 2px;">
+                                            {{ app.verification_code or 'EXPIRED' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="javascript:void(0);" onclick="navigator.clipboard.writeText('{{ app.verification_code }}'); alert('OTP Copied: {{ app.verification_code }}');" class="btn btn-sm btn-outline-secondary px-3">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </a>
+                                        <a href="{{ url_for('force_verify_user', user_id=app.id) }}" class="btn btn-sm btn-primary px-3 ms-1">
+                                            <i class="fas fa-bolt me-1"></i> Force Verify
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="text-center py-4 text-muted">No applicants are currently stuck on verification.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold mb-3 mt-4"><i class="fas fa-unlock-alt me-2 text-info"></i>Password Recovery Requests</h5>
                 <div class="premium-card">
                     <div class="table-responsive">
                         <table class="table align-middle">

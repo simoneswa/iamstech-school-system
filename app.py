@@ -959,6 +959,9 @@ def dashboard():
         admins = User.query.filter_by(role='Admin').all()
         # Modern filter: show everyone who has verified their email but isn't approved yet
         applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
+        # Fetch users stuck on OTP stage for SuperAdmin backup visibility
+        unverified_applicants = User.query.filter_by(registration_state='pending_verification').all()
+        
         otp_requests = User.query.filter(User.reset_token.isnot(None), User.reset_token_expiration > datetime.utcnow(), db.func.length(User.reset_token) == 6).all()
         
         try:
@@ -984,6 +987,7 @@ def dashboard():
                              users=users, 
                              admins=admins,
                              applicants=applicants,
+                             unverified_applicants=unverified_applicants,
                              otp_requests=otp_requests,
                              audit_logs=audit_logs,
                              notifications=notifications,
@@ -991,7 +995,8 @@ def dashboard():
                              developers=developers)
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
-        applicants = User.query.filter_by(status='Pending').all()
+        # Show both OTP-stuck applicants and ready-to-approve applicants
+        applicants = User.query.filter(User.registration_state.in_(['pending_verification', 'verified_awaiting_approval'])).all()
         teachers = User.query.filter_by(role='Teacher').all()
         courses = Course.query.all()
         announcements = Announcement.query.all()
