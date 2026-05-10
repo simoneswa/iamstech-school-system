@@ -645,6 +645,17 @@ def index():
             logger.warning(f"Homepage announcement query failed: {e}")
             announcements = []
         
+        # Fetch recent activities for highlights
+        try:
+            activities = Activity.query.order_by(Activity.date.desc()).limit(6).all()
+        except Exception as e:
+            logger.warning(f"Homepage activities query failed: {e}")
+            activities = []
+        
+        # Get branding paths
+        brand_logo_path = find_brand_media_path('logo')
+        brand_hero_path = find_brand_media_path('hero')
+        
         # Defensive Query for Founder/Dev (Crash-Proof)
         try:
             founders = Founder.query.all()
@@ -660,6 +671,9 @@ def index():
 
         return render_template('index.html', 
                              announcements=announcements, 
+                             activities=activities,
+                             brand_logo_path=brand_logo_path,
+                             brand_hero_path=brand_hero_path,
                              founders=founders,
                              developers=developers)
     except Exception as e:
