@@ -311,7 +311,25 @@
                                 </form>
                             </div>
                         </div>
-                        <!-- We could loop existing activities here -->
+                        {% for act in activities %}
+                        <div class="col-md-3">
+                            <div class="position-relative rounded-3 overflow-hidden shadow-sm" style="height: 150px;">
+                                <img src="{{ media_url(act.image_path, 'img/placeholder.png') }}" class="w-100 h-100" style="object-fit: cover;" onerror="this.src='/static/img/placeholder.png'">
+                                <div class="position-absolute top-0 end-0 p-1">
+                                    <form action="{{ url_for('admin_delete_activity', activity_id=act.id) }}" method="POST" onsubmit="return confirm('Delete this activity from the gallery?');">
+                                        <button type="submit" class="btn btn-danger btn-sm rounded-circle" style="width:28px;height:28px;padding:0;" title="Delete">
+                                            <i class="fas fa-times" style="font-size:11px;"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% if act.title %}
+                                <div class="position-absolute bottom-0 start-0 w-100 px-2 py-1" style="background:rgba(0,0,0,0.55);">
+                                    <small class="text-white fw-bold">{{ act.title }}</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </section>

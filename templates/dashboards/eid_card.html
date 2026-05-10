@@ -195,9 +195,11 @@
                 </div>
                 
                 <div class="id-photo-container">
-                    <img src="{{ media_url(user.profile_photo, 'img/default-avatar.png') }}" 
+                    <img id="eid-photo"
+                         src="{{ media_url(user.profile_photo, 'img/default-avatar.png') }}" 
                          class="id-photo" 
-                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 110 130%22%3E%3Crect fill=%22%23e0e0e0%22 width=%22110%22 height=%22130%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22 font-family=%22sans-serif%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
+                         crossorigin="anonymous"
+                         onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 110 130%22%3E%3Crect fill%3D%22%23e8ecf0%22 width%3D%22110%22 height%3D%22130%22%2F%3E%3Ccircle fill%3D%22%23b0bec5%22 cx%3D%2255%22 cy%3D%2248%22 r%3D%2222%22%2F%3E%3Cellipse fill%3D%22%23b0bec5%22 cx%3D%2255%22 cy%3D%22105%22 rx%3D%2232%22 ry%3D%2222%22%2F%3E%3C%2Fsvg%3E'">
                 </div>
                 
                 <div class="id-body">
@@ -230,7 +232,7 @@
             </div>
         </div>
         
-        <div class="mt-5 d-flex gap-3 justify-content-center">
+        <div class="mt-5 d-flex gap-3 justify-content-center flex-wrap">
             <button onclick="downloadPDF()" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
                 <i class="fas fa-file-pdf me-2"></i>Download PDF
             </button>
@@ -239,7 +241,16 @@
             </button>
         </div>
         
-        <p class="small text-muted mt-4 mb-0"><i class="fas fa-info-circle me-1"></i> This is a valid digital representation of your IAMSTECH identity.</p>
+        <!-- Update Profile Photo -->
+        <div class="mt-4 p-3 bg-light rounded-3 text-center border" style="max-width:380px;margin:0 auto;">
+            <p class="small text-muted mb-2"><i class="fas fa-camera me-1"></i><strong>Update your ID photo</strong> — if missing or outdated</p>
+            <form action="{{ url_for('update_profile_photo') }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center justify-content-center">
+                <input type="file" name="profile_photo" accept="image/*" class="form-control form-control-sm rounded-pill" style="max-width:200px;" required>
+                <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-3">Upload</button>
+            </form>
+        </div>
+        
+        <p class="small text-muted mt-3 mb-0"><i class="fas fa-info-circle me-1"></i> This is a valid digital representation of your IAMSTECH identity.</p>
     </div>
 </div>
 
@@ -269,26 +280,50 @@
     // Download as PDF
     function downloadPDF() {
         const element = document.getElementById('capture-area');
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
         const opt = {
             margin:       0.5,
             filename:     'IAMSTECH_E-ID_{{ user.student_id }}.pdf',
-            image:        { type: 'jpeg', quality: 1 },
-            html2canvas:  { scale: 4, useCORS: true },
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 3, useCORS: true, allowTaint: false, logging: false },
             jsPDF:        { unit: 'in', format: 'a5', orientation: 'portrait' }
         };
-        html2pdf().set(opt).from(element).save();
+        html2pdf().set(opt).from(element).save().then(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-file-pdf me-2"></i>Download PDF';
+        }).catch(function(err) {
+            console.error('PDF export failed:', err);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-file-pdf me-2"></i>Download PDF';
+            alert('PDF generation failed. Try downloading as Image instead.');
+        });
     }
     
-    // Download as Image using HTML2Canvas (bundled inside html2pdf)
+    // Download as Image
     function downloadImage() {
         const element = document.getElementById('capture-area');
-        html2pdf().from(element).outputImg('datauristring').then(function(imgStr) {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+        html2pdf().set({
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3, useCORS: true, allowTaint: false, logging: false }
+        }).from(element).outputImg('datauristring').then(function(imgStr) {
             const link = document.createElement('a');
             link.href = imgStr;
             link.download = 'IAMSTECH_E-ID_{{ user.student_id }}.jpg';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-image me-2"></i>Download Image';
+        }).catch(function(err) {
+            console.error('Image export failed:', err);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-image me-2"></i>Download Image';
+            alert('Image generation failed. Please try again.');
         });
     }
 </script>

@@ -982,6 +982,12 @@ def dashboard():
             logger.warning(f"Developer table query error in dashboard: {e}")
             developers = []
 
+        try:
+            activities = Activity.query.order_by(Activity.id.desc()).all()
+        except Exception as e:
+            logger.warning(f"Activity query error in dashboard: {e}")
+            activities = []
+
         notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(10).all()
         return render_template('dashboards/superadmin.html', 
                              users=users, 
@@ -992,7 +998,8 @@ def dashboard():
                              audit_logs=audit_logs,
                              notifications=notifications,
                              founders=founders,
-                             developers=developers)
+                             developers=developers,
+                             activities=activities)
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         # Show both OTP-stuck applicants and ready-to-approve applicants
@@ -1000,12 +1007,18 @@ def dashboard():
         teachers = User.query.filter_by(role='Teacher').all()
         courses = Course.query.all()
         announcements = Announcement.query.all()
+        try:
+            activities = Activity.query.order_by(Activity.id.desc()).all()
+        except Exception as e:
+            logger.warning(f"Activity query error in admin dashboard: {e}")
+            activities = []
         return render_template('dashboards/admin_new.html', 
                              users=users, 
                              applicants=applicants, 
                              teachers=teachers, 
                              courses=courses, 
-                             announcements=announcements)
+                             announcements=announcements,
+                             activities=activities)
                              
     elif current_user.role == 'Teacher':
         courses = Course.query.filter_by(teacher_id=current_user.id).all()
@@ -1068,11 +1081,15 @@ def dashboard():
         announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
 
         # Leaderboard — Students ONLY (excludes Admin, SuperAdmin, Teacher, Staff, technical accounts)
-        top_students = User.query.filter(
-            User.role == 'Student',
-            User.registration_state == 'approved',
-            User.is_superadmin == False
-        ).order_by(User.points.desc()).limit(10).all()
+        try:
+            top_students = User.query.filter(
+                User.role == 'Student',
+                User.registration_state == 'approved',
+                User.is_superadmin == False
+            ).order_by(User.points.desc()).limit(10).all()
+        except Exception as e:
+            logger.error(f"Leaderboard query failed: {e}")
+            top_students = []
         # Rank calculation
         try:
             current_points = getattr(current_user, 'points', 0) or 0
@@ -1318,9 +1335,9 @@ def admin_update_founder():
     
     try:
         founder = Founder.query.first() or Founder()
-        founder.name = name
-        founder.title = title
-        founder.message = message
+        if name: founder.name = name
+        if title: founder.title = title
+        if message: founder.message = message
         
         if photo:
             founder.image_path = save_media_file(photo, 'branding', prefix='founder')
@@ -1345,9 +1362,9 @@ def admin_update_developer():
     photo = request.files.get('image')
     
     dev = Developer.query.first() or Developer()
-    dev.name = name
-    dev.role = role
-    dev.description = desc
+    if name: dev.name = name
+    if role: dev.role = role
+    if desc: dev.description = desc
     
     if photo:
         dev.image_path = save_media_file(photo, 'branding', prefix='developer')
@@ -1663,6 +1680,31 @@ def admin_add_activity():
     return redirect(url_for('dashboard'))
 
 
+@app.route('/admin/delete-activity/<int:activity_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_activity(activity_id):
+    try:
+        act = Activity.query.get_or_404(activity_id)
+        # Try to remove the local file too (non-blocking)
+        try:
+            if act.image_path:
+                local_path = os.path.join(app.config['UPLOAD_FOLDER'], act.image_path.replace('uploads/', '', 1))
+                if os.path.exists(local_path):
+                    os.remove(local_path)
+        except Exception:
+            pass
+        db.session.delete(act)
+        db.session.commit()
+        log_audit(f"Deleted Activity #{activity_id}", target_id=activity_id, target_type='Activity')
+        flash('Activity removed from gallery.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Activity delete error: {e}")
+        flash('Could not delete activity.', 'danger')
+    return redirect(url_for('dashboard'))
+
+
 # --- SuperAdmin Controls ---
 @app.route('/superadmin/suspend/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -1944,6 +1986,29 @@ def chatbot():
         ])
     
     return jsonify({"response": response})
+
+@app.route('/update-profile-photo', methods=['POST'])
+@login_required
+def update_profile_photo():
+    """Allows any logged-in user to update their profile photo."""
+    photo = request.files.get('profile_photo')
+    if not photo or not photo.filename:
+        flash('No photo selected.', 'warning')
+        return redirect(request.referrer or url_for('dashboard'))
+    try:
+        saved_path = save_media_file(photo, 'profiles', prefix=current_user.email.split('@')[0])
+        if saved_path:
+            current_user.profile_photo = saved_path
+            db.session.commit()
+            flash('Profile photo updated successfully!', 'success')
+        else:
+            flash('Photo upload failed. Please try again.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Profile photo update error: {e}")
+        flash('An error occurred while updating your photo.', 'danger')
+    return redirect(request.referrer or url_for('dashboard'))
+
 
 @app.route('/my_eid')
 @login_required
