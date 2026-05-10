@@ -620,8 +620,12 @@ def check_auth_state(user, current_step):
 @app.route('/')
 def index():
     try:
-        # Only show OVERALL announcements (where course_id is None)
-        announcements = Announcement.query.filter_by(course_id=None).order_by(Announcement.date.desc()).limit(3).all()
+        # Only show OVERALL announcements (where course_id is None) - Hardened
+        try:
+            announcements = Announcement.query.filter_by(course_id=None).order_by(Announcement.date.desc()).limit(3).all()
+        except Exception as e:
+            logger.warning(f"Homepage announcement query failed: {e}")
+            announcements = []
         
         # Defensive Query for Founder/Dev (Crash-Proof)
         try:
@@ -1025,7 +1029,12 @@ def dashboard():
             logger.warning(f"Activity query error in dashboard: {e}")
             activities = []
 
-        notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(10).all()
+        # Announcements for management
+        try:
+            announcements = Announcement.query.order_by(Announcement.date.desc()).all()
+        except Exception:
+            announcements = []
+
         return render_template('dashboards/superadmin.html', 
                              users=users, 
                              admins=admins,
@@ -1036,7 +1045,8 @@ def dashboard():
                              notifications=notifications,
                              founders=founders,
                              developers=developers,
-                             activities=activities)
+                             activities=activities,
+                             announcements=announcements)
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         # Show both OTP-stuck applicants and ready-to-approve applicants
