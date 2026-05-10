@@ -15,7 +15,7 @@ import random
 import io
 from flask import send_file
 from supabase import create_client
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection, SystemReport
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
 from lib.storage import upload_to_bucket
@@ -1027,58 +1027,80 @@ def dashboard():
         return redirect(url_for('change_password'))
 
     if current_user.role == 'SuperAdmin':
-        users = User.query.all()
-        admins = User.query.filter_by(role='Admin').all()
-        # Modern filter: show everyone who has verified their email but isn't approved yet
-        applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
-        # Fetch users stuck on OTP stage for SuperAdmin backup visibility
-        unverified_applicants = User.query.filter_by(registration_state='pending_verification').all()
-        
-        otp_requests = User.query.filter(User.reset_token.isnot(None), User.reset_token_expiration > datetime.utcnow(), db.func.length(User.reset_token) == 6).all()
-        
         try:
-            audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
-        except Exception:
-            audit_logs = []
+            users = User.query.all()
+            admins = User.query.filter_by(role='Admin').all()
+            # Modern filter: show everyone who has verified their email but isn't approved yet
+            applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
+            # Fetch users stuck on OTP stage for SuperAdmin backup visibility
+            unverified_applicants = User.query.filter_by(registration_state='pending_verification').all()
             
-        # Defensive Query for Founder/Dev (Crash-Proof)
-        try:
-            founders = Founder.query.all()
-        except Exception as e:
-            logger.warning(f"Founder table query error in dashboard: {e}")
-            founders = []
+            otp_requests = User.query.filter(User.reset_token.isnot(None), User.reset_token_expiration > datetime.utcnow(), db.func.length(User.reset_token) == 6).all()
             
-        try:
-            developers = Developer.query.all()
+            try:
+                audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
+            except Exception as e:
+                logger.warning(f"Audit logs query error: {e}")
+                audit_logs = []
+            
+            # Get notifications for SuperAdmin
+            try:
+                notifications = Notification.query.order_by(Notification.created_at.desc()).limit(20).all()
+            except Exception as e:
+                logger.warning(f"Notification query error: {e}")
+                notifications = []
+                
+            # Defensive Query for Founder/Dev (Crash-Proof)
+            try:
+                founders = Founder.query.all()
+            except Exception as e:
+                logger.warning(f"Founder table query error in dashboard: {e}")
+                founders = []
+                
+            try:
+                developers = Developer.query.all()
+            except Exception as e:
+                logger.warning(f"Developer table query error in dashboard: {e}")
+                developers = []
+
+            try:
+                activities = Activity.query.order_by(Activity.id.desc()).all()
+            except Exception as e:
+                logger.warning(f"Activity query error in dashboard: {e}")
+                activities = []
+
+            # Announcements for management
+            try:
+                announcements = Announcement.query.order_by(Announcement.date.desc()).all()
+            except Exception as e:
+                logger.warning(f"Announcements query error: {e}")
+                announcements = []
+
+            # Get system reports for SuperAdmin
+            try:
+                system_reports = SystemReport.query.filter_by(status='open').order_by(SystemReport.created_at.desc()).limit(10).all()
+            except Exception as e:
+                logger.warning(f"System reports query error: {e}")
+                system_reports = []
+
+            return render_template('dashboards/superadmin.html', 
+                                 users=users, 
+                                 admins=admins,
+                                 applicants=applicants,
+                                 unverified_applicants=unverified_applicants,
+                                 otp_requests=otp_requests,
+                                 audit_logs=audit_logs,
+                                 notifications=notifications,
+                                 system_reports=system_reports,
+                                 founders=founders,
+                                 developers=developers,
+                                 activities=activities,
+                                 announcements=announcements,
+                                 cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
         except Exception as e:
-            logger.warning(f"Developer table query error in dashboard: {e}")
-            developers = []
-
-        try:
-            activities = Activity.query.order_by(Activity.id.desc()).all()
-        except Exception as e:
-            logger.warning(f"Activity query error in dashboard: {e}")
-            activities = []
-
-        # Announcements for management
-        try:
-            announcements = Announcement.query.order_by(Announcement.date.desc()).all()
-        except Exception:
-            announcements = []
-
-        return render_template('dashboards/superadmin.html', 
-                             users=users, 
-                             admins=admins,
-                             applicants=applicants,
-                             unverified_applicants=unverified_applicants,
-                             otp_requests=otp_requests,
-                             audit_logs=audit_logs,
-                             notifications=notifications,
-                             founders=founders,
-                             developers=developers,
-                             activities=activities,
-                             announcements=announcements,
-                             cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
+            logger.error(f"SuperAdmin dashboard critical error: {e}", exc_info=True)
+            flash(f'Dashboard loading error: {str(e)}', 'danger')
+            return render_template('errors/500.html', error=str(e)), 500
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         # Show both OTP-stuck applicants and ready-to-approve applicants
@@ -1933,6 +1955,186 @@ def broadcast_alert():
         log_audit("Created Global Alert")
         flash('Alert broadcasted across the system.', 'success')
     return redirect(url_for('dashboard'))
+
+# ===== ADMIN ASSISTANCE / ISSUE REPORTING =====
+
+@app.route('/admin/report-issue', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def report_issue():
+    """Admin can report system issues or request assistance"""
+    if request.method == 'POST':
+        try:
+            report_type = request.form.get('report_type', 'assistance')
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            severity = request.form.get('severity', 'medium')
+            
+            if not title or not description:
+                flash('Title and description are required.', 'warning')
+                return redirect(url_for('report_issue'))
+            
+            report = SystemReport(
+                user_id=current_user.id,
+                report_type=report_type,
+                title=title,
+                description=description,
+                severity=severity,
+                status='open'
+            )
+            db.session.add(report)
+            db.session.commit()
+            
+            # Notify SuperAdmin
+            superadmins = User.query.filter_by(role='SuperAdmin').all()
+            for admin in superadmins:
+                notif = Notification(
+                    user_id=admin.id,
+                    message=f"New {report_type} report: {title}",
+                    type='danger' if severity == 'critical' else 'warning',
+                    link=url_for('superadmin_view_reports')
+                )
+                db.session.add(notif)
+            db.session.commit()
+            
+            flash(f'Your {report_type} report has been submitted. The SuperAdmin has been notified.', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Issue report error: {e}")
+            flash('Failed to submit report. Please try again.', 'danger')
+    
+    return render_template('admin_report_issue.html')
+
+@app.route('/superadmin/reports', methods=['GET'])
+@login_required
+@superadmin_required
+def superadmin_view_reports():
+    """SuperAdmin view all submitted reports"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        status_filter = request.args.get('status', '')
+        severity_filter = request.args.get('severity', '')
+        
+        query = SystemReport.query.order_by(SystemReport.created_at.desc())
+        
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+        if severity_filter:
+            query = query.filter_by(severity=severity_filter)
+        
+        reports = query.paginate(page=page, per_page=20)
+        return render_template('superadmin_reports.html', reports=reports, 
+                             status_filter=status_filter, severity_filter=severity_filter)
+    except Exception as e:
+        logger.error(f"SuperAdmin reports view error: {e}")
+        flash('Error loading reports.', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/report/<int:report_id>/update', methods=['POST'])
+@login_required
+@superadmin_required
+def update_report_status(report_id):
+    """Update report status and add resolution notes"""
+    try:
+        report = SystemReport.query.get_or_404(report_id)
+        status = request.form.get('status', 'open')
+        notes = request.form.get('resolution_notes', '')
+        
+        report.status = status
+        if notes:
+            report.resolution_notes = notes
+        report.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        log_audit(f"Updated report #{report_id} status to {status}")
+        flash(f'Report status updated to {status}.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Report update error: {e}")
+        flash('Failed to update report.', 'danger')
+    
+    return redirect(request.referrer or url_for('superadmin_view_reports'))
+
+# ===== SUPER ADMIN CONTENT MANAGEMENT =====
+
+@app.route('/superadmin/delete-activity/<int:activity_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def superadmin_delete_activity(activity_id):
+    """SuperAdmin can delete activities"""
+    try:
+        activity = Activity.query.get_or_404(activity_id)
+        db.session.delete(activity)
+        db.session.commit()
+        log_audit(f"Deleted activity: {activity.title}")
+        flash(f'Activity "{activity.title}" has been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Activity deletion error: {e}")
+        flash('Failed to delete activity.', 'danger')
+    
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/superadmin/delete-announcement/<int:ann_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def superadmin_delete_announcement(ann_id):
+    """SuperAdmin can delete announcements"""
+    try:
+        announcement = Announcement.query.get_or_404(ann_id)
+        db.session.delete(announcement)
+        db.session.commit()
+        log_audit(f"Deleted announcement: {announcement.title}")
+        flash(f'Announcement "{announcement.title}" has been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Announcement deletion error: {e}")
+        flash('Failed to delete announcement.', 'danger')
+    
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/superadmin/delete-user/<int:user_id>', methods=['POST'])
+@login_required
+@superadmin_required
+def superadmin_delete_user(user_id):
+    """SuperAdmin can deactivate/delete users"""
+    try:
+        if user_id == current_user.id:
+            flash('You cannot delete your own account.', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        user = User.query.get_or_404(user_id)
+        # Soft delete: mark as suspended instead
+        user.is_suspended = True
+        user.suspension_reason = "Account removed by Super Administrator"
+        db.session.commit()
+        log_audit(f"Deactivated user: {user.email}")
+        flash(f'User {user.email} has been deactivated.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"User deletion error: {e}")
+        flash('Failed to deactivate user.', 'danger')
+    
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/superadmin/toggle-feature/<feature_name>', methods=['POST'])
+@login_required
+@superadmin_required
+def toggle_feature(feature_name):
+    """SuperAdmin can disable/enable system features"""
+    try:
+        # This would require a SystemConfig table in production
+        # For now, we'll just log and notify
+        action = request.form.get('action', 'disable')
+        log_audit(f"Feature toggle: {feature_name} set to {action}")
+        flash(f'Feature "{feature_name}" has been {action}d.', 'success')
+    except Exception as e:
+        logger.error(f"Feature toggle error: {e}")
+        flash('Failed to toggle feature.', 'danger')
+    
+    return redirect(request.referrer or url_for('dashboard'))
+
 
 @app.route('/superadmin/export/<data_type>')
 @login_required

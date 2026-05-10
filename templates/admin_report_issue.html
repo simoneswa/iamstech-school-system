@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-warning text-dark p-4">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Report System Issue</h5>
+                </div>
+                
+                <div class="card-body p-4">
+                    <p class="text-muted mb-4">Submit a technical issue or request assistance from the Super Administrator. Your report will be reviewed and prioritized.</p>
+                    
+                    <form method="POST" action="{{ url_for('report_issue') }}">
+                        <!-- Report Type -->
+                        <div class="mb-3">
+                            <label for="report_type" class="form-label fw-bold">Issue Type *</label>
+                            <select class="form-select" id="report_type" name="report_type" required>
+                                <option value="assistance">Request Assistance</option>
+                                <option value="bug">Bug Report</option>
+                                <option value="feature_request">Feature Request</option>
+                                <option value="other">Other Issue</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">Select the category that best describes your issue</small>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label fw-bold">Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" placeholder="Brief summary of the issue" required maxlength="200">
+                            <small class="text-muted">Max 200 characters</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label fw-bold">Detailed Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="6" placeholder="Provide as much detail as possible. Include steps to reproduce if it's a bug." required></textarea>
+                            <small class="text-muted">Include error messages, screenshots, or any relevant details</small>
+                        </div>
+
+                        <!-- Severity -->
+                        <div class="mb-3">
+                            <label for="severity" class="form-label fw-bold">Severity Level *</label>
+                            <select class="form-select" id="severity" name="severity" required>
+                                <option value="low">Low - Minor issue, doesn't affect operations</option>
+                                <option value="medium" selected>Medium - Affects some operations</option>
+                                <option value="high">High - Major functionality impaired</option>
+                                <option value="critical">Critical - System is down or unusable</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning fw-bold py-2">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Report
+                            </button>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+                    
+                    <div class="alert alert-info alert-sm p-3" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Support Center:</strong> For urgent issues, contact via WhatsApp: <a href="https://wa.me/231880864187" target="_blank" class="text-reset fw-bold">+231 880 864 187</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

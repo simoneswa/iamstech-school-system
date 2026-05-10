@@ -2,6 +2,697 @@
 
 {% block content %}
 <style>
+    /* === MODERN HOMEPAGE ENHANCEMENTS === */
+    
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(135deg, rgba(13, 27, 62, 0.85), rgba(7, 16, 38, 0.95)), 
+                    url("{{ media_url(brand_hero_path, 'img/placeholder.png') }}");
+        background-size: cover;
+        background-position: center;
+        min-height: 600px;
+        display: flex;
+        align-items: center;
+        padding: 60px 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 80%, rgba(255, 107, 15, 0.1), transparent 50%);
+        pointer-events: none;
+    }
+    
+    .hero-main-logo {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .hero-title {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        line-height: 1.2;
+        color: white;
+        margin-bottom: 1rem;
+        letter-spacing: -1px;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #FFB800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    .hero-desc {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 400;
+        line-height: 1.6;
+    }
+    
+    /* Buttons */
+    .btn-become-ready {
+        background: linear-gradient(135deg, #FF6B0F, #FF8C00);
+        border: none;
+        color: white;
+        font-weight: 700;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(255, 107, 15, 0.3);
+    }
+    
+    .btn-become-ready:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(255, 107, 15, 0.4);
+        color: white;
+    }
+    
+    /* Floating Cards */
+    .hero-visual-stack {
+        position: relative;
+        height: 450px;
+    }
+    
+    .floating-card {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: white;
+        font-weight: 700;
+        font-size: 1.1rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .floating-card:hover {
+        transform: translateY(-10px);
+        border-color: rgba(255, 255, 255, 0.4);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .card-tech {
+        background: linear-gradient(135deg, rgba(26, 35, 126, 0.6), rgba(63, 81, 181, 0.6));
+        top: 20px;
+        left: 20px;
+        animation: float-1 3s ease-in-out infinite;
+    }
+    
+    .card-training {
+        background: linear-gradient(135deg, rgba(255, 107, 15, 0.6), rgba(255, 140, 0, 0.6));
+        top: 150px;
+        right: 80px;
+        animation: float-2 3s ease-in-out infinite 0.5s;
+    }
+    
+    .card-community {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.6), rgba(102, 187, 106, 0.6));
+        bottom: 20px;
+        left: 60px;
+        animation: float-3 3s ease-in-out infinite 1s;
+    }
+    
+    .floating-card i {
+        font-size: 2.5rem;
+    }
+    
+    @keyframes float-1 {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    
+    @keyframes float-2 {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+    
+    @keyframes float-3 {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-12px); }
+    }
+    
+    /* Stats Bar */
+    .stats-bar {
+        background: white;
+        padding: 50px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .stat-number {
+        display: block;
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #FF6B0F, #FF8C00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stat-label {
+        display: block;
+        font-size: 0.95rem;
+        color: #666;
+        font-weight: 600;
+        margin-top: 8px;
+    }
+    
+    /* Section Styling */
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #FF6B0F;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    .section-header {
+        font-size: clamp(1.8rem, 4vw, 2.8rem);
+        font-weight: 800;
+        color: #0D1B3E;
+        margin-bottom: 1rem;
+    }
+    
+    /* Course/Program Cards */
+    .course-card {
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        padding: 40px 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+    
+    .course-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        border-color: #FF6B0F;
+    }
+    
+    .course-icon {
+        font-size: 3rem;
+        color: #FF6B0F;
+        margin-bottom: 20px;
+        display: block;
+    }
+    
+    .course-card h5 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0D1B3E;
+        margin-bottom: 12px;
+    }
+    
+    .course-card p {
+        font-size: 0.95rem;
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+    }
+    
+    .learn-more {
+        color: #FF6B0F;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .learn-more:hover {
+        color: #E85A00;
+        transform: translateX(5px);
+    }
+    
+    /* Activity Cards */
+    .activity-card {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .activity-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .activity-image-container {
+        height: 200px;
+        overflow: hidden;
+        background: #f0f0f0;
+    }
+    
+    .activity-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .activity-card:hover .activity-image {
+        transform: scale(1.05);
+    }
+    
+    /* Vision Section */
+    .vision-banner {
+        background: linear-gradient(135deg, rgba(13, 27, 62, 0.95), rgba(255, 107, 15, 0.1));
+        padding: 80px 0;
+    }
+    
+    .vision-quote {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: white;
+        line-height: 1.8;
+        margin-bottom: 30px;
+        position: relative;
+        padding-left: 40px;
+    }
+    
+    .vision-quote::before {
+        content: '"';
+        font-size: 4rem;
+        color: #FF6B0F;
+        position: absolute;
+        left: -20px;
+        top: -20px;
+        opacity: 0.3;
+    }
+    
+    /* Profile Cards */
+    .profile-card {
+        text-align: center;
+    }
+    
+    .founder-portrait, .dev-portrait-large {
+        width: 100%;
+        height: auto;
+        border-radius: 16px;
+        object-fit: cover;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-name {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #0D1B3E;
+        margin: 20px 0 10px;
+    }
+    
+    .profile-title {
+        font-size: 1rem;
+        color: #FF6B0F;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .profile-bio {
+        font-size: 1rem;
+        color: #666;
+        line-height: 1.8;
+        margin: 20px 0;
+    }
+    
+    /* Developer Flex */
+    .dev-flex {
+        display: flex;
+        align-items: center;
+        gap: 50px;
+    }
+    
+    .dev-image-side {
+        flex: 1;
+    }
+    
+    .dev-content-side {
+        flex: 1;
+    }
+    
+    .dev-tag {
+        display: inline-block;
+        background: linear-gradient(135deg, #FF6B0F, #FF8C00);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 20px;
+    }
+    
+    .dev-bio-text {
+        font-size: 1rem;
+        color: #666;
+        line-height: 1.8;
+        margin-bottom: 30px;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .hero-section {
+            min-height: 500px;
+            padding: 40px 0;
+        }
+        
+        .hero-visual-stack {
+            display: none;
+        }
+        
+        .dev-flex {
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .floating-card {
+            width: 110px;
+            height: 110px;
+            font-size: 0.9rem;
+        }
+        
+        .floating-card i {
+            font-size: 2rem;
+        }
+        
+        .section-header {
+            font-size: 2rem;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+        }
+        
+        .vision-quote {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+
+<!-- HERO SECTION (Modern Professional) -->
+<header class="hero-section">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" alt="IAMSTECH Official Logo" class="hero-main-logo" style="max-width: 200px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-bottom: 20px;">
+                <p class="hero-subtitle">Institute of Advanced Management Science & Technology</p>
+                <h1 class="hero-title">Technology & Business Education for Future Professionals</h1>
+                <p class="hero-desc mb-5">"Shaping Tomorrow's Leaders Through Technology & Excellence"</p>
+                <div class="d-flex flex-column gap-3">
+                    <p class="text-white-50 mb-0 small"><i class="fas fa-graduation-cap me-2"></i>Ready to transform your career?</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>Portal Login</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="hero-visual-stack">
+                    <div class="floating-card card-tech">
+                        <i class="fas fa-laptop-code"></i>
+                        <span>Technology</span>
+                    </div>
+                    <div class="floating-card card-training">
+                        <i class="fas fa-book-open"></i>
+                        <span>Training</span>
+                    </div>
+                    <div class="floating-card card-community">
+                        <i class="fas fa-handshake"></i>
+                        <span>Community</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- STATS BAR (Modern Design) -->
+<section class="stats-bar">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <span class="stat-number">8+</span>
+                <span class="stat-label">Professional Programs</span>
+            </div>
+            <div class="col-md-4 text-center" style="border-left: 1px solid rgba(0,0,0,0.1); border-right: 1px solid rgba(0,0,0,0.1);">
+                <span class="stat-number">1000+</span>
+                <span class="stat-label">Trained Professionals</span>
+            </div>
+            <div class="col-md-4 text-center">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Industry Focused</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TRAINING PROGRAMS (Modern Layout) -->
+<section id="programs" class="py-6 bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">Professional Development</p>
+            <h2 class="section-header">Our Training Programs</h2>
+            <p class="text-muted mt-3" style="max-width: 600px; margin: 0 auto;">Specialized vocational certifications designed for modern professionals seeking industry-recognized credentials</p>
+        </div>
+        
+        <div class="row g-5 mt-2">
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-laptop-code course-icon"></i>
+                    <h5>Microsoft Office Suite</h5>
+                    <p>Master essential digital productivity tools used across all industries.</p>
+                    <a href="#" class="learn-more">Explore Program <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-calculator course-icon"></i>
+                    <h5>QuickBooks Accounting</h5>
+                    <p>Professional financial management and bookkeeping expertise.</p>
+                    <a href="#" class="learn-more">Explore Program <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-folder-open course-icon"></i>
+                    <h5>Office Procedures</h5>
+                    <p>Advanced administrative and organizational skills for office management.</p>
+                    <a href="#" class="learn-more">Explore Program <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="course-card">
+                    <i class="fas fa-globe course-icon"></i>
+                    <h5>Internet Usage</h5>
+                    <p>Digital citizenship, security, and professional online proficiency.</p>
+                    <a href="#" class="learn-more">Explore Program <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HIGHLIGHTS / ACTIVITIES (Modern Grid) -->
+<section id="highlights" class="py-6 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">Institutional Highlights</p>
+            <h2 class="section-header">Recent Activities & Events</h2>
+            <p class="text-muted mt-3" style="max-width: 600px; margin: 0 auto;">Stay updated with our latest institutional activities and community events</p>
+        </div>
+        
+        {% if activities %}
+        <div class="row g-5">
+            {% for activity in activities %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card border-0 shadow-sm h-100 activity-card">
+                    <div class="activity-image-container">
+                        <img src="{{ media_url(activity.image_path, 'img/placeholder.png') }}" 
+                             alt="{{ activity.title }}" 
+                             class="card-img-top activity-image"
+                             onerror="this.src='{{ url_for('static', filename='img/placeholder.png') }}';">
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title fw-bold mb-2">{{ activity.title }}</h5>
+                        <p class="card-text text-muted flex-grow-1">{{ activity.description[:120] }}...</p>
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-calendar-alt me-2 text-primary"></i>{{ activity.date.strftime('%B %d, %Y') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No activities available at the moment</h5>
+            <p class="text-muted">Check back soon for updates on our institutional activities.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- LEADERSHIP & VISION (Premium Section) -->
+<section class="vision-banner">
+    <div class="container text-center py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                {% if founders and founders[0] %}
+                <div class="vision-quote">
+                    "{{ founders[0].leadership_statement if (founders and founders[0] and founders[0].leadership_statement) else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
+                </div>
+                <div class="mt-4">
+                    <h5 class="fw-black mb-0 text-white">{{ founders[0].name }}</h5>
+                    <p class="text-warning small fw-bold mb-0 text-uppercase letter-spacing-1"><i class="fas fa-crown me-2"></i>Founder & CEO, IAMSTECH</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOUNDER PROFILE (Modern Design) -->
+<section class="py-6 bg-light">
+    <div class="container py-5">
+        <div class="row align-items-center g-5">
+            {% if founders %}
+                {% for f in founders %}
+                <div class="col-lg-5">
+                    <div class="profile-card">
+                        <img src="{{ media_url(f.image_path, 'https://via.placeholder.com/600x600?text=Founder') }}" 
+                             alt="{{ f.name }}" 
+                             class="founder-portrait"
+                             onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
+                        <h2 class="profile-name">{{ f.name }}</h2>
+                        <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
+                        <p class="profile-bio">{{ f.bio if (f and f.bio) else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
+                        
+                        <div class="mt-4 d-flex justify-content-center gap-3">
+                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-twitter"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="ps-lg-5">
+                        <span class="badge bg-warning text-dark px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">Institutional Vision</span>
+                        <h2 class="display-5 fw-black text-dark mb-4">Shaping Liberia's Digital Future</h2>
+                        
+                        <div class="mb-5">
+                            <h5 class="fw-bold text-dark"><i class="fas fa-eye me-2 text-warning"></i>Our Vision</h5>
+                            <p class="text-muted lead">{{ f.vision if (f and f.vision) else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
+                        </div>
+
+                        <div class="mb-0">
+                            <h5 class="fw-bold text-dark"><i class="fas fa-bullseye me-2 text-warning"></i>Our Mission</h5>
+                            <p class="text-muted lead">{{ f.mission if (f and f.mission) else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- DEVELOPER SHOWCASE (Premium) -->
+<section class="py-6 bg-white">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                {% if developers %}
+                    {% for d in developers %}
+                    <div class="dev-showcase">
+                        <div class="dev-flex">
+                            <div class="dev-image-side">
+                                <img src="{{ media_url(d.image_path, 'https://via.placeholder.com/400x400?text=Dev') }}" 
+                                     alt="{{ d.name }}" 
+                                     class="dev-portrait-large"
+                                     style="border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);"
+                                     onerror="this.src='https://via.placeholder.com/400x400?text=Dev';">
+                            </div>
+                            <div class="dev-content-side">
+                                <span class="dev-tag">System Architect & Developer</span>
+                                <h2 class="display-5 fw-black text-dark mb-2">{{ d.name }}</h2>
+                                <h5 class="text-warning fw-bold mb-4" style="letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem;">
+                                     <i class="fas fa-microchip me-2"></i>Informatics Engineering • <i class="fas fa-network-wired mx-2"></i>Networking Specialist
+                                </h5>
+                                
+                                <p class="dev-bio-text">
+                                    {{ d.description if d.description else 'Developer specializing in Networking and Informatics Engineering. Dedicated to building robust institutional infrastructure that shapes the future of technology and leadership in Liberia.' }}
+                                </p>
+                                
+                                <div class="d-flex gap-4 align-items-center">
+                                    <div class="d-flex gap-2">
+                                        <a href="#" class="btn btn-warning btn-sm px-4 fw-bold">Portfolio</a>
+                                        <a href="#" class="btn btn-outline-dark btn-sm px-4 fw-bold">LinkedIn</a>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="fas fa-check-circle text-success me-1"></i> Verified Developer
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ANNOUNCEMENTS (Modern Cards) -->
+<section class="py-6 bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <p class="section-title">Institutional Updates</p>
+            <h2 class="section-header">Official Announcements</h2>
+        </div>
+        {% if announcements %}
+            <div class="row g-5">
+            {% for ann in announcements %}
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 border-start border-warning border-4 h-100" style="border-radius: 12px;">
+                        <h5 class="fw-bold mb-2 text-dark">{{ ann.title }}</h5>
+                        <p class="small text-muted mb-3"><i class="fas fa-calendar-alt me-2"></i>{{ ann.date.strftime('%B %d, %Y') }}</p>
+                        <p class="text-muted small" style="line-height: 1.6;">{{ ann.content[:200] }}...</p>
+                        <a href="#" class="text-warning fw-bold small mt-2 d-inline-flex align-items-center gap-2">
+                            Read More <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<style>
     .hero-section {
         background: linear-gradient(rgba(13, 27, 62, 0.8), rgba(7, 16, 38, 0.9)), 
                     url("{{ media_url(brand_hero_path, 'img/placeholder.png') }}");

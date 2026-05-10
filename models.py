@@ -177,6 +177,21 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     link = db.Column(db.String(200)) # Optional link
 
+class SystemReport(db.Model):
+    """Admin-submitted system issues and assistance requests"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False)  # 'bug', 'assistance', 'feature_request', 'other'
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    severity = db.Column(db.String(20), default='medium')  # low, medium, high, critical
+    status = db.Column(db.String(20), default='open')  # open, in_progress, resolved, closed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    resolution_notes = db.Column(db.Text)
+    
+    user = db.relationship('User', backref='system_reports')
+    
 
 class HomePageSection(db.Model):
     __tablename__ = 'homepage_section'
