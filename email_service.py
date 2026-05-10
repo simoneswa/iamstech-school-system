@@ -173,12 +173,47 @@ def render_approval_html(user, setup_link):
 
 def send_reset_email(user):
     """
-    Sends a password reset email with a secure token.
+    Sends a password reset email with OTP or link.
     """
-    reset_link = build_external_url('reset_password', token=user.reset_token)
-    subject = "IAMSTECH LIBERIA - Password Reset Request"
-    
-    text_body = f"""
+    if len(user.reset_token) == 6:
+        # OTP mode
+        subject = "IAMSTECH LIBERIA - Password Reset OTP"
+        text_body = f"""
+Dear {user.name},
+
+Your password reset OTP is: {user.reset_token}
+
+This OTP is valid for 15 minutes.
+
+Please use it to reset your password on the website.
+
+Best Regards,
+IAMSTECH Technical Support
+        """
+        html_body = f"""
+    <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        <div style="background: #0d1b3e; color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">Password Reset OTP</h1>
+        </div>
+        <div style="padding: 40px; color: #333; line-height: 1.6;">
+            <p>Dear <strong>{user.name}</strong>,</p>
+            <p>You requested to reset your password for your IAMSTECH <strong>{user.role}</strong> account.</p>
+            <p style="text-align: center; margin: 30px 0; font-size: 24px; font-weight: bold; color: #ff6f00;">{user.reset_token}</p>
+            <p>This OTP is valid for 15 minutes.</p>
+            <p style="font-size: 12px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                * If you did not make this request, you can safely ignore this email.
+            </p>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 11px; color: #999;">
+            &copy; 2026 IAMSTECH LIBERIA. Hotel Africa Road, Monrovia.
+        </div>
+    </div>
+        """
+    else:
+        # Link mode
+        reset_link = build_external_url('reset_password', token=user.reset_token)
+        subject = "IAMSTECH LIBERIA - Password Reset Request"
+        text_body = f"""
 Dear {user.name},
 
 You recently requested to reset your password for your IAMSTECH account.
@@ -190,9 +225,8 @@ This link is valid for 1 hour. If you did not request this, please ignore this e
 
 Best Regards,
 IAMSTECH Technical Support
-    """
-    
-    html_body = f"""
+        """
+        html_body = f"""
     <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
         <div style="background: #0d1b3e; color: white; padding: 30px; text-align: center;">
             <h1 style="margin: 0; font-size: 24px;">Password Reset Request</h1>
@@ -211,7 +245,7 @@ IAMSTECH Technical Support
             &copy; 2026 IAMSTECH LIBERIA. Hotel Africa Road, Monrovia.
         </div>
     </div>
-    """
+        """
     return send_email_wrapper(subject, [user.email], text_body, html_body)
 
 def send_verification_otp(user, code):

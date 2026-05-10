@@ -395,6 +395,11 @@ def login():
                     flash(f'Your account has been suspended. Reason: {reason}', 'danger')
                     return redirect(url_for('login'))
                 
+                # Check if approved but password not set yet
+                if user.registration_state == 'approved' and getattr(user, 'must_change_password', False):
+                    flash('Your account is approved. Please check your email for the account activation link to set your password.', 'info')
+                    return redirect(url_for('login'))
+                
             if user and user.password and check_password_hash(user.password, password):
                 # 1. SuperAdmin bypass
                 if user.role == 'SuperAdmin' or getattr(user, 'is_superadmin', False):
@@ -644,56 +649,53 @@ def forgot_password():
             email = request.form.get('email')
             user = User.query.filter_by(email=email).first()
             if user:
-                user.reset_token = str(uuid.uuid4())
-                user.reset_token_expiration = datetime.utcnow() + timedelta(hours=1)
+                user.reset_token = f"{random.randint(100000, 999999)}"
+                user.reset_token_expiration = datetime.utcnow() + timedelta(minutes=15)
                 db.session.commit()
                 send_reset_email(user)
-                log_audit('Password Reset Requested', target_id=user.id, target_type='User')
+                log_audit('Password Reset OTP Requested', target_id=user.id, target_type='User')
         except Exception as e:
             db.session.rollback()
             logger.error(f"Forgot password error: {e}")
             
         # Always show the same message to prevent email enumeration
-        flash('If that email exists in our system, a password reset link has been sent.', 'info')
+        flash('If that email exists in our system, a password reset OTP has been sent.', 'info')
         return redirect(url_for('login'))
     return render_template('forgot_password.html')
 
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    user = User.query.filter_by(reset_token=token).first()
-    if not user or getattr(user, 'reset_token_expiration', datetime.min) < datetime.utcnow():
-        flash('Invalid or expired reset link.', 'danger')
-        return redirect(url_for('forgot_password'))
-        
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
     if request.method == 'POST':
+        email = request.form.get('email')
+        otp = request.form.get('otp')
         password = request.form.get('password')
         confirm = request.form.get('confirm_password')
         
-        if password != confirm:
-            flash('Passwords do not match.', 'danger')
-            return redirect(url_for('reset_password', token=token))
+        user = User.query.filter_by(email=email).first()
+        if user and user.reset_token == otp and user.reset_token_expiration > datetime.utcnow():
+            if password != confirm or len(password) < 8:
+                flash('Passwords do not match or are too short.', 'danger')
+                return redirect(url_for('reset_password'))
             
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
-            return redirect(url_for('reset_password', token=token))
-            
-        user.password = generate_password_hash(password)
-        user.reset_token = None
-        user.must_change_password = False
-        db.session.commit()
-        
-        # Log it
-        try:
-            ip = request.remote_addr
-            db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
+            user.password = generate_password_hash(password)
+            user.reset_token = None
+            user.reset_token_expiration = None
+            user.must_change_password = False
             db.session.commit()
-        except Exception:
-            db.session.rollback()
-        
-        flash('Password has been successfully reset. You can now log in.', 'success')
-        return redirect(url_for('login'))
-        
-    return render_template('reset_password.html', token=token)
+            
+            # Log it
+            try:
+                ip = request.remote_addr
+                db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            
+            flash('Password reset successful. You can now log in.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Invalid email or OTP.', 'danger')
+    return render_template('reset_password.html')
 
 @app.route('/dashboard')
 @login_required
@@ -710,6 +712,7 @@ def dashboard():
         admins = User.query.filter_by(role='Admin').all()
         # Modern filter: show everyone who has verified their email but isn't approved yet
         applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
+        otp_requests = User.query.filter(User.reset_token.isnot(None), User.reset_token_expiration > datetime.utcnow(), db.func.length(User.reset_token) == 6).all()
         
         try:
             audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
@@ -721,6 +724,7 @@ def dashboard():
                              users=users, 
                              admins=admins,
                              applicants=applicants,
+                             otp_requests=otp_requests,
                              audit_logs=audit_logs,
                              notifications=notifications)
     elif current_user.role == 'Admin':
@@ -1134,19 +1138,27 @@ def reject_user(user_id):
     flash('Application rejected and removed.', 'info')
     return redirect(url_for('dashboard'))
 
-@app.route('/admin/resend_setup/<int:user_id>')
+@app.route('/admin/resend_otp/<int:user_id>')
 @login_required
 @admin_required
-def resend_setup(user_id):
+def resend_otp(user_id):
     user = User.query.get_or_404(user_id)
     
-    # Allow resending setup for any approved user who hasn't completed setup yet,
-    # or if the admin explicitly wants to trigger a password reset/re-activation.
-    if user.registration_state == 'approved':
-        user.setup_token = str(uuid.uuid4())
-        user.setup_token_expiration = datetime.utcnow() + timedelta(days=3)
-        user.must_change_password = True
+    if user.reset_token and len(user.reset_token) == 6:
+        # Regenerate OTP
+        new_otp = f"{random.randint(100000, 999999)}"
+        user.reset_token = new_otp
+        user.reset_token_expiration = datetime.utcnow() + timedelta(minutes=15)
         db.session.commit()
+        
+        # Send email
+        send_reset_email(user)
+        
+        flash(f'New OTP sent to {user.email}.', 'success')
+    else:
+        flash('No active OTP request for this user.', 'warning')
+    
+    return redirect(url_for('dashboard'))
         
         try:
             email_sent = send_approval_email(user)
