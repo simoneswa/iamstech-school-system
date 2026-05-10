@@ -306,11 +306,17 @@ app.config['SUPABASE_KEY'] = (
     os.environ.get('SUPABASE_KEY') or
     os.environ.get('SUPABASE_ANON_KEY')
 )
-app.config['SUPABASE_BUCKET'] = os.environ.get('SUPABASE_BUCKET', 'iamstech-media')
+app.config['SUPABASE_BUCKET'] = os.environ.get('SUPABASE_BUCKET', 'ianstechlib')
 app.config['SUPABASE_STORAGE_PUBLIC'] = os.environ.get('SUPABASE_STORAGE_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
 app.config['SUPABASE_STORAGE_ENABLED'] = bool(app.config['SUPABASE_URL'] and app.config['SUPABASE_KEY'])
 try:
-    app.config['SUPABASE_CLIENT'] = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY']) if app.config['SUPABASE_STORAGE_ENABLED'] else None
+    if app.config['SUPABASE_URL'] and app.config['SUPABASE_KEY']:
+        # Auto-clean whitespace to prevent initialization errors
+        clean_url = app.config['SUPABASE_URL'].strip()
+        clean_key = app.config['SUPABASE_KEY'].strip()
+        app.config['SUPABASE_CLIENT'] = create_client(clean_url, clean_key)
+    else:
+        app.config['SUPABASE_CLIENT'] = None
 except Exception as e:
     logger.error(f"Failed to initialize Supabase client: {e}")
     app.config['SUPABASE_STORAGE_ENABLED'] = False

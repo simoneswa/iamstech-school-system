@@ -13,7 +13,7 @@ SUPABASE_KEY = (
     os.environ.get('SUPABASE_KEY') or
     os.environ.get('SUPABASE_ANON_KEY')
 )
-SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'iamstech-media')
+SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'ianstechlib')
 SUPABASE_STORAGE_PUBLIC = os.environ.get('SUPABASE_STORAGE_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
 
 _supabase = None
