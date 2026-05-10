@@ -437,7 +437,7 @@ def sync_local_media_to_supabase():
                 logger.warning(f"Could not sync local media to Supabase for {relpath}: {e}")
 
 
-@app.before_first_request
+@app.before_serving
 def ensure_media_storage():
     if app.config['SUPABASE_STORAGE_ENABLED']:
         sync_local_media_to_supabase()
