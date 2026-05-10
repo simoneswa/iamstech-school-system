@@ -437,10 +437,21 @@ def sync_local_media_to_supabase():
                 logger.warning(f"Could not sync local media to Supabase for {relpath}: {e}")
 
 
-@app.before_serving
 def ensure_media_storage():
     if app.config['SUPABASE_STORAGE_ENABLED']:
         sync_local_media_to_supabase()
+
+
+if hasattr(app, 'before_serving'):
+    @app.before_serving
+    def _ensure_media_storage():
+        ensure_media_storage()
+elif hasattr(app, 'before_first_request'):
+    @app.before_first_request
+    def _ensure_media_storage():
+        ensure_media_storage()
+else:
+    ensure_media_storage()
 
 @login_manager.user_loader
 def load_user(user_id):
