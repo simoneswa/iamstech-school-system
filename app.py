@@ -1159,7 +1159,19 @@ def resend_otp(user_id):
         flash('No active OTP request for this user.', 'warning')
     
     return redirect(url_for('dashboard'))
-        
+
+@app.route('/admin/resend_setup/<int:user_id>')
+@login_required
+@admin_required
+def resend_setup(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.registration_state == 'approved':
+        user.setup_token = str(uuid.uuid4())
+        user.setup_token_expiration = datetime.utcnow() + timedelta(days=3)
+        user.must_change_password = True
+        db.session.commit()
+
         try:
             email_sent = send_approval_email(user)
             if email_sent:
@@ -1170,7 +1182,6 @@ def resend_otp(user_id):
             logger.error(f"Failed to resend setup for {user.email}: {e}")
             flash('Internal error sending setup email.', 'danger')
             
-        # Also flash the link for manual copying
         setup_link = build_external_url('setup_account', token=user.setup_token)
         flash(f'MANUAL ACTIVATION LINK: {setup_link}', 'info')
     else:
