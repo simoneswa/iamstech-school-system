@@ -39,17 +39,22 @@ def send_async_email(app, msg, user_id=None, otp_code=None):
                         "html": msg.html,
                         "text": msg.body
                     }
-                    resend.Emails.send(params)
-                    print(f"INFO: [RESEND] Delivery SUCCESS for {msg.recipients} (via {resend_sender})")
+                    response = resend.Emails.send(params)
+                    print(f"INFO: [RESEND] Delivery SUCCESS for {msg.recipients} (via {resend_sender}) - Response: {response}")
                     email_sent_successfully = True
                 except Exception as resend_error:
                     print(f"WARNING: [RESEND] Failed, falling back to SMTP. Error: {resend_error}")
+                    print(f"DEBUG: [RESEND] API Key present: {bool(resend.api_key)}, Sender: {resend_sender}")
 
             # 3. Fallback to SMTP (Flask-Mail)
             if not email_sent_successfully:
-                mail.send(msg)
-                print(f"INFO: [SMTP] Delivery SUCCESS for {msg.recipients}")
-                email_sent_successfully = True
+                try:
+                    mail.send(msg)
+                    print(f"INFO: [SMTP] Delivery SUCCESS for {msg.recipients}")
+                    email_sent_successfully = True
+                except Exception as smtp_error:
+                    print(f"ERROR: [SMTP] Delivery FAILED for {msg.recipients}. Error: {smtp_error}")
+                    print(f"DEBUG: [SMTP] MAIL_SERVER: {os.environ.get('MAIL_SERVER')}, MAIL_USERNAME: {os.environ.get('MAIL_USERNAME')}, MAIL_DEFAULT_SENDER: {os.environ.get('MAIL_DEFAULT_SENDER')}")
             
             if user_id and email_sent_successfully:
                 from models import db, User

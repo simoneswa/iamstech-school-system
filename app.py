@@ -2055,6 +2055,16 @@ def chatbot():
         "certificate": [
             "Yes! All IAMSTECH programs come with an official certificate upon successful completion. Our certificates are recognized by employers across Liberia and the region.",
             "Every graduate receives a professional certificate from IAMSTECH LIBERIA. Our credentials are respected by leading employers in IT, Finance, and Business sectors."
+        ],
+        "admission": [
+            "Admission to IAMSTECH is straightforward! Complete our online application, verify your email, and submit required documents. Our team reviews applications within 24-48 hours. For questions, WhatsApp us at +231 880 864 187.",
+            "To join IAMSTECH, fill out the online registration form, verify your email with the OTP, and upload your documents. We accept applications year-round with rolling admissions. Contact admissions at +231 880 864 187 for guidance.",
+            "Our admission process is simple: Register online, verify your email, submit documents, and await approval. We offer flexible start dates and payment plans. Reach out via WhatsApp for personalized assistance."
+        ],
+        "requirements": [
+            "Basic requirements: Valid ID, high school diploma or equivalent, basic computer skills. Specific program requirements vary—contact us at +231 880 864 187 for details on your chosen course.",
+            "You'll need: Government-issued ID, educational certificates, and proof of address. Some programs require prior experience. WhatsApp +231 880 864 187 for a complete requirements checklist.",
+            "Admission requirements include ID verification, educational background check, and basic computer literacy. Program-specific prerequisites apply. Call our admissions office for detailed guidance."
         ]
     }
 
@@ -2121,6 +2131,14 @@ def chatbot():
     # 15. About (Fallback for general info)
     elif re.search(r'\b(about|who are you|what is iamstech|tell me more|information|info)\b', msg):
         matched_intent = "about"
+
+    # 16. Admission
+    elif re.search(r'\b(admission|enrollment|apply|join|register|admit)\b', msg):
+        matched_intent = "admission"
+
+    # 17. Requirements
+    elif re.search(r'\b(requirement|qualification|eligible|need|prerequisite)\b', msg):
+        matched_intent = "requirements"
 
     # Final Selection Logic
     if matched_intent and matched_intent in responses:
