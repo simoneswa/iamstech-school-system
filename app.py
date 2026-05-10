@@ -742,15 +742,35 @@ def reset_password():
             flash('Invalid email or OTP.', 'danger')
     return render_template('reset_password.html')
 
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm = request.form.get('confirm_password')
+
+        if password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('change_password'))
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return redirect(url_for('change_password'))
+
+        current_user.password = generate_password_hash(password)
+        current_user.must_change_password = False
+        db.session.commit()
+
+        flash('Your password has been updated successfully.', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('change_password.html')
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     # Force password change if required
     if getattr(current_user, 'must_change_password', False) and not current_user.setup_token:
-        # If they don't have a setup token but must change, it's the SuperAdmin first login
-        # We can just redirect them to a profile/password change page. For now, we'll
-        # just let them in but they should probably have a force-change UI.
-        pass
+        return redirect(url_for('change_password'))
 
     if current_user.role == 'SuperAdmin':
         users = User.query.all()
