@@ -114,9 +114,9 @@
                 <div class="col-md-4">
                     <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" 
                          class="brand-logo mb-3" 
-                         style="height: 80px; filter: brightness(0) invert(1); object-fit: contain;" 
+                         style="height: 80px; max-width: 200px; object-fit: contain;" 
                          alt="IAMSTECH Logo"
-                         onerror="this.onerror=null; this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'color:#ffc107; font-size:2rem;\'><i class=\'fas fa-shield-alt\'></i></div>')">
+                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/logo.png') }}';">
                     <p class="small text-white-50">Institute of Advanced Management Science & Technology. Empowering Liberia through excellence in vocational education.</p>
                 </div>
                 <div class="col-md-3">

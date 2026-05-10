@@ -344,16 +344,27 @@ def get_media_url(path, fallback=None):
 
     if path.startswith('uploads/') or path.startswith('resources/') or path.startswith('profiles/') or path.startswith('activities/') or path.startswith('branding/'):
         storage_path = path[len('uploads/'):] if path.startswith('uploads/') else path
+        
+        # 1. Try Cloud
         if app.config['SUPABASE_STORAGE_ENABLED']:
             try:
                 if app.config['SUPABASE_STORAGE_PUBLIC']:
                     return f"{app.config['SUPABASE_URL']}/storage/v1/object/public/{app.config['SUPABASE_BUCKET']}/{storage_path}"
                 response = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).create_signed_url(storage_path, 3600)
-                return response.get('signedURL') or url_for('media_file', filepath=path)
+                if response and response.get('signedURL'):
+                    return response.get('signedURL')
             except Exception as e:
                 logger.warning(f"Supabase media URL generation failed: {e}")
-                return url_for('media_file', filepath=path)
-        return url_for('media_file', filepath=path)
+
+        # 2. Try Local (Verified)
+        local_path = os.path.join(app.config['UPLOAD_FOLDER'], storage_path)
+        if os.path.exists(local_path):
+            return url_for('media_file', filepath=path)
+        
+        # 3. Fallback to placeholder if file is missing (Railway wiped local storage)
+        if fallback:
+            return url_for('static', filename=fallback) if static_file_exists(fallback) else url_for('static', filename='img/placeholder.png')
+        return url_for('static', filename='img/placeholder.png')
 
     if path.startswith('/'):
         return url_for('static', filename=path.lstrip('/'))
@@ -1045,7 +1056,8 @@ def dashboard():
                              founders=founders,
                              developers=developers,
                              activities=activities,
-                             announcements=announcements)
+                             announcements=announcements,
+                             cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
     elif current_user.role == 'Admin':
         users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
         # Show both OTP-stuck applicants and ready-to-approve applicants
@@ -1064,7 +1076,8 @@ def dashboard():
                              teachers=teachers, 
                              courses=courses, 
                              announcements=announcements,
-                             activities=activities)
+                             activities=activities,
+                             cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
                              
     elif current_user.role == 'Teacher':
         courses = Course.query.filter_by(teacher_id=current_user.id).all()
