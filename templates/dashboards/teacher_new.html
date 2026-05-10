@@ -24,6 +24,12 @@
                 <a href="#" class="nav-link text-white-80" data-section="meetings">
                     <i class="fas fa-video me-2"></i>Meetings
                 </a>
+                <a href="#" class="nav-link text-white-80" data-section="announcements">
+                    <i class="fas fa-bullhorn me-2"></i>Announcements
+                </a>
+                <a href="#" class="nav-link text-white-80" data-section="resources">
+                    <i class="fas fa-folder-open me-2"></i>Resources
+                </a>
                 <a href="#" class="nav-link text-white-80" data-section="attendance">
                     <i class="fas fa-calendar-check me-2"></i>Attendance
                 </a>
@@ -67,7 +73,7 @@
                     </div>
                     <div class="col-md-4">
                         <div class="dash-card p-4 rounded-4 text-center">
-                            <div class="display-4 fw-bold text-warning mb-2">{{ courses|sum(attribute='enrollments')|length }}</div>
+                            <div class="display-4 fw-bold text-warning mb-2">{{ total_students }}</div>
                             <p class="text-muted small">Total Students</p>
                         </div>
                     </div>
@@ -89,6 +95,16 @@
                         <div class="col-md-4">
                             <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('attendance')">
                                 <i class="fas fa-check me-2"></i>Mark Attendance
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('announcements')">
+                                <i class="fas fa-bullhorn me-2"></i>Post Announcement
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100 rounded-3 py-3" onclick="switchSection('resources')">
+                                <i class="fas fa-folder-open me-2"></i>Upload Resource
                             </button>
                         </div>
                     </div>
@@ -211,6 +227,122 @@
                     </div>
                 </div>
                 {% endif %}
+            </section>
+
+            <!-- Announcements Section -->
+            <section id="section-announcements" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-plus me-2"></i>Post Announcement</h5>
+                    <form action="{{ url_for('post_announcement') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Title</label>
+                                <input type="text" name="title" class="form-control rounded-3" placeholder="Announcement title" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Select Course</label>
+                                <select name="course_id" class="form-select rounded-3" required>
+                                    <option value="" disabled selected>Choose Course...</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.name }} ({{ course.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Message</label>
+                                <textarea name="content" class="form-control rounded-3" rows="4" placeholder="Share an update with your students..." required></textarea>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-success rounded-pill px-5">
+                                    <i class="fas fa-bullhorn me-2"></i>Publish Announcement
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Recent Announcements</h5>
+                    {% if course_announcements %}
+                    <div class="list-group">
+                        {% for announcement in course_announcements %}
+                        <div class="list-group-item rounded-3 mb-2 border">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ announcement.title }}</h6>
+                                    <p class="small text-muted mb-1">{{ announcement.date.strftime('%b %d, %Y') }}</p>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ announcement.course.name }}</span>
+                            </div>
+                            <p class="small mb-0">{{ announcement.content }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No announcements posted yet.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Resources Section -->
+            <section id="section-resources" class="section-content d-none">
+                <div class="dash-card p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-plus me-2"></i>Upload Learning Material</h5>
+                    <form action="{{ url_for('upload_material') }}" method="POST" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Resource Title</label>
+                                <input type="text" name="title" class="form-control rounded-3" placeholder="e.g. Week 6 Lecture Notes" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Select Course</label>
+                                <select name="course_id" class="form-select rounded-3" required>
+                                    <option value="" disabled selected>Choose Course...</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.name }} ({{ course.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">File</label>
+                                <input type="file" name="resource_file" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Description</label>
+                                <input type="text" name="description" class="form-control rounded-3" placeholder="Brief description" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-5">
+                                    <i class="fas fa-upload me-2"></i>Upload Resource
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="dash-card p-4 rounded-4">
+                    <h5 class="fw-bold mb-4">Uploaded Resources</h5>
+                    {% if course_resources %}
+                    <div class="list-group">
+                        {% for resource in course_resources %}
+                        <div class="list-group-item rounded-3 mb-2 border">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ resource.title }}</h6>
+                                    <p class="small text-muted mb-1">{{ resource.description }}</p>
+                                    <p class="small text-muted mb-0"><strong>Course:</strong> {{ resource.course.name }}</p>
+                                </div>
+                                <a href="{{ url_for('download_resource', resource_id=resource.id) }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No learning resources uploaded yet.</p>
+                    {% endif %}
+                </div>
             </section>
 
             <!-- Attendance Section -->

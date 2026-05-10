@@ -13,7 +13,7 @@ import csv
 import random
 import io
 from flask import send_file
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -174,7 +174,35 @@ with app.app_context():
             try:
                 db.session.execute(text(f"ALTER TABLE developer ADD COLUMN bio TEXT"))
                 db.session.commit()
-            except Exception: db.session.rollback()
+            except Exception:
+                db.session.rollback()
+
+        # 4. Assignment Points Support
+        try:
+            assignment_cols = [c['name'] for c in inspector.get_columns('assignment')]
+            if 'points' not in assignment_cols:
+                db.session.execute(text("ALTER TABLE assignment ADD COLUMN points INTEGER DEFAULT 100"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # 5. Meeting Table Enhancements
+        try:
+            meeting_cols = [c['name'] for c in inspector.get_columns('meeting')]
+            if 'course_id' not in meeting_cols:
+                db.session.execute(text("ALTER TABLE meeting ADD COLUMN course_id INTEGER"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # 6. Announcement Course Association
+        try:
+            announcement_cols = [c['name'] for c in inspector.get_columns('announcement')]
+            if 'course_id' not in announcement_cols:
+                db.session.execute(text("ALTER TABLE announcement ADD COLUMN course_id INTEGER"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         from seed_sa_module import seed_sa_func
         seed_sa_func()
@@ -219,6 +247,18 @@ def superadmin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def teacher_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.role != 'Teacher':
+            flash('Teacher access required.', 'danger')
+            return redirect(url_for('dashboard'))
+        if getattr(current_user, 'is_suspended', False):
+            flash('Your account is suspended. Contact administration.', 'danger')
+            return redirect(url_for('logout'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Safe Database Initialization ---
 _db_initialized = False
 
@@ -247,6 +287,11 @@ app.config['UPLOAD_FOLDER'] = os.path.join(UPLOAD_BASE, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'activities'), exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'resources'), exist_ok=True)
+app.config['ALLOWED_RESOURCE_EXTENSIONS'] = {'pdf', 'docx', 'pptx', 'xlsx', 'zip', 'png', 'jpg', 'jpeg', 'mp4', 'mp3', 'txt'}
+
+def allowed_resource_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_RESOURCE_EXTENSIONS']
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -741,8 +786,32 @@ def dashboard():
                              announcements=announcements)
                              
     elif current_user.role == 'Teacher':
-        meetings = Meeting.query.filter_by(teacher_id=current_user.id).all()
-        return render_template('dashboards/teacher.html', meetings=meetings)
+        courses = Course.query.filter_by(teacher_id=current_user.id).all()
+        meetings = Meeting.query.filter_by(teacher_id=current_user.id).order_by(Meeting.date.asc(), Meeting.time.asc()).all()
+        total_students = sum(len(course.enrollments) for course in courses)
+        course_announcements = Announcement.query.filter_by(posted_by=current_user.id).order_by(Announcement.date.desc()).limit(20).all()
+        course_resources = LessonMaterial.query.filter_by(teacher_id=current_user.id).order_by(LessonMaterial.uploaded_at.desc()).all()
+        attendance_records = Attendance.query.join(Course, Attendance.course_id == Course.id).filter(Course.teacher_id == current_user.id).order_by(Attendance.date.desc()).limit(50).all()
+
+        attendance_summary = []
+        for course in courses:
+            total = Attendance.query.filter_by(course_id=course.id).count()
+            present = Attendance.query.filter_by(course_id=course.id, status='Present').count()
+            attendance_summary.append({
+                'course': course,
+                'total': total,
+                'present': present,
+                'percent': round((present / total * 100), 1) if total else 0
+            })
+
+        return render_template('dashboards/teacher_new.html', 
+                               courses=courses,
+                               meetings=meetings,
+                               total_students=total_students,
+                               attendance_records=attendance_records,
+                               attendance_summary=attendance_summary,
+                               course_resources=course_resources,
+                               course_announcements=course_announcements)
         
     elif current_user.role in ['Student', 'Staff']:
         # Gamification: Daily Login Reward (Hardened)
@@ -811,6 +880,155 @@ def dashboard():
         flash('Your role does not have a dashboard yet. Please contact administration.', 'warning')
         announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
         return render_template('dashboards/applicant.html', announcements=announcements)
+
+# --- Teacher Controls ---
+@app.route('/teacher/post_assignment', methods=['POST'])
+@login_required
+@teacher_required
+def post_assignment():
+    title = request.form.get('title')
+    content = request.form.get('content')
+    due_date = request.form.get('due_date')
+    course_id = request.form.get('course_id')
+    points = request.form.get('points') or 100
+
+    course = Course.query.filter_by(id=course_id, teacher_id=current_user.id).first()
+    if not course:
+        flash('Course selection invalid.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        assignment = Assignment(course_id=course.id, title=title, content=content, due_date=due_date, points=int(points))
+        db.session.add(assignment)
+        db.session.commit()
+        flash('Assignment published successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Assignment creation failed: {e}')
+        flash('Could not publish assignment at this time.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/teacher/add_meeting', methods=['POST'])
+@login_required
+@teacher_required
+def add_meeting():
+    title = request.form.get('title')
+    meet_link = request.form.get('link')
+    date = request.form.get('date')
+    time = request.form.get('time')
+    course_id = request.form.get('course_id')
+
+    course = Course.query.filter_by(id=course_id, teacher_id=current_user.id).first()
+    if not course:
+        flash('Invalid course selection for meeting.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        meeting = Meeting(teacher_id=current_user.id, course_id=course.id, title=title, meet_link=meet_link, date=date, time=time)
+        db.session.add(meeting)
+        db.session.commit()
+        flash('Live session scheduled successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Meeting creation failed: {e}')
+        flash('Could not schedule meeting at this time.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/teacher/mark_attendance', methods=['POST'])
+@login_required
+@teacher_required
+def mark_attendance():
+    course_id = request.form.get('course_id')
+    date_str = request.form.get('attendance_date') or datetime.utcnow().date().isoformat()
+    attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+    course = Course.query.filter_by(id=course_id, teacher_id=current_user.id).first()
+    if not course:
+        flash('Invalid attendance submission.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        for enrollment in course.enrollments:
+            status = request.form.get(f'status_{enrollment.student_id}', 'Absent')
+            record = Attendance.query.filter_by(student_id=enrollment.student_id, course_id=course.id, date=attendance_date).first()
+            if record:
+                record.status = status
+            else:
+                record = Attendance(student_id=enrollment.student_id, course_id=course.id, date=attendance_date, status=status)
+                db.session.add(record)
+        db.session.commit()
+        flash('Attendance saved successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Attendance save failed: {e}')
+        flash('Could not save attendance.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/teacher/upload_material', methods=['POST'])
+@login_required
+@teacher_required
+def upload_material():
+    course_id = request.form.get('course_id')
+    title = request.form.get('title')
+    description = request.form.get('description')
+    file = request.files.get('resource_file')
+
+    course = Course.query.filter_by(id=course_id, teacher_id=current_user.id).first()
+    if not course or not file or not allowed_resource_file(file.filename):
+        flash('Invalid resource upload. Please choose a valid course file.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    filename = secure_filename(f"{uuid.uuid4().hex[:8]}_{file.filename}")
+    resource_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'resources')
+    os.makedirs(resource_dir, exist_ok=True)
+    file.save(os.path.join(resource_dir, filename))
+
+    try:
+        material = LessonMaterial(course_id=course.id, teacher_id=current_user.id, title=title, description=description, file_name=file.filename, file_path=f"resources/{filename}")
+        db.session.add(material)
+        db.session.commit()
+        flash('Lesson material uploaded successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Material upload failed: {e}')
+        flash('Could not upload material.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/teacher/post_announcement', methods=['POST'])
+@login_required
+@teacher_required
+def post_announcement():
+    title = request.form.get('title')
+    content = request.form.get('content')
+    course_id = request.form.get('course_id')
+
+    course = Course.query.filter_by(id=course_id, teacher_id=current_user.id).first()
+    if not course:
+        flash('Invalid course selection for announcement.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        announcement = Announcement(title=title, content=content, posted_by=current_user.id, course_id=course.id)
+        db.session.add(announcement)
+        db.session.commit()
+        flash('Course announcement posted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Announcement creation failed: {e}')
+        flash('Could not post announcement.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/teacher/download_resource/<int:resource_id>')
+@login_required
+@teacher_required
+def download_resource(resource_id):
+    material = LessonMaterial.query.get_or_404(resource_id)
+    if material.teacher_id != current_user.id:
+        flash('Resource access denied.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    path = os.path.join(app.config['UPLOAD_FOLDER'], material.file_path)
+    return send_file(path, as_attachment=True, download_name=material.file_name)
 
 # --- Admin Controls ---
 @app.route('/admin/update-branding', methods=['POST'])

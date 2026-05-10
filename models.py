@@ -78,6 +78,7 @@ class Assignment(db.Model):
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     due_date = db.Column(db.String(50))
+    points = db.Column(db.Integer, default=100)
 
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -92,14 +93,30 @@ class Announcement(db.Model):
     content = db.Column(db.Text, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     posted_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=True)
+    course = db.relationship('Course', backref='announcements')
 
 class Meeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=True)
     title = db.Column(db.String(100), nullable=False)
     meet_link = db.Column(db.String(500), nullable=False)
     date = db.Column(db.String(50))
     time = db.Column(db.String(50))
+    course = db.relationship('Course', backref='meetings')
+
+class LessonMaterial(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    course = db.relationship('Course', backref='materials')
+    teacher = db.relationship('User', backref='materials')
 
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
