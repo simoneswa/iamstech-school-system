@@ -43,6 +43,15 @@ app.config['DEV_MODE'] = os.environ.get("DEV_MODE", "false").lower() == "true"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB Upload Limit
 app.config['BASE_URL'] = os.environ.get('IAMSTECH_BASE_URL', '').strip().rstrip('/') or None
 app.config['PREFERRED_URL_SCHEME'] = 'https'
+
+# --- Email Configuration (SMTP Fallback) ---
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', 'on', '1']
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME')
 # NOTE: SERVER_NAME is intentionally NOT set — setting it causes Flask to
 # return 404 for all routes when the configured value doesn't exactly match
 # the Host header (e.g. after a Railway domain rename). ProxyFix handles
