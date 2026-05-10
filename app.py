@@ -17,6 +17,7 @@ from supabase import create_client
 from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
+from lib.storage import upload_to_bucket
 
 # --- Professional Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -390,23 +391,30 @@ def save_media_file(uploaded_file, folder, prefix=None, filename=None):
         safe_name = secure_filename(f"{prefix or uuid.uuid4().hex[:10]}_{uuid.uuid4().hex[:10]}.{ext}")
     storage_path = f"{folder}/{safe_name}".lstrip('/')
 
-    # Save a local fallback copy always
+    # 1. Save a local fallback copy always (for immediate access/debugging)
     local_folder = os.path.join(app.config['UPLOAD_FOLDER'], folder)
     os.makedirs(local_folder, exist_ok=True)
     local_path = os.path.join(local_folder, safe_name)
     uploaded_file.seek(0)
     uploaded_file.save(local_path)
 
-    if app.config['SUPABASE_STORAGE_ENABLED']:
-        try:
-            uploaded_file.seek(0)
-            data = uploaded_file.read()
-            result = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).upload(storage_path, data)
-            if result and result.get('error'):
-                logger.warning(f"Supabase upload warning: {result.get('error')}")
-        except Exception as e:
-            logger.error(f"Supabase upload failed for {storage_path}: {e}")
+    # 2. Cloud Upload via Library (Returns permanent public URL)
+    try:
+        uploaded_file.seek(0)
+        file_bytes = uploaded_file.read()
+        public_url = upload_to_bucket(
+            file_bytes=file_bytes,
+            filename=safe_name,
+            content_type=uploaded_file.content_type,
+            folder=folder
+        )
+        if public_url:
+            logger.info(f"Cloud upload success: {public_url}")
+            return public_url
+    except Exception as e:
+        logger.error(f"Cloud upload integration failed: {e}")
 
+    # Fallback to local path if cloud upload fails
     return f"uploads/{storage_path}"
 
 
