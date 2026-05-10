@@ -290,11 +290,17 @@ app.config['ALLOWED_RESOURCE_EXTENSIONS'] = {'pdf', 'docx', 'pptx', 'xlsx', 'zip
 
 # Supabase storage integration (optional, enables persistent object storage across deploys)
 app.config['SUPABASE_URL'] = os.environ.get('SUPABASE_URL')
-app.config['SUPABASE_KEY'] = os.environ.get('SUPABASE_SERVICE_KEY') or os.environ.get('SUPABASE_KEY') or os.environ.get('SUPABASE_ANON_KEY')
+app.config['SUPABASE_KEY'] = (
+    os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or
+    os.environ.get('SUPABASE_SERVICE_KEY') or
+    os.environ.get('SUPABASE_KEY') or
+    os.environ.get('SUPABASE_ANON_KEY')
+)
 app.config['SUPABASE_BUCKET'] = os.environ.get('SUPABASE_BUCKET', 'iamstech-media')
 app.config['SUPABASE_STORAGE_PUBLIC'] = os.environ.get('SUPABASE_STORAGE_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
 app.config['SUPABASE_STORAGE_ENABLED'] = bool(app.config['SUPABASE_URL'] and app.config['SUPABASE_KEY'])
 app.config['SUPABASE_CLIENT'] = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY']) if app.config['SUPABASE_STORAGE_ENABLED'] else None
+logger.info(f"SUPABASE_STORAGE_ENABLED={app.config['SUPABASE_STORAGE_ENABLED']}, bucket={app.config['SUPABASE_BUCKET']}, public={app.config['SUPABASE_STORAGE_PUBLIC']}")
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profiles'), exist_ok=True)
@@ -304,11 +310,18 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'branding'), exist_ok=True
 
 
 # --- Media helpers ---
+def static_file_exists(path):
+    static_path = os.path.join(app.static_folder, path.lstrip('/'))
+    return os.path.exists(static_path)
+
+
 def get_media_url(path, fallback=None):
     if not path:
         if fallback:
-            return fallback if fallback.lower().startswith('http') else url_for('static', filename=fallback)
-        return url_for('static', filename='img/default-avatar.png')
+            if fallback.lower().startswith('http'):
+                return fallback
+            return url_for('static', filename=fallback) if static_file_exists(fallback) else url_for('static', filename='img/placeholder.png')
+        return url_for('static', filename='img/placeholder.png')
 
     if isinstance(path, str) and path.startswith(('http://', 'https://')):
         return path
@@ -464,7 +477,7 @@ def inject_now():
         'notifications': [],
         'global_alerts': [],
         'brand_logo_path': find_brand_media_path('logo') or 'img/logo.png',
-        'brand_hero_path': find_brand_media_path('hero') or 'img/hero.jpg'
+        'brand_hero_path': find_brand_media_path('hero') or 'img/placeholder.png'
     }
     try:
         if current_user.is_authenticated:
