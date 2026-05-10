@@ -30,15 +30,17 @@ def send_async_email(app, msg, user_id=None, otp_code=None):
             # 2. Try Resend First (Production Preferred)
             if resend.api_key:
                 try:
+                    # TEST MODE: Use onboarding@resend.dev to bypass domain verification
+                    resend_sender = os.environ.get('RESEND_SENDER_EMAIL', 'onboarding@resend.dev')
                     params = {
-                        "from": msg.sender or "IamsTech <noreply@iamstech.com>",
+                        "from": resend_sender,
                         "to": msg.recipients,
                         "subject": msg.subject,
                         "html": msg.html,
                         "text": msg.body
                     }
                     resend.Emails.send(params)
-                    print(f"INFO: [RESEND] Delivery SUCCESS for {msg.recipients}")
+                    print(f"INFO: [RESEND] Delivery SUCCESS for {msg.recipients} (via {resend_sender})")
                     email_sent_successfully = True
                 except Exception as resend_error:
                     print(f"WARNING: [RESEND] Failed, falling back to SMTP. Error: {resend_error}")
