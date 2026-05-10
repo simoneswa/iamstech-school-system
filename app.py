@@ -309,7 +309,13 @@ app.config['SUPABASE_KEY'] = (
 app.config['SUPABASE_BUCKET'] = os.environ.get('SUPABASE_BUCKET', 'iamstech-media')
 app.config['SUPABASE_STORAGE_PUBLIC'] = os.environ.get('SUPABASE_STORAGE_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
 app.config['SUPABASE_STORAGE_ENABLED'] = bool(app.config['SUPABASE_URL'] and app.config['SUPABASE_KEY'])
-app.config['SUPABASE_CLIENT'] = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY']) if app.config['SUPABASE_STORAGE_ENABLED'] else None
+try:
+    app.config['SUPABASE_CLIENT'] = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY']) if app.config['SUPABASE_STORAGE_ENABLED'] else None
+except Exception as e:
+    logger.error(f"Failed to initialize Supabase client: {e}")
+    app.config['SUPABASE_STORAGE_ENABLED'] = False
+    app.config['SUPABASE_CLIENT'] = None
+
 logger.info(f"SUPABASE_STORAGE_ENABLED={app.config['SUPABASE_STORAGE_ENABLED']}, bucket={app.config['SUPABASE_BUCKET']}, public={app.config['SUPABASE_STORAGE_PUBLIC']}")
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
