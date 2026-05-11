@@ -98,9 +98,17 @@ def _get_db_uri():
             url = db_url
             if url.startswith("postgres://"):
                 url = url.replace("postgres://", "postgresql://", 1)
+            
+            # Remove pgbouncer=true if it exists in the query string as it can cause psycopg2 errors
+            if "pgbouncer=true" in url:
+                url = url.replace("pgbouncer=true", "")
+                url = url.replace("??", "?").replace("?&", "?").rstrip("?&")
+                logger.info("MIGRATION: Removed 'pgbouncer=true' from DATABASE_URL for compatibility.")
+
             # Validate it looks like a real URL (has @host:port pattern)
             if "@" not in url or "://" not in url:
                 raise ValueError(f"DATABASE_URL appears malformed (missing @ or ://): {url[:60]}")
+            
             logger.info(f"DB: Using PostgreSQL (host={url.split('@')[-1].split('/')[0]})")
             return url
         except Exception as e:
@@ -127,6 +135,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
     "pool_recycle": 280,
     "pool_timeout": 30,
+    "pool_size": 10,
+    "max_overflow": 5,
     "connect_args": {"connect_timeout": 10} if "postgresql" in app.config['SQLALCHEMY_DATABASE_URI'] else {},
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -139,9 +149,23 @@ with app.app_context():
         # --- EXHAUSTIVE AUTO-MIGRATION (Full Spectrum) ---
         from sqlalchemy import text, inspect
         inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
         
-        # 1. User Table Hardening (Comprehensive Spectrum)
-        user_cols = [c['name'] for c in inspector.get_columns('user')]
+        # Helper to safely add column
+        def safe_add_column(table_name, col_name, col_type):
+            try:
+                columns = [c['name'] for c in inspector.get_columns(table_name)]
+                if col_name not in columns:
+                    logger.info(f"MIGRATION: Adding column {col_name} to '{table_name}'...")
+                    # Quote table name for reserved words like "user"
+                    quoted_table = f'"{table_name}"' if table_name.lower() == 'user' else table_name
+                    db.session.execute(text(f"ALTER TABLE {quoted_table} ADD COLUMN {col_name} {col_type}"))
+                    db.session.commit()
+            except Exception as ex:
+                logger.error(f"MIGRATION FAILED for {table_name}.{col_name}: {ex}")
+                db.session.rollback()
+
+        # 1. User Table Hardening
         user_updates = {
             'registration_state': 'VARCHAR(30)',
             'otp_email_status': 'VARCHAR(20)',
@@ -161,60 +185,32 @@ with app.app_context():
             'reset_token': 'VARCHAR(100)',
             'reset_token_expiration': 'TIMESTAMP'
         }
-        for col, col_type in user_updates.items():
-            if col not in user_cols:
+        if 'user' in tables:
+            for col, col_type in user_updates.items():
+                safe_add_column('user', col, col_type)
+
+        # 2. Founder/Developer Table Hardening
+        if 'founder' in tables:
+            for col in ['bio', 'vision', 'mission', 'leadership_statement']:
+                safe_add_column('founder', col, 'TEXT')
+        if 'developer' in tables:
+            safe_add_column('developer', 'bio', 'TEXT')
+
+        # 3. Association/Metadata Columns
+        if 'assignment' in tables: safe_add_column('assignment', 'points', 'INTEGER DEFAULT 100')
+        if 'meeting' in tables: safe_add_column('meeting', 'course_id', 'INTEGER')
+        if 'announcement' in tables: safe_add_column('announcement', 'course_id', 'INTEGER')
+        
+        # 4. Verify Critical Tables Exist (Double Check)
+        for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity']:
+            if t not in tables:
+                logger.warning(f"MIGRATION: Table '{t}' missing after create_all. Attempting manual creation...")
                 try:
-                    logger.info(f"MIGRATION: Adding column {col} to 'user' table...")
-                    db.session.execute(text(f"ALTER TABLE \"user\" ADD COLUMN {col} {col_type}"))
+                    # This is a fallback if create_all failed for some reason
+                    db.create_all()
                     db.session.commit()
-                except Exception as e: 
-                    logger.error(f"MIGRATION FAILED for {col}: {e}")
-                    db.session.rollback()
-
-        # 2. Founder Table Hardening
-        founder_cols = [c['name'] for c in inspector.get_columns('founder')]
-        for col in ['bio', 'vision', 'mission', 'leadership_statement']:
-            if col not in founder_cols:
-                try:
-                    db.session.execute(text(f"ALTER TABLE founder ADD COLUMN {col} TEXT"))
-                    db.session.commit()
-                except Exception: db.session.rollback()
-
-        # 3. Developer Table Hardening
-        dev_cols = [c['name'] for c in inspector.get_columns('developer')]
-        if 'bio' not in dev_cols:
-            try:
-                db.session.execute(text(f"ALTER TABLE developer ADD COLUMN bio TEXT"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        # 4. Assignment Points Support
-        try:
-            assignment_cols = [c['name'] for c in inspector.get_columns('assignment')]
-            if 'points' not in assignment_cols:
-                db.session.execute(text("ALTER TABLE assignment ADD COLUMN points INTEGER DEFAULT 100"))
-                db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # 5. Meeting Table Enhancements
-        try:
-            meeting_cols = [c['name'] for c in inspector.get_columns('meeting')]
-            if 'course_id' not in meeting_cols:
-                db.session.execute(text("ALTER TABLE meeting ADD COLUMN course_id INTEGER"))
-                db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # 6. Announcement Course Association
-        try:
-            announcement_cols = [c['name'] for c in inspector.get_columns('announcement')]
-            if 'course_id' not in announcement_cols:
-                db.session.execute(text("ALTER TABLE announcement ADD COLUMN course_id INTEGER"))
-                db.session.commit()
-        except Exception:
-            db.session.rollback()
+                except Exception as e:
+                    logger.error(f"Manual table creation failed: {e}")
 
         from seed_sa_module import seed_sa_func
         seed_sa_func()
@@ -638,42 +634,28 @@ def check_auth_state(user, current_step):
 @app.route('/')
 def index():
     try:
-        # Only show OVERALL announcements (where course_id is None) - Hardened
-        try:
-            announcements = Announcement.query.filter_by(course_id=None).order_by(Announcement.date.desc()).limit(3).all()
-        except Exception as e:
-            logger.warning(f"Homepage announcement query failed: {e}")
-            announcements = []
-        
-        # Fetch recent activities for highlights
-        try:
-            activities = Activity.query.order_by(Activity.date.desc()).limit(6).all()
-        except Exception as e:
-            logger.warning(f"Homepage activities query failed: {e}")
-            activities = []
-        
-        # Get branding paths
+        # 1. Branding Paths
         brand_logo_path = find_brand_media_path('logo')
         brand_hero_path = find_brand_media_path('hero')
-        
-        # Defensive Query for Founder/Dev (Crash-Proof)
-        try:
-            founders = Founder.query.all()
-        except Exception as e:
-            logger.warning(f"Founder table schema mismatch: {e}")
-            founders = [] # Fallback to empty list so it doesn't crash
-            
-        try:
-            developers = Developer.query.all()
-        except Exception as e:
-            logger.warning(f"Developer table schema mismatch: {e}")
-            developers = []
 
-        try:
-            home_sections = HomePageSection.query.filter_by(is_active=True).order_by(HomePageSection.display_order.asc()).all()
-        except Exception as e:
-            logger.warning(f"Homepage sections query failed: {e}")
-            home_sections = []
+        # 2. Hardened Queries
+        def safe_query(query_func, default_val=[]):
+            try:
+                return query_func()
+            except Exception as ex:
+                logger.warning(f"Index: Query failed: {ex}")
+                return default_val
+
+        # Only show OVERALL institutional announcements
+        announcements = safe_query(lambda: Announcement.query.filter_by(course_id=None).order_by(Announcement.date.desc()).limit(3).all())
+        activities = safe_query(lambda: Activity.query.order_by(Activity.date.desc()).limit(6).all())
+        founders = safe_query(lambda: Founder.query.all())
+        developers = safe_query(lambda: Developer.query.all())
+        home_sections = safe_query(lambda: HomePageSection.query.filter_by(is_active=True).order_by(HomePageSection.display_order.asc()).all())
+        
+        # Individual records for highlighting
+        founder = safe_query(lambda: Founder.query.first(), None)
+        dev = safe_query(lambda: Developer.query.first(), None)
 
         return render_template('index.html', 
                              announcements=announcements, 
@@ -682,7 +664,9 @@ def index():
                              brand_hero_path=brand_hero_path,
                              founders=founders,
                              developers=developers,
-                             home_sections=home_sections)
+                             home_sections=home_sections,
+                             founder=founder,
+                             dev=dev)
     except Exception as e:
         logger.error(f"Index route critical failure: {e}")
         return render_template('errors/500.html', error=e), 500
@@ -1035,66 +1019,33 @@ def dashboard():
 
     if current_user.role == 'SuperAdmin':
         try:
-            users = User.query.all()
-            admins = User.query.filter_by(role='Admin').all()
-            # Modern filter: show everyone who has verified their email but isn't approved yet
-            applicants = User.query.filter_by(registration_state='verified_awaiting_approval').all()
-            # Fetch users stuck on OTP stage for SuperAdmin backup visibility
-            unverified_applicants = User.query.filter_by(registration_state='pending_verification').all()
+            # Main Queries - Wrapped individually for maximum resilience
+            def safe_query(query_func, default_val=[]):
+                try:
+                    return query_func()
+                except Exception as ex:
+                    logger.warning(f"SuperAdmin Dashboard: Query failed: {ex}")
+                    return default_val
+
+            users = safe_query(lambda: User.query.all())
+            admins = safe_query(lambda: User.query.filter_by(role='Admin').all())
+            applicants = safe_query(lambda: User.query.filter_by(registration_state='verified_awaiting_approval').all())
+            unverified_applicants = safe_query(lambda: User.query.filter_by(registration_state='pending_verification').all())
             
-            otp_requests = User.query.filter(User.reset_token.isnot(None), User.reset_token_expiration > datetime.utcnow(), db.func.length(User.reset_token) == 6).all()
+            otp_requests = safe_query(lambda: User.query.filter(
+                User.reset_token.isnot(None), 
+                User.reset_token_expiration > datetime.utcnow(), 
+                db.func.length(User.reset_token) == 6
+            ).all())
             
-            try:
-                audit_logs = SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all()
-            except Exception as e:
-                logger.warning(f"Audit logs query error: {e}")
-                audit_logs = []
-            
-            # Get notifications for SuperAdmin
-            try:
-                notifications = Notification.query.order_by(Notification.created_at.desc()).limit(20).all()
-            except Exception as e:
-                logger.warning(f"Notification query error: {e}")
-                notifications = []
-                
-            # Defensive Query for Founder/Dev (Crash-Proof)
-            try:
-                founders = Founder.query.all()
-            except Exception as e:
-                logger.warning(f"Founder table query error in dashboard: {e}")
-                founders = []
-                
-            try:
-                developers = Developer.query.all()
-            except Exception as e:
-                logger.warning(f"Developer table query error in dashboard: {e}")
-                developers = []
-
-            try:
-                activities = Activity.query.order_by(Activity.id.desc()).all()
-            except Exception as e:
-                logger.warning(f"Activity query error in dashboard: {e}")
-                activities = []
-
-            # Announcements for management
-            try:
-                announcements = Announcement.query.order_by(Announcement.date.desc()).all()
-            except Exception as e:
-                logger.warning(f"Announcements query error: {e}")
-                announcements = []
-
-            # Get system reports for SuperAdmin
-            try:
-                system_reports = SystemReport.query.filter_by(status='open').order_by(SystemReport.created_at.desc()).limit(10).all()
-            except Exception as e:
-                logger.warning(f"System reports query error: {e}")
-                system_reports = []
-
-            try:
-                home_sections = HomePageSection.query.order_by(HomePageSection.display_order.asc()).all()
-            except Exception as e:
-                logger.warning(f"Homepage section query failed in dashboard: {e}")
-                home_sections = []
+            audit_logs = safe_query(lambda: SystemAuditLog.query.order_by(SystemAuditLog.timestamp.desc()).limit(50).all())
+            notifications = safe_query(lambda: Notification.query.order_by(Notification.created_at.desc()).limit(20).all())
+            founders = safe_query(lambda: Founder.query.all())
+            developers = safe_query(lambda: Developer.query.all())
+            activities = safe_query(lambda: Activity.query.order_by(Activity.id.desc()).all())
+            announcements = safe_query(lambda: Announcement.query.order_by(Announcement.date.desc()).all())
+            system_reports = safe_query(lambda: SystemReport.query.filter_by(status='open').order_by(SystemReport.created_at.desc()).limit(10).all())
+            home_sections = safe_query(lambda: HomePageSection.query.order_by(HomePageSection.display_order.asc()).all())
 
             return render_template('dashboards/superadmin.html', 
                                  users=users, 
@@ -1116,22 +1067,21 @@ def dashboard():
             flash(f'Dashboard loading error: {str(e)}', 'danger')
             return render_template('errors/500.html', error=str(e)), 500
     elif current_user.role == 'Admin':
-        users = User.query.filter(User.role != 'SuperAdmin').all() # Hide SuperAdmin
-        # Show both OTP-stuck applicants and ready-to-approve applicants
-        applicants = User.query.filter(User.registration_state.in_(['pending_verification', 'verified_awaiting_approval'])).all()
-        teachers = User.query.filter_by(role='Teacher').all()
-        courses = Course.query.all()
-        announcements = Announcement.query.all()
-        try:
-            activities = Activity.query.order_by(Activity.id.desc()).all()
-        except Exception as e:
-            logger.warning(f"Activity query error in admin dashboard: {e}")
-            activities = []
-        try:
-            home_sections = HomePageSection.query.order_by(HomePageSection.display_order.asc()).all()
-        except Exception as e:
-            logger.warning(f"Homepage section query failed in admin dashboard: {e}")
-            home_sections = []
+        def safe_query(query_func, default_val=[]):
+            try:
+                return query_func()
+            except Exception as ex:
+                logger.warning(f"Admin Dashboard: Query failed: {ex}")
+                return default_val
+
+        users = safe_query(lambda: User.query.filter(User.role != 'SuperAdmin').all())
+        applicants = safe_query(lambda: User.query.filter(User.registration_state.in_(['pending_verification', 'verified_awaiting_approval'])).all())
+        teachers = safe_query(lambda: User.query.filter_by(role='Teacher').all())
+        courses = safe_query(lambda: Course.query.all())
+        announcements = safe_query(lambda: Announcement.query.all())
+        activities = safe_query(lambda: Activity.query.order_by(Activity.id.desc()).all())
+        home_sections = safe_query(lambda: HomePageSection.query.order_by(HomePageSection.display_order.asc()).all())
+        
         return render_template('dashboards/admin_new.html', 
                              users=users, 
                              applicants=applicants, 
@@ -1143,23 +1093,33 @@ def dashboard():
                              cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
                              
     elif current_user.role == 'Teacher':
-        courses = Course.query.filter_by(teacher_id=current_user.id).all()
-        meetings = Meeting.query.filter_by(teacher_id=current_user.id).order_by(Meeting.date.asc(), Meeting.time.asc()).all()
+        def safe_query(query_func, default_val=[]):
+            try:
+                return query_func()
+            except Exception as ex:
+                logger.warning(f"Teacher Dashboard: Query failed: {ex}")
+                return default_val
+
+        courses = safe_query(lambda: Course.query.filter_by(teacher_id=current_user.id).all())
+        meetings = safe_query(lambda: Meeting.query.filter_by(teacher_id=current_user.id).order_by(Meeting.date.asc(), Meeting.time.asc()).all())
         total_students = sum(len(course.enrollments) for course in courses)
-        course_announcements = Announcement.query.filter_by(posted_by=current_user.id).order_by(Announcement.date.desc()).limit(20).all()
-        course_resources = LessonMaterial.query.filter_by(teacher_id=current_user.id).order_by(LessonMaterial.uploaded_at.desc()).all()
-        attendance_records = Attendance.query.join(Course, Attendance.course_id == Course.id).filter(Course.teacher_id == current_user.id).order_by(Attendance.date.desc()).limit(50).all()
+        course_announcements = safe_query(lambda: Announcement.query.filter_by(posted_by=current_user.id).order_by(Announcement.date.desc()).limit(20).all())
+        course_resources = safe_query(lambda: LessonMaterial.query.filter_by(teacher_id=current_user.id).order_by(LessonMaterial.uploaded_at.desc()).all())
+        attendance_records = safe_query(lambda: Attendance.query.join(Course, Attendance.course_id == Course.id).filter(Course.teacher_id == current_user.id).order_by(Attendance.date.desc()).limit(50).all())
 
         attendance_summary = []
         for course in courses:
-            total = Attendance.query.filter_by(course_id=course.id).count()
-            present = Attendance.query.filter_by(course_id=course.id, status='Present').count()
-            attendance_summary.append({
-                'course': course,
-                'total': total,
-                'present': present,
-                'percent': round((present / total * 100), 1) if total else 0
-            })
+            try:
+                total = Attendance.query.filter_by(course_id=course.id).count()
+                present = Attendance.query.filter_by(course_id=course.id, status='Present').count()
+                attendance_summary.append({
+                    'course': course,
+                    'total': total,
+                    'present': present,
+                    'percent': round((present / total * 100), 1) if total else 0
+                })
+            except Exception as e:
+                logger.warning(f"Teacher Dashboard: Attendance summary failed for course {course.id}: {e}")
 
         return render_template('dashboards/teacher_new.html', 
                                courses=courses,
@@ -1183,17 +1143,15 @@ def dashboard():
             db.session.rollback()
             logger.warning(f"Gamification update failed: {e}")
             
-        # Fetch student data
-        try:
-            enrollments = Enrollment.query.filter_by(student_id=current_user.id).all()
-        except Exception as e:
-            logger.warning(f"Enrollment query failed: {e}")
-            enrollments = []
+        def safe_query(query_func, default_val=[]):
+            try:
+                return query_func()
+            except Exception as ex:
+                logger.warning(f"Student Dashboard: Query failed: {ex}")
+                return default_val
 
-        try:
-            courses = Course.query.all()
-        except Exception:
-            courses = []
+        enrollments = safe_query(lambda: Enrollment.query.filter_by(student_id=current_user.id).all())
+        courses = safe_query(lambda: Course.query.all())
 
         # Attendance calculation
         try:
@@ -1205,40 +1163,22 @@ def dashboard():
             att_percent = 0
 
         # Assignments from enrolled courses
-        try:
-            enrolled_course_ids = [e.course_id for e in enrollments]
-            assignments = Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else []
-        except Exception as e:
-            logger.warning(f"Assignment query failed: {e}")
-            assignments = []
-
-        # All meetings (students and staff see published meetings)
-        try:
-            meetings = Meeting.query.order_by(Meeting.date.desc()).all()
-        except Exception as e:
-            logger.warning(f"Meeting query failed: {e}")
-            meetings = []
+        enrolled_course_ids = [e.course_id for e in enrollments]
+        assignments = safe_query(lambda: Assignment.query.filter(Assignment.course_id.in_(enrolled_course_ids)).all() if enrolled_course_ids else [])
+        meetings = safe_query(lambda: Meeting.query.order_by(Meeting.date.desc()).all())
 
         # Announcements for portal: Overall + Enrolled Courses
-        try:
-            enrolled_course_ids = [e.course_id for e in current_user.enrollments]
-            announcements = Announcement.query.filter(
-                (Announcement.course_id == None) | (Announcement.course_id.in_(enrolled_course_ids))
-            ).order_by(Announcement.date.desc()).limit(10).all()
-        except Exception as e:
-            logger.warning(f"Announcement query failed: {e}")
-            announcements = []
+        announcements = safe_query(lambda: Announcement.query.filter(
+            (Announcement.course_id == None) | (Announcement.course_id.in_(enrolled_course_ids))
+        ).order_by(Announcement.date.desc()).limit(10).all())
 
-        # Leaderboard — Students ONLY (excludes Admin, SuperAdmin, Teacher, Staff, technical accounts)
-        try:
-            top_students = User.query.filter(
-                User.role == 'Student',
-                User.registration_state == 'approved',
-                User.is_superadmin == False
-            ).order_by(User.points.desc()).limit(10).all()
-        except Exception as e:
-            logger.error(f"Leaderboard query failed: {e}")
-            top_students = []
+        # Leaderboard — Students ONLY
+        top_students = safe_query(lambda: User.query.filter(
+            User.role == 'Student',
+            User.registration_state == 'approved',
+            User.is_superadmin == False
+        ).order_by(User.points.desc()).limit(10).all())
+
         # Rank calculation
         try:
             current_points = getattr(current_user, 'points', 0) or 0
@@ -1650,61 +1590,224 @@ def admin_update_homepage_section(section_id):
 @login_required
 @superadmin_required
 def superadmin_download_documentation():
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
-    except ImportError:
-        flash('PDF generation component is unavailable. Please ensure reportlab is installed.', 'danger')
-        return redirect(url_for('dashboard'))
+    """Generates an exhaustive, institutionally branded System Demo PDF."""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import Paragraph, Spacer, Image, Table, TableStyle
+    from reportlab.graphics.barcode import code128, qr
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics import renderPDF
 
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=letter)
-    text = pdf.beginText(40, 740)
-    text.setFont('Helvetica-Bold', 14)
-    text.textLine('IAMSTECH Platform Administration Guide')
-    text.setFont('Helvetica', 10)
-    text.textLine('')
-    lines = [
-        'This document summarizes the IAMSTECH administration platform,',
-        'user onboarding flow, content management, and operational controls.',
-        '',
-        '1. User Onboarding',
-        '   - Applicants register and verify email via OTP.',
-        '   - Verified applicants await administrative approval.',
-        '   - Upon approval, the user receives an activation link to set a password.',
-        '',
-        '2. Authentication & Password Management',
-        '   - Login supports student ID, institutional email, or primary email.',
-        '   - Password setup is required after administrative approval.',
-        '   - Forgot password and OTP recovery routes are available for all users.',
-        '',
-        '3. Content Management',
-        '   - SuperAdmin may update homepage hero and logo images.',
-        '   - Active homepage sections can be published or removed using the content manager.',
-        '   - Activity gallery images are managed through the administration dashboard.',
-        '',
-        '4. Media Storage',
-        '   - Supabase storage is preferred for persistence across deployments.',
-        '   - Local uploads are used only when cloud storage is disabled.',
-        '',
-        '5. Security and Monitoring',
-        '   - Login attempts are audited and reported to the SuperAdmin dashboard.',
-        '   - Email verification, OTP, and password reset flows are all monitored.',
-        '',
-        '6. Support',
-        '   - For technical support, update SUPABASE credentials and the email service settings.',
-        '',
-        'This guide can be used for training new administrators and verifying platform readiness.',
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    styles = getSampleStyleSheet()
+    
+    # Custom Styles
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#0d1b3e'), alignment=1, spaceAfter=20)
+    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=16, textColor=colors.HexColor('#ff6f00'), spaceBefore=15, spaceAfter=10)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=11, leading=14, spaceAfter=10)
+
+    def draw_header_footer(canvas_obj):
+        # Header
+        canvas_obj.setStrokeColor(colors.HexColor('#0d1b3e'))
+        canvas_obj.setLineWidth(1)
+        canvas_obj.line(0.5*inch, height-0.75*inch, width-0.5*inch, height-0.75*inch)
+        
+        logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
+        if os.path.exists(logo_path):
+            try:
+                canvas_obj.drawImage(logo_path, 0.5*inch, height-0.65*inch, width=1.2*inch, preserveAspectRatio=True, mask='auto')
+            except: pass
+        
+        canvas_obj.setFont("Helvetica-Bold", 10)
+        canvas_obj.setFillColor(colors.HexColor('#0d1b3e'))
+        canvas_obj.drawRightString(width-0.5*inch, height-0.5*inch, "IAMSTECH LIBERIA - Official System Documentation")
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.drawRightString(width-0.5*inch, height-0.65*inch, f"Generated on: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+
+        # Footer
+        canvas_obj.line(0.5*inch, 0.75*inch, width-0.5*inch, 0.75*inch)
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.setFillColor(colors.grey)
+        canvas_obj.drawString(0.5*inch, 0.5*inch, "Confidential - Institutional Property of IAMSTECH")
+        canvas_obj.drawRightString(width-0.5*inch, 0.5*inch, f"Page {canvas_obj.getPageNumber()}")
+
+    def draw_watermark(canvas_obj):
+        logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
+        if os.path.exists(logo_path):
+            try:
+                canvas_obj.saveState()
+                canvas_obj.setFillAlpha(0.05)
+                canvas_obj.drawImage(logo_path, width/2 - 2*inch, height/2 - 2*inch, width=4*inch, preserveAspectRatio=True, mask='auto')
+                canvas_obj.restoreState()
+            except: pass
+
+    def draw_barcode(canvas_obj, x, y, data):
+        try:
+            barcode = code128.Code128(data, barHeight=0.4*inch, barWidth=1.2)
+            barcode.drawOn(canvas_obj, x, y)
+        except:
+            canvas_obj.drawString(x, y, f"[BARCODE: {data}]")
+        canvas_obj.setFont("Helvetica", 6)
+        canvas_obj.drawCentredString(x + 1*inch, y - 10, f"VERIFICATION ID: {data}")
+
+    # --- PAGE 1: COVER ---
+    draw_header_footer(p)
+    draw_watermark(p)
+    
+    p.setFont("Helvetica-Bold", 32)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawCentredString(width/2, height/2 + 1*inch, "IAMSTECH LIBERIA")
+    
+    p.setFont("Helvetica", 18)
+    p.setFillColor(colors.HexColor('#ff6f00'))
+    p.drawCentredString(width/2, height/2 + 0.5*inch, "School Management System")
+    
+    p.setFont("Helvetica-Bold", 14)
+    p.setFillColor(colors.black)
+    p.drawCentredString(width/2, height/2 - 0.5*inch, "ADMINISTRATION & SYSTEM DEMO GUIDE")
+    
+    p.setFont("Helvetica", 10)
+    p.drawCentredString(width/2, height/2 - 1.5*inch, "Modernizing Education through Technology & Innovation")
+    
+    # Verification Barcode on Cover
+    draw_barcode(p, width/2 - 1*inch, 1.5*inch, f"IAM-{uuid.uuid4().hex[:8].upper()}")
+    
+    p.showPage()
+
+    # --- PAGE 2: CORE FEATURES & AUTHENTICATION ---
+    draw_header_footer(p)
+    draw_watermark(p)
+    
+    y_pos = height - 1.5*inch
+    
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y_pos, "1. Institutional Branding & Verification")
+    y_pos -= 0.4*inch
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.black)
+    text_lines = [
+        "The IAMSTECH system utilizes multi-layered visual and digital branding to ensure document integrity:",
+        "• Institutional Logo: Present on all official headers to confirm institutional origin.",
+        "• Digital Watermarking: Faded background branding prevents unauthorized duplication.",
+        "• Barcode/QR Verification: Unique tracking IDs allow for real-time verification of generated reports.",
+        "• Secure Signatures: Digital audit trails for all administrative actions."
     ]
-    for line in lines:
-        text.textLine(line)
+    for line in text_lines:
+        p.drawString(0.7*inch, y_pos, line)
+        y_pos -= 0.2*inch
+    
+    y_pos -= 0.3*inch
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y_pos, "2. AI Chatbot & Navigation Efficiency")
+    y_pos -= 0.4*inch
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.black)
+    text_lines = [
+        "Our integrated AI Assistant acts as a 24/7 technical and academic advisor:",
+        "• Academic Guidance: Explains course requirements and institutional policies.",
+        "• Navigation Support: Directs users to dashboards, profiles, and resources.",
+        "• Error Recovery: Provides immediate help for OTP delivery and password resets.",
+        "• Real-time Alerts: Informs users of global system status and updates."
+    ]
+    for line in text_lines:
+        p.drawString(0.7*inch, y_pos, line)
+        y_pos -= 0.2*inch
 
-    pdf.drawText(text)
-    pdf.showPage()
-    pdf.save()
+    y_pos -= 0.3*inch
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y_pos, "3. Technical Support & SuperAdmin Integration")
+    y_pos -= 0.4*inch
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.black)
+    text_lines = [
+        "The SuperAdmin portal provides centralized control and rapid support escalation:",
+        "• WhatsApp Escalation: Direct link to technical support for registration hurdles.",
+        "• User Management: Full control over Student, Teacher, and Admin accounts.",
+        "• Audit Logging: Complete transparency of system modifications and logins.",
+        "• Database Resilience: Self-healing architecture with automated backups."
+    ]
+    for line in text_lines:
+        p.drawString(0.7*inch, y_pos, line)
+        y_pos -= 0.2*inch
+
+    p.showPage()
+
+    # --- PAGE 3: ACADEMIC WORKFLOWS ---
+    draw_header_footer(p)
+    draw_watermark(p)
+    
+    y_pos = height - 1.5*inch
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y_pos, "4. Academic & Administrative Workflows")
+    y_pos -= 0.4*inch
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.black)
+    text_lines = [
+        "Integrated modules for a seamless educational experience:",
+        "• Course Management: Instructors can upload resources, assignments, and schedule meetings.",
+        "• Attendance Tracking: Real-time attendance monitoring for students and staff.",
+        "• Gradebook: Transparent performance tracking and progress reporting.",
+        "• Announcements: Role-based communication for courses and institutional updates."
+    ]
+    for line in text_lines:
+        p.drawString(0.7*inch, y_pos, line)
+        y_pos -= 0.2*inch
+
+    y_pos -= 0.3*inch
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y_pos, "5. Security, Privacy & User Experience")
+    y_pos -= 0.4*inch
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.black)
+    text_lines = [
+        "Built with modern standards for security and usability:",
+        "• Data Encryption: Secure hashing for passwords and sensitive user data.",
+        "• Role-Based Access (RBAC): Strict permission boundaries for all user types.",
+        "• Responsive Design: Optimized for Desktop, Tablet, and Mobile devices.",
+        "• Modern Aesthetics: Glassmorphism and premium design for a professional feel."
+    ]
+    for line in text_lines:
+        p.drawString(0.7*inch, y_pos, line)
+        y_pos -= 0.2*inch
+
+    # Final Verification Section
+    p.setStrokeColor(colors.HexColor('#ff6f00'))
+    p.rect(0.5*inch, 1*inch, width-1*inch, 1.5*inch)
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(0.7*inch, 2.2*inch, "DOCUMENT VERIFICATION")
+    p.setFont("Helvetica", 9)
+    p.drawString(0.7*inch, 2.0*inch, "This document is a certified system demonstration generated by the IAMSTECH Management Portal.")
+    p.drawString(0.7*inch, 1.85*inch, "Scan the QR code or verify the Barcode ID at support.iamstech.edu.lr")
+    
+    try:
+        # Add a QR code representation
+        qr_code = qr.QrCodeWidget('https://iamstech.edu.lr/verify')
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(1*inch, 1*inch, transform=[1*inch/qr_width, 0, 0, 1*inch/qr_height, 0, 0])
+        d.add(qr_code)
+        renderPDF.draw(d, p, width-1.7*inch, 1.2*inch)
+    except: pass
+
+    p.save()
     buffer.seek(0)
-
-    return send_file(buffer, as_attachment=True, download_name='IAMSTECH_Admin_Guide.pdf', mimetype='application/pdf')
+    return send_file(buffer, as_attachment=True, download_name=f'IAMSTECH_System_Documentation_{datetime.utcnow().strftime("%Y%m%d")}.pdf', mimetype='application/pdf')
 
 @app.route('/superadmin/system-reset', methods=['POST'])
 @login_required

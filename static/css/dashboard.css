@@ -133,6 +133,10 @@ Inspired by Stripe, Vercel, and modern SaaS UI.
     gap: 24px;
 }
 
+.border-dashed {
+    border-style: dashed !important;
+}
+
 .media-card {
     border: 1px solid var(--dash-border);
     border-radius: 12px;

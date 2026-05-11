@@ -233,10 +233,10 @@
         </div>
         
         <div class="mt-5 d-flex gap-3 justify-content-center flex-wrap">
-            <button onclick="downloadPDF()" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
+            <button onclick="downloadPDF(this)" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
                 <i class="fas fa-file-pdf me-2"></i>Download PDF
             </button>
-            <button onclick="downloadImage()" class="btn btn-warning fw-bold px-4 py-2 rounded-pill shadow-sm">
+            <button onclick="downloadImage(this)" class="btn btn-warning fw-bold px-4 py-2 rounded-pill shadow-sm">
                 <i class="fas fa-image me-2"></i>Download Image
             </button>
         </div>
@@ -278,16 +278,15 @@
     });
 
     // Download as PDF
-    function downloadPDF() {
+    function downloadPDF(btn) {
         const element = document.getElementById('capture-area');
-        const btn = event.currentTarget;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
         const opt = {
             margin:       0.5,
             filename:     'IAMSTECH_E-ID_{{ user.student_id }}.pdf',
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 3, useCORS: true, allowTaint: false, logging: false },
+            html2canvas:  { scale: 3, useCORS: true, allowTaint: true, logging: false },
             jsPDF:        { unit: 'in', format: 'a5', orientation: 'portrait' }
         };
         html2pdf().set(opt).from(element).save().then(function() {
@@ -302,14 +301,13 @@
     }
     
     // Download as Image
-    function downloadImage() {
+    function downloadImage(btn) {
         const element = document.getElementById('capture-area');
-        const btn = event.currentTarget;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
         html2pdf().set({
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 3, useCORS: true, allowTaint: false, logging: false }
+            html2canvas: { scale: 3, useCORS: true, allowTaint: true, logging: false }
         }).from(element).outputImg('datauristring').then(function(imgStr) {
             const link = document.createElement('a');
             link.href = imgStr;

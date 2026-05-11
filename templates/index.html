@@ -555,68 +555,33 @@
     </div>
 </section>
 
-<!-- LEADERSHIP & VISION (Premium Section) -->
-<section class="vision-banner">
-    <div class="container text-center py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                {% if founders and founders[0] %}
-                <div class="vision-quote">
-                    "{{ founders[0].leadership_statement if (founders and founders[0] and founders[0].leadership_statement) else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
-                </div>
-                <div class="mt-4">
-                    <h5 class="fw-black mb-0 text-white">{{ founders[0].name }}</h5>
-                    <p class="text-warning small fw-bold mb-0 text-uppercase letter-spacing-1"><i class="fas fa-crown me-2"></i>Founder & CEO, IAMSTECH</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- FOUNDER PROFILE (Modern Design) -->
+<!-- FEATURED HOMEPAGE CONTENT -->
+{% if home_sections %}
 <section class="py-6 bg-light">
     <div class="container py-5">
-        <div class="row align-items-center g-5">
-            {% if founders %}
-                {% for f in founders %}
-                <div class="col-lg-5">
-                    <div class="profile-card">
-                        <img src="{{ media_url(f.image_path, 'https://via.placeholder.com/600x600?text=Founder') }}" 
-                             alt="{{ f.name }}" 
-                             class="founder-portrait"
-                             onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
-                        <h2 class="profile-name">{{ f.name }}</h2>
-                        <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
-                        <p class="profile-bio">{{ f.bio if (f and f.bio) else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
-                        
-                        <div class="mt-4 d-flex justify-content-center gap-3">
-                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-linkedin-in"></i></a>
-                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-twitter"></i></a>
-                        </div>
+        <div class="text-center mb-5">
+            <p class="section-title">Featured Stories</p>
+            <h2 class="section-header">Homepage Highlights</h2>
+            <p class="text-muted mt-3" style="max-width: 620px; margin: 0 auto;">Curated homepage content that reflects your latest updates, programs, and institutional focus.</p>
+        </div>
+        <div class="row g-4">
+            {% for section in home_sections %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    {% if section.image_path %}
+                    <img src="{{ media_url(section.image_path, 'img/placeholder.png') }}" class="card-img-top" alt="{{ section.title }}" onerror="this.src='{{ url_for('static', filename='img/placeholder.png') }}';">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="fw-bold">{{ section.title }}</h5>
+                        <p class="text-muted small">{{ section.description }}</p>
                     </div>
                 </div>
-                <div class="col-lg-7">
-                    <div class="ps-lg-5">
-                        <span class="badge bg-warning text-dark px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">Institutional Vision</span>
-                        <h2 class="display-5 fw-black text-dark mb-4">Shaping Liberia's Digital Future</h2>
-                        
-                        <div class="mb-5">
-                            <h5 class="fw-bold text-dark"><i class="fas fa-eye me-2 text-warning"></i>Our Vision</h5>
-                            <p class="text-muted lead">{{ f.vision if (f and f.vision) else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
-                        </div>
-
-                        <div class="mb-0">
-                            <h5 class="fw-bold text-dark"><i class="fas fa-bullseye me-2 text-warning"></i>Our Mission</h5>
-                            <p class="text-muted lead">{{ f.mission if (f and f.mission) else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% endif %}
+            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
+{% endif %}
 
 <!-- DEVELOPER SHOWCASE (Premium) -->
 <section class="py-6 bg-white">
@@ -687,309 +652,6 @@
             {% endfor %}
             </div>
         {% endif %}
-    </div>
-</section>
-{% endblock %}
-
-{% block content %}
-<style>
-    .hero-section {
-        background: linear-gradient(rgba(13, 27, 62, 0.8), rgba(7, 16, 38, 0.9)), 
-                    url("{{ media_url(brand_hero_path, 'img/placeholder.png') }}");
-        background-size: cover;
-        background-position: center;
-    }
-</style>
-<!-- HERO SECTION (Institutional) -->
-<header class="hero-section">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <img src="{{ media_url(brand_logo_path, 'img/logo.png') }}" alt="IAMSTECH Official Logo" class="hero-main-logo" style="max-width: 220px; background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
-                <p class="hero-subtitle mt-3">INSTITUTE OF ADVANCED MANAGEMENT SCIENCE & TECHNOLOGY</p>
-                <h1 class="hero-title">Technology & Business Education for Future Professionals</h1>
-                <p class="hero-desc mb-5">"Shaping Tomorrow’s Leaders Through Technology"</p>
-                <div class="d-flex flex-column gap-2">
-                    <p class="text-white-50 mb-0 small"><i class="fas fa-graduation-cap me-2"></i>Not yet enrolled?</p>
-                    <div class="d-flex gap-3">
-                        <a href="{{ url_for('register') }}" class="btn btn-become-ready px-5 py-3 fs-5">Become Future-Ready</a>
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-light px-4 py-3 border-2 fw-bold"><i class="fas fa-sign-in-alt me-2"></i>STUDENT PORTAL</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 d-none d-lg-block">
-                <div class="hero-visual-stack">
-                    <!-- Floating Card 1 -->
-                    <div class="floating-card card-tech">
-                        <i class="fas fa-code"></i>
-                        <span>Technology</span>
-                    </div>
-                    <!-- Floating Card 2 -->
-                    <div class="floating-card card-training">
-                        <i class="fas fa-book-open"></i>
-                        <span>Training</span>
-                    </div>
-                    <!-- Floating Card 3 -->
-                    <div class="floating-card card-community">
-                        <i class="fas fa-users"></i>
-                        <span>Community</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- STATS BAR (Match Screenshot 3) -->
-<section class="stats-bar shadow-sm">
-    <div class="container">
-        <div class="row text-center g-4">
-            <div class="col-md-4">
-                <span class="stat-number">8+</span>
-                <span class="stat-label">Professional Programs</span>
-            </div>
-            <div class="col-md-4 border-start border-end">
-                <span class="stat-number">2026</span>
-                <span class="stat-label">Enrollment Year</span>
-            </div>
-            <div class="col-md-4">
-                <span class="stat-number">100%</span>
-                <span class="stat-label">Industry Focused</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- TRAINING PROGRAMS (Match Screenshot 4 & 5) -->
-<section id="programs" class="py-5 bg-white">
-    <div class="container py-5">
-        <div class="text-center mb-5">
-            <p class="section-title">PROFESSIONAL DEVELOPMENT</p>
-            <h2 class="section-header">Our Training Programs</h2>
-            <p class="text-muted mt-3">Specialized vocational certifications for modern professionals</p>
-        </div>
-        
-        <div class="row g-4 mt-4">
-            <!-- Program 1 -->
-            <div class="col-lg-3 col-md-6">
-                <div class="course-card">
-                    <i class="fas fa-laptop-code course-icon"></i>
-                    <h5>Microsoft Office Suite</h5>
-                    <p>Master essential digital productivity tools used across all industries.</p>
-                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-            <!-- Program 2 -->
-            <div class="col-lg-3 col-md-6">
-                <div class="course-card">
-                    <i class="fas fa-calculator course-icon"></i>
-                    <h5>QuickBooks Accounting</h5>
-                    <p>Professional financial management and bookkeeping expertise.</p>
-                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-            <!-- Program 3 -->
-            <div class="col-lg-3 col-md-6">
-                <div class="course-card">
-                    <i class="fas fa-folder-open course-icon"></i>
-                    <h5>Office Procedures</h5>
-                    <p>Advanced administrative and organizational skills for effective office management.</p>
-                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-            <!-- Program 4 -->
-            <div class="col-lg-3 col-md-6">
-                <div class="course-card">
-                    <i class="fas fa-globe course-icon"></i>
-                    <h5>Internet Usage</h5>
-                    <p>Digital citizenship, security, and professional online proficiency.</p>
-                    <a href="#" class="learn-more">Learn More <i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- HIGHLIGHTS / ACTIVITIES -->
-<section id="highlights" class="py-5 bg-light">
-    <div class="container py-5">
-        <div class="text-center mb-5">
-            <p class="section-title">INSTITUTIONAL HIGHLIGHTS</p>
-            <h2 class="section-header">Recent Activities & Events</h2>
-            <p class="text-muted mt-3">Stay updated with our latest institutional activities and community events</p>
-        </div>
-        
-        {% if activities %}
-        <div class="row g-4">
-            {% for activity in activities %}
-            <div class="col-lg-4 col-md-6">
-                <div class="card border-0 shadow-sm h-100 activity-card">
-                    <div class="activity-image-container">
-                        <img src="{{ media_url(activity.image_path, 'img/placeholder.png') }}" 
-                             alt="{{ activity.title }}" 
-                             class="card-img-top activity-image"
-                             onerror="this.src='{{ url_for('static', filename='img/placeholder.png') }}';">
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold">{{ activity.title }}</h5>
-                        <p class="card-text text-muted">{{ activity.description[:150] }}...</p>
-                        <p class="text-muted small mb-0">
-                            <i class="fas fa-calendar-alt me-2"></i>{{ activity.date.strftime('%B %d, %Y') }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No activities available at the moment</h5>
-            <p class="text-muted">Check back soon for updates on our institutional activities.</p>
-        </div>
-        {% endif %}
-    </div>
-</section>
-
-<!-- LEADERSHIP & VISION (Premium Institutional Section) -->
-<section class="vision-banner">
-    <div class="container text-center py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                {% if founders and founders[0] %}
-                <div class="vision-quote">
-                    <i class="fas fa-quote-left"></i>
-                    "{{ founders[0].leadership_statement if (founders and founders[0] and founders[0].leadership_statement) else 'To be Liberia\'s premier gateway for industry-ready vocational and technical expertise.' }}"
-                </div>
-                <div class="mt-4">
-                    <h5 class="fw-black mb-0">{{ founders[0].name }}</h5>
-                    <p class="text-warning small fw-bold mb-0 text-uppercase letter-spacing-1">Founder & CEO, IAMSTECH</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- THE FOUNDER (Professional Profile) -->
-<section class="py-5 bg-light">
-    <div class="container py-5">
-        <div class="row align-items-center g-5">
-            {% if founders %}
-                {% for f in founders %}
-                <div class="col-lg-5">
-                    <div class="profile-card">
-                        <div class="text-center mb-4">
-                            <img src="{{ media_url(f.image_path, 'https://via.placeholder.com/600x600?text=Founder') }}" 
-                                 alt="{{ f.name }}" 
-                                 class="founder-portrait"
-                                 onerror="this.src='https://via.placeholder.com/600x600?text=Founder';">
-                        </div>
-                        <h2 class="profile-name">{{ f.name }}</h2>
-                        <p class="profile-title">{{ f.title if f.title else 'Founder & CEO' }}</p>
-                        <p class="profile-bio">{{ f.bio if (f and f.bio) else 'A visionary leader dedicated to bridging the technological gap in Liberia.' }}</p>
-                        
-                        <div class="mt-4 d-flex justify-content-center gap-3">
-                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-linkedin-in"></i></a>
-                            <a href="#" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fab fa-twitter"></i></a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-7">
-                    <div class="ps-lg-5">
-                        <span class="badge bg-primary px-3 py-2 mb-3 fw-bold rounded-pill" style="letter-spacing: 1px;">INSTITUTIONAL VISION</span>
-                        <h2 class="display-4 fw-black text-primary mb-4">Shaping Liberia's Digital Future</h2>
-                        
-                        <div class="mb-5">
-                            <h5 class="fw-bold text-dark"><i class="fas fa-eye me-2 text-warning"></i>Our Vision</h5>
-                            <p class="text-muted lead">{{ f.vision if (f and f.vision) else 'To lead digital transformation in Liberia by producing world-class tech and business professionals.' }}</p>
-                        </div>
-
-                        <div class="mb-0">
-                            <h5 class="fw-bold text-dark"><i class="fas fa-bullseye me-2 text-warning"></i>Our Mission</h5>
-                            <p class="text-muted lead">{{ f.mission if (f and f.mission) else 'To deliver industry-relevant, hands-on education in IT and Accounting.' }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-    </div>
-</section>
-
-<!-- SYSTEM DEVELOPED BY (Premium Developer Showcase) -->
-<section class="py-5 bg-light border-top">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                {% if developers %}
-                    {% for d in developers %}
-                    <div class="dev-showcase">
-                        <div class="dev-flex">
-                            <!-- Image Side -->
-                            <div class="dev-image-side">
-                                <img src="{{ media_url(d.image_path, 'https://via.placeholder.com/300x300?text=Dev') }}" 
-                                     alt="{{ d.name }}" 
-                                     class="dev-portrait-large"
-                                     onerror="this.src='https://via.placeholder.com/300x300?text=Dev';">
-                            </div>
-                            <!-- Content Side -->
-                            <div class="dev-content-side">
-                                <span class="dev-tag">System Architect & Developer</span>
-                                <h2 class="display-5 fw-black text-primary mb-2">Simone Swaray</h2>
-                                <h5 class="text-warning fw-bold mb-4" style="letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem;">
-                                     <i class="fas fa-microchip me-2"></i>Informatics Engineering • <i class="fas fa-network-wired mx-2"></i>Networking Specialist
-                                </h5>
-                                
-                                <p class="dev-bio-text">
-                                    {{ d.description if d.description else 'Simone Swaray is the lead digital architect at IAMSTECH, specializing in Networking and Informatics Engineering. As a young Liberian in the diaspora, he is dedicated to building robust institutional infrastructure that shapes the future of technology and leadership in Liberia.' }}
-                                </p>
-                                
-                                <div class="d-flex gap-4 align-items-center">
-                                    <div class="d-flex gap-2">
-                                        <a href="#" class="btn btn-primary rounded-pill px-4 fw-bold">Portfolio</a>
-                                        <a href="#" class="btn btn-outline-primary rounded-pill px-4 fw-bold">LinkedIn</a>
-                                    </div>
-                                    <div class="text-muted small">
-                                        <i class="fas fa-check-circle text-success me-1"></i> Verified Developer
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</section>
-
-
-
-<!-- ANNOUNCEMENTS -->
-<section class="py-5 bg-white">
-    <div class="container py-5">
-        <div class="row g-5">
-            <div class="col-lg-12">
-                <div class="text-center mb-5">
-                    <p class="section-title">INSTITUTIONAL UPDATES</p>
-                    <h2 class="section-header">Overall Announcements</h2>
-                </div>
-                {% if announcements %}
-                    <div class="row g-4">
-                    {% for ann in announcements %}
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm p-4 border-start border-warning border-4 h-100">
-                                <h5 class="fw-bold mb-1">{{ ann.title }}</h5>
-                                <p class="small text-muted mb-3"><i class="fas fa-calendar-alt me-2"></i>{{ ann.date.strftime('%B %d, %Y') }}</p>
-                                <p class="text-muted small">{{ ann.content[:200] }}...</p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
     </div>
 </section>
 {% endblock %}
