@@ -669,13 +669,20 @@ def index():
             logger.warning(f"Developer table schema mismatch: {e}")
             developers = []
 
+        try:
+            home_sections = HomePageSection.query.filter_by(is_active=True).order_by(HomePageSection.display_order.asc()).all()
+        except Exception as e:
+            logger.warning(f"Homepage sections query failed: {e}")
+            home_sections = []
+
         return render_template('index.html', 
                              announcements=announcements, 
                              activities=activities,
                              brand_logo_path=brand_logo_path,
                              brand_hero_path=brand_hero_path,
                              founders=founders,
-                             developers=developers)
+                             developers=developers,
+                             home_sections=home_sections)
     except Exception as e:
         logger.error(f"Index route critical failure: {e}")
         return render_template('errors/500.html', error=e), 500
@@ -1083,6 +1090,12 @@ def dashboard():
                 logger.warning(f"System reports query error: {e}")
                 system_reports = []
 
+            try:
+                home_sections = HomePageSection.query.order_by(HomePageSection.display_order.asc()).all()
+            except Exception as e:
+                logger.warning(f"Homepage section query failed in dashboard: {e}")
+                home_sections = []
+
             return render_template('dashboards/superadmin.html', 
                                  users=users, 
                                  admins=admins,
@@ -1096,6 +1109,7 @@ def dashboard():
                                  developers=developers,
                                  activities=activities,
                                  announcements=announcements,
+                                 home_sections=home_sections,
                                  cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
         except Exception as e:
             logger.error(f"SuperAdmin dashboard critical error: {e}", exc_info=True)
@@ -1113,6 +1127,11 @@ def dashboard():
         except Exception as e:
             logger.warning(f"Activity query error in admin dashboard: {e}")
             activities = []
+        try:
+            home_sections = HomePageSection.query.order_by(HomePageSection.display_order.asc()).all()
+        except Exception as e:
+            logger.warning(f"Homepage section query failed in admin dashboard: {e}")
+            home_sections = []
         return render_template('dashboards/admin_new.html', 
                              users=users, 
                              applicants=applicants, 
@@ -1120,6 +1139,7 @@ def dashboard():
                              courses=courses, 
                              announcements=announcements,
                              activities=activities,
+                             home_sections=home_sections,
                              cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
                              
     elif current_user.role == 'Teacher':
@@ -1543,6 +1563,148 @@ def admin_update_developer():
     db.session.commit()
     flash('Developer information updated!', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/admin/homepage-section', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_homepage_section():
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    display_order = request.form.get('display_order', '').strip() or 0
+    image = request.files.get('image')
+
+    if not title or not description:
+        flash('Section title and description are required.', 'warning')
+        return redirect(url_for('dashboard'))
+
+    section = HomePageSection(
+        title=title,
+        description=description,
+        display_order=int(display_order),
+        is_active=True
+    )
+
+    if image and image.filename:
+        section.image_path = save_media_file(image, 'branding', prefix='section')
+
+    try:
+        db.session.add(section)
+        db.session.commit()
+        flash('Homepage section added successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Homepage section creation failed: {e}')
+        flash('Could not add homepage section. Please try again.', 'danger')
+
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/homepage-section/delete/<int:section_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_homepage_section(section_id):
+    section = HomePageSection.query.get_or_404(section_id)
+    try:
+        db.session.delete(section)
+        db.session.commit()
+        flash('Homepage section removed successfully.', 'info')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Homepage section deletion failed: {e}')
+        flash('Could not delete the homepage section.', 'danger')
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/homepage-section/update/<int:section_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_update_homepage_section(section_id):
+    section = HomePageSection.query.get_or_404(section_id)
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    display_order = request.form.get('display_order', '').strip() or 0
+    is_active = request.form.get('is_active') == 'on'
+    image = request.files.get('image')
+
+    if not title or not description:
+        flash('Section title and description are required.', 'warning')
+        return redirect(url_for('dashboard'))
+
+    section.title = title
+    section.description = description
+    section.display_order = int(display_order)
+    section.is_active = is_active
+
+    if image and image.filename:
+        section.image_path = save_media_file(image, 'branding', prefix=f'section-{section.id}')
+
+    try:
+        db.session.commit()
+        flash('Homepage section updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Homepage section update failed: {e}')
+        flash('Could not update the homepage section. Please try again.', 'danger')
+
+    return redirect(url_for('dashboard'))
+
+@app.route('/superadmin/download-documentation')
+@login_required
+@superadmin_required
+def superadmin_download_documentation():
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+    except ImportError:
+        flash('PDF generation component is unavailable. Please ensure reportlab is installed.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    text = pdf.beginText(40, 740)
+    text.setFont('Helvetica-Bold', 14)
+    text.textLine('IAMSTECH Platform Administration Guide')
+    text.setFont('Helvetica', 10)
+    text.textLine('')
+    lines = [
+        'This document summarizes the IAMSTECH administration platform,',
+        'user onboarding flow, content management, and operational controls.',
+        '',
+        '1. User Onboarding',
+        '   - Applicants register and verify email via OTP.',
+        '   - Verified applicants await administrative approval.',
+        '   - Upon approval, the user receives an activation link to set a password.',
+        '',
+        '2. Authentication & Password Management',
+        '   - Login supports student ID, institutional email, or primary email.',
+        '   - Password setup is required after administrative approval.',
+        '   - Forgot password and OTP recovery routes are available for all users.',
+        '',
+        '3. Content Management',
+        '   - SuperAdmin may update homepage hero and logo images.',
+        '   - Active homepage sections can be published or removed using the content manager.',
+        '   - Activity gallery images are managed through the administration dashboard.',
+        '',
+        '4. Media Storage',
+        '   - Supabase storage is preferred for persistence across deployments.',
+        '   - Local uploads are used only when cloud storage is disabled.',
+        '',
+        '5. Security and Monitoring',
+        '   - Login attempts are audited and reported to the SuperAdmin dashboard.',
+        '   - Email verification, OTP, and password reset flows are all monitored.',
+        '',
+        '6. Support',
+        '   - For technical support, update SUPABASE credentials and the email service settings.',
+        '',
+        'This guide can be used for training new administrators and verifying platform readiness.',
+    ]
+    for line in lines:
+        text.textLine(line)
+
+    pdf.drawText(text)
+    pdf.showPage()
+    pdf.save()
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name='IAMSTECH_Admin_Guide.pdf', mimetype='application/pdf')
 
 @app.route('/superadmin/system-reset', methods=['POST'])
 @login_required
