@@ -15,7 +15,7 @@ import random
 import io
 from flask import send_file
 from supabase import create_client
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection, SystemReport, Payment
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection, SystemReport, Payment, FinancialReport
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
 from lib.storage import upload_to_bucket
@@ -203,7 +203,7 @@ with app.app_context():
         if 'system_audit_log' in tables: safe_add_column('system_audit_log', 'user_agent', 'VARCHAR(500)')
         
         # 4. Verify Critical Tables Exist (Double Check)
-        for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity', 'payment']:
+        for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity', 'payment', 'financial_report']:
             if t not in tables:
                 logger.warning(f"MIGRATION: Table '{t}' missing after create_all. Attempting manual creation...")
                 try:

@@ -228,7 +228,7 @@ class Payment(db.Model):
     student = db.relationship('User', backref='payments', foreign_keys=[student_id])
     staff = db.relationship('User', backref='payments_processed', foreign_keys=[processed_by])
 
-class SystemReport(db.Model):
+class FinancialReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     type = db.Column(db.String(50)) # financial, academic, user_growth
