@@ -15,4 +15,5 @@ gotrue==2.10.0
 email-validator==2.1.1
 pillow
 resend==0.8.0
-reportlab==3.8.0
+reportlab>=4.1.0
+qrcode
