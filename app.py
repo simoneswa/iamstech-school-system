@@ -200,6 +200,7 @@ with app.app_context():
         if 'assignment' in tables: safe_add_column('assignment', 'points', 'INTEGER DEFAULT 100')
         if 'meeting' in tables: safe_add_column('meeting', 'course_id', 'INTEGER')
         if 'announcement' in tables: safe_add_column('announcement', 'course_id', 'INTEGER')
+        if 'system_audit_log' in tables: safe_add_column('system_audit_log', 'user_agent', 'VARCHAR(500)')
         
         # 4. Verify Critical Tables Exist (Double Check)
         for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity', 'payment']:
@@ -1163,26 +1164,7 @@ def dashboard():
         
     elif current_user.role == 'BusinessOffice':
         return redirect(url_for('business_office_dashboard'))
-                return default_val
 
-        users = safe_query(lambda: User.query.filter(User.role != 'SuperAdmin').all())
-        applicants = safe_query(lambda: User.query.filter(User.registration_state.in_(['pending_verification', 'verified_awaiting_approval'])).all())
-        teachers = safe_query(lambda: User.query.filter_by(role='Teacher').all())
-        courses = safe_query(lambda: Course.query.all())
-        announcements = safe_query(lambda: Announcement.query.all())
-        activities = safe_query(lambda: Activity.query.order_by(Activity.id.desc()).all())
-        home_sections = safe_query(lambda: HomePageSection.query.order_by(HomePageSection.display_order.asc()).all())
-        
-        return render_template('dashboards/admin_new.html', 
-                             users=users, 
-                             applicants=applicants, 
-                             teachers=teachers, 
-                             courses=courses, 
-                             announcements=announcements,
-                             activities=activities,
-                             home_sections=home_sections,
-                             cloud_storage_enabled=app.config['SUPABASE_STORAGE_ENABLED'])
-                             
     elif current_user.role == 'Teacher':
         def safe_query(query_func, default_val=[]):
             try:
@@ -2255,14 +2237,17 @@ def broadcast_alert():
 @login_required
 @admin_required
 def report_issue():
-            title = request.form.get('title', '').strip()
-            description = request.form.get('description', '').strip()
-            severity = request.form.get('severity', 'medium')
-            
-            if not title or not description:
-                flash('Title and description are required.', 'warning')
-                return redirect(url_for('report_issue'))
-            
+    report_type = request.args.get('type', 'technical')
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        severity = request.form.get('severity', 'medium')
+        
+        if not title or not description:
+            flash('Title and description are required.', 'warning')
+            return redirect(url_for('report_issue'))
+        
+        try:
             report = SystemReport(
                 user_id=current_user.id,
                 report_type=report_type,
