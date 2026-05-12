@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white text-center py-4 border-0">
+                    <i class="fas fa-shield-alt fa-3x mb-3"></i>
+                    <h3 class="fw-bold mb-0">Two-Step Verification</h3>
+                    <p class="small mb-0 opacity-75">Enter the 6-digit code sent to your email</p>
+                </div>
+                <div class="card-body p-5">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-pill" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form action="{{ url_for('verify_otp_flow') }}" method="POST">
+                        <div class="mb-4">
+                            <label for="otp" class="form-label fw-bold text-muted small text-uppercase">OTP Code</label>
+                            <input type="text" name="otp" id="otp" class="form-control form-control-lg text-center fw-bold letter-spacing-5 rounded-pill" 
+                                   placeholder="000000" maxlength="6" required autofocus>
+                            <div class="form-text text-center mt-2">
+                                Didn't receive a code? <a href="{{ url_for('forgot_password') }}" class="text-primary text-decoration-none fw-bold">Resend Code</a>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
+                                Verify & Continue <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-light border-0 py-3 text-center">
+                    <p class="small text-muted mb-0">
+                        <i class="fas fa-lock me-1"></i> Secure institutional authentication by IAMSTECH
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .letter-spacing-5 {
+        letter-spacing: 0.5rem;
+    }
+    .fw-black {
+        font-weight: 900;
+    }
+</style>
+{% endblock %}

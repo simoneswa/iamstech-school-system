@@ -15,7 +15,7 @@ import random
 import io
 from flask import send_file
 from supabase import create_client
-from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection, SystemReport
+from models import db, User, Course, Enrollment, Assignment, Announcement, Attendance, Activity, Founder, Developer, Meeting, LessonMaterial, AdminAuditLog, SystemAuditLog, Notification, GlobalAlert, HomePageSection, SystemReport, Payment
 from email_service import mail, send_approval_email, send_reset_email, send_verification_otp, build_external_url
 from werkzeug.middleware.proxy_fix import ProxyFix
 from lib.storage import upload_to_bucket
@@ -202,7 +202,7 @@ with app.app_context():
         if 'announcement' in tables: safe_add_column('announcement', 'course_id', 'INTEGER')
         
         # 4. Verify Critical Tables Exist (Double Check)
-        for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity']:
+        for t in ['notification', 'system_report', 'homepage_section', 'global_alert', 'activity', 'payment']:
             if t not in tables:
                 logger.warning(f"MIGRATION: Table '{t}' missing after create_all. Attempting manual creation...")
                 try:
@@ -223,9 +223,9 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # --- Role Configuration ---
-ROLE_CHOICES = ['SuperAdmin', 'Admin', 'Teacher', 'Student', 'Staff', 'Applicant']
-SUPERADMIN_ASSIGNABLE_ROLES = ['Admin', 'Teacher', 'Student', 'Staff', 'Applicant']
-ADMIN_ASSIGNABLE_ROLES = ['Teacher', 'Student', 'Staff', 'Applicant']
+ROLE_CHOICES = ['SuperAdmin', 'Admin', 'Teacher', 'Student', 'Staff', 'Applicant', 'BusinessOffice']
+SUPERADMIN_ASSIGNABLE_ROLES = ['Admin', 'Teacher', 'Student', 'Staff', 'Applicant', 'BusinessOffice']
+ADMIN_ASSIGNABLE_ROLES = ['Teacher', 'Student', 'Staff', 'Applicant', 'BusinessOffice']
 DEFAULT_APPROVAL_ROLE = 'Student'
 
 # --- Security Decorators ---
@@ -251,6 +251,15 @@ def superadmin_required(f):
                 log = AdminAuditLog(admin_id=current_user.id, action="Unauthorized SuperAdmin Access Attempt")
                 db.session.add(log)
                 db.session.commit()
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def business_office_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role not in ['BusinessOffice', 'Admin', 'SuperAdmin']:
+            flash('Business Office access required.', 'danger')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
@@ -284,9 +293,47 @@ def first_request_init():
 def health_check():
     return jsonify({
         "status": "healthy", 
-        "database": str(db.engine.url.drivername),
-        "initialized": _db_initialized
-    }), 200
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": "connected" if db.session.is_active else "disconnected"
+    })
+
+def generate_institutional_id(role):
+    """Generates a unique institutional ID based on role: STU_, TEA_, ADM_, BOF_."""
+    import random
+    import string
+    
+    prefix = 'GEN'
+    if role == 'Student': prefix = 'STU'
+    elif role == 'Teacher': prefix = 'TEA'
+    elif role == 'Admin': prefix = 'ADM'
+    elif role == 'BusinessOffice': prefix = 'BOF'
+    elif role == 'Staff': prefix = 'STF'
+    
+    # Format: PREFIX_IAM001
+    try:
+        count = User.query.filter(User.role == role).count() + 1
+        return f"{prefix}_IAM{count:03d}"
+    except:
+        random_suffix = ''.join(random.choices(string.digits, k=3))
+        return f"{prefix}_IAM{random_suffix}"
+
+def log_audit(action, target_id=None, target_type=None, details=None):
+    """System-level audit logger with device tracking."""
+    try:
+        log = SystemAuditLog(
+            user_id=getattr(current_user, 'id', None) if current_user.is_authenticated else None,
+            action=action,
+            target_id=target_id,
+            target_type=target_type,
+            details=details,
+            ip_address=request.remote_addr,
+            user_agent=request.user_agent.string if request else 'System'
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Audit Log Error: {e}")
 
 # --- File Upload Config ---
 # Prefer persistent media storage configured via MEDIA_ROOT, else use /data if present, else fallback to static uploads.
@@ -475,15 +522,21 @@ def media_file(filepath):
     if os.path.exists(full_path):
         return send_file(full_path)
 
+    # REPAIR LOGIC: If missing locally but we have Supabase enabled
     if app.config['SUPABASE_STORAGE_ENABLED']:
         storage_path = filepath.replace('\\', '/')
         try:
+            # Check if it's a signed URL or redirect
             signed = app.config['SUPABASE_CLIENT'].storage.from_(app.config['SUPABASE_BUCKET']).create_signed_url(storage_path, 3600)
-            if signed and signed.get('signedURL'):
+            if signed and 'signedURL' in signed:
                 return redirect(signed['signedURL'])
         except Exception as e:
-            logger.warning(f"Supabase media file redirect failed: {e}")
+            logger.warning(f"Supabase media repair failed for {filepath}: {e}")
 
+    # Fallback to institutional default images
+    if 'profiles' in filepath:
+        return redirect(url_for('static', filename='img/default-avatar.png'))
+    
     abort(404)
 
 
@@ -930,61 +983,85 @@ def resend_verification(user_id):
         
     return redirect(url_for('verify_email', user_id=user.id))
 
-
-
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        try:
-            email = request.form.get('email')
-            user = User.query.filter_by(email=email).first()
-            if user:
-                user.reset_token = f"{random.randint(100000, 999999)}"
-                user.reset_token_expiration = datetime.utcnow() + timedelta(minutes=15)
-                db.session.commit()
-                send_reset_email(user)
-                log_audit('Password Reset OTP Requested', target_id=user.id, target_type='User')
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Forgot password error: {e}")
+        email = request.form.get('email').strip().lower()
+        user = User.query.filter(db.func.lower(User.email) == email).first()
+        if user:
+            # Generate 6-digit OTP
+            otp = f"{random.randint(100000, 999999)}"
+            user.verification_code = otp
+            user.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
+            db.session.commit()
             
-        # Always show the same message to prevent email enumeration
-        flash('If that email exists in our system, a password reset OTP has been sent.', 'info')
-        return redirect(url_for('login'))
+            # Send Email
+            send_async_email(app, send_verification_otp, user.email, otp)
+            
+            session['reset_email'] = user.email
+            flash('Verification code sent to your email. Please verify to reset your password.', 'info')
+            return redirect(url_for('verify_otp_flow'))
+        else:
+            flash('If that email exists in our system, a password reset OTP has been sent.', 'info')
+            return redirect(url_for('login'))
     return render_template('forgot_password.html')
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp_flow():
+    if 'reset_email' not in session:
+        flash('Session expired. Please request a new OTP.', 'warning')
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        otp = request.form.get('otp')
+        email = session.get('reset_email')
+        user = User.query.filter(db.func.lower(User.email) == email).first()
+        
+        if user and user.verification_code == otp and user.verification_code_expires > datetime.utcnow():
+            session['otp_verified'] = True
+            flash('OTP Verified! You can now reset your password.', 'success')
+            return redirect(url_for('reset_password'))
+        else:
+            flash('Invalid or expired OTP. Please try again.', 'danger')
+            
+    return render_template('otp_verify.html')
 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
+    if not session.get('otp_verified') or 'reset_email' not in session:
+        flash('Please verify your OTP first.', 'warning')
+        return redirect(url_for('forgot_password'))
+        
     if request.method == 'POST':
-        email = request.form.get('email')
-        otp = request.form.get('otp')
         password = request.form.get('password')
         confirm = request.form.get('confirm_password')
         
-        user = User.query.filter_by(email=email).first()
-        if user and user.reset_token == otp and user.reset_token_expiration > datetime.utcnow():
-            if password != confirm or len(password) < 8:
-                flash('Passwords do not match or are too short.', 'danger')
-                return redirect(url_for('reset_password'))
+        if password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return render_template('reset_password.html')
             
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return render_template('reset_password.html')
+            
+        email = session.get('reset_email')
+        user = User.query.filter(db.func.lower(User.email) == email).first()
+        
+        if user:
             user.password = generate_password_hash(password)
-            user.reset_token = None
-            user.reset_token_expiration = None
+            user.verification_code = None 
+            user.verification_code_expires = None
             user.must_change_password = False
             db.session.commit()
             
-            # Log it
-            try:
-                ip = request.remote_addr
-                db.session.add(SystemAuditLog(user_id=user.id, action='Password Successfully Reset', ip_address=ip))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
+            # Clear session
+            session.pop('reset_email', None)
+            session.pop('otp_verified', None)
             
-            flash('Password reset successful. You can now log in.', 'success')
+            log_audit('Password Reset Success', target_id=user.id, target_type='User')
+            flash('Password reset successful! You can now log in.', 'success')
             return redirect(url_for('login'))
-        else:
-            flash('Invalid email or OTP.', 'danger')
+            
     return render_template('reset_password.html')
 
 @app.route('/change-password', methods=['GET', 'POST'])
@@ -1046,6 +1123,10 @@ def dashboard():
             announcements = safe_query(lambda: Announcement.query.order_by(Announcement.date.desc()).all())
             system_reports = safe_query(lambda: SystemReport.query.filter_by(status='open').order_by(SystemReport.created_at.desc()).limit(10).all())
             home_sections = safe_query(lambda: HomePageSection.query.order_by(HomePageSection.display_order.asc()).all())
+            
+            # Additional Financial Tracking
+            recent_payments = safe_query(lambda: Payment.query.order_by(Payment.payment_date.desc()).limit(20).all())
+            total_revenue = safe_query(lambda: db.session.query(db.func.sum(Payment.amount_paid)).scalar() or 0)
 
             return render_template('dashboards/superadmin.html', 
                                  users=users, 
@@ -1056,6 +1137,8 @@ def dashboard():
                                  audit_logs=audit_logs,
                                  notifications=notifications,
                                  system_reports=system_reports,
+                                 recent_payments=recent_payments,
+                                 total_revenue=total_revenue,
                                  founders=founders,
                                  developers=developers,
                                  activities=activities,
@@ -1072,6 +1155,14 @@ def dashboard():
                 return query_func()
             except Exception as ex:
                 logger.warning(f"Admin Dashboard: Query failed: {ex}")
+                return default_val
+        
+        users = safe_query(lambda: User.query.filter(User.role != 'SuperAdmin').all())
+        pending_approvals = safe_query(lambda: User.query.filter_by(registration_state='verified_awaiting_approval').all())
+        return render_template('dashboards/admin.html', users=users, pending_approvals=pending_approvals)
+        
+    elif current_user.role == 'BusinessOffice':
+        return redirect(url_for('business_office_dashboard'))
                 return default_val
 
         users = safe_query(lambda: User.query.filter(User.role != 'SuperAdmin').all())
@@ -1179,6 +1270,11 @@ def dashboard():
             User.is_superadmin == False
         ).order_by(User.points.desc()).limit(10).all())
 
+        # Financials
+        payments = safe_query(lambda: Payment.query.filter_by(student_id=current_user.id).order_by(Payment.payment_date.desc()).all())
+        total_paid = sum(p.amount_paid for p in payments)
+        remaining_balance = payments[0].remaining_balance if payments else 0.0
+
         # Rank calculation
         try:
             current_points = getattr(current_user, 'points', 0) or 0
@@ -1200,6 +1296,9 @@ def dashboard():
                                top_students=top_students,
                                my_rank=rank,
                                announcements=announcements,
+                               payments=payments,
+                               total_paid=total_paid,
+                               remaining_balance=remaining_balance,
                                user_role=current_user.role)
     elif current_user.role == 'Applicant':
         announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
@@ -1590,7 +1689,16 @@ def admin_update_homepage_section(section_id):
 @login_required
 @superadmin_required
 def superadmin_download_documentation():
-    """Generates an exhaustive, institutionally branded System Demo PDF."""
+    return redirect(url_for('download_user_guide'))
+
+@app.route('/download-user-guide')
+@login_required
+def download_user_guide():
+    """Generates an exhaustive, institutionally branded System User Guide PDF."""
+    if current_user.role not in ['SuperAdmin', 'Admin', 'BusinessOffice', 'Teacher']:
+        flash("Unauthorized access to institutional documentation.", "danger")
+        return redirect(url_for('dashboard'))
+
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import inch
@@ -1604,31 +1712,20 @@ def superadmin_download_documentation():
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    styles = getSampleStyleSheet()
     
-    # Custom Styles
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#0d1b3e'), alignment=1, spaceAfter=20)
-    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=16, textColor=colors.HexColor('#ff6f00'), spaceBefore=15, spaceAfter=10)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=11, leading=14, spaceAfter=10)
-
     def draw_header_footer(canvas_obj):
-        # Header
         canvas_obj.setStrokeColor(colors.HexColor('#0d1b3e'))
         canvas_obj.setLineWidth(1)
         canvas_obj.line(0.5*inch, height-0.75*inch, width-0.5*inch, height-0.75*inch)
-        
         logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
         if os.path.exists(logo_path):
-            try:
-                canvas_obj.drawImage(logo_path, 0.5*inch, height-0.65*inch, width=1.2*inch, preserveAspectRatio=True, mask='auto')
+            try: canvas_obj.drawImage(logo_path, 0.5*inch, height-0.65*inch, width=1.2*inch, preserveAspectRatio=True, mask='auto')
             except: pass
-        
         canvas_obj.setFont("Helvetica-Bold", 10)
         canvas_obj.setFillColor(colors.HexColor('#0d1b3e'))
-        canvas_obj.drawRightString(width-0.5*inch, height-0.5*inch, "IAMSTECH LIBERIA - Official System Documentation")
+        canvas_obj.drawRightString(width-0.5*inch, height-0.5*inch, "IAMSTECH LIBERIA - Official System User Guide")
         canvas_obj.setFont("Helvetica", 8)
-        canvas_obj.drawRightString(width-0.5*inch, height-0.65*inch, f"Generated on: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
-
+        canvas_obj.drawRightString(width-0.5*inch, height-0.65*inch, f"Generated for: {current_user.name} | {datetime.utcnow().strftime('%Y-%m-%d')}")
         # Footer
         canvas_obj.line(0.5*inch, 0.75*inch, width-0.5*inch, 0.75*inch)
         canvas_obj.setFont("Helvetica", 8)
@@ -1641,173 +1738,104 @@ def superadmin_download_documentation():
         if os.path.exists(logo_path):
             try:
                 canvas_obj.saveState()
-                canvas_obj.setFillAlpha(0.05)
-                canvas_obj.drawImage(logo_path, width/2 - 2*inch, height/2 - 2*inch, width=4*inch, preserveAspectRatio=True, mask='auto')
+                canvas_obj.setFillAlpha(0.03)
+                canvas_obj.drawImage(logo_path, width/2 - 2.5*inch, height/2 - 2.5*inch, width=5*inch, preserveAspectRatio=True, mask='auto')
                 canvas_obj.restoreState()
             except: pass
-
-    def draw_barcode(canvas_obj, x, y, data):
-        try:
-            barcode = code128.Code128(data, barHeight=0.4*inch, barWidth=1.2)
-            barcode.drawOn(canvas_obj, x, y)
-        except:
-            canvas_obj.drawString(x, y, f"[BARCODE: {data}]")
-        canvas_obj.setFont("Helvetica", 6)
-        canvas_obj.drawCentredString(x + 1*inch, y - 10, f"VERIFICATION ID: {data}")
 
     # --- PAGE 1: COVER ---
     draw_header_footer(p)
     draw_watermark(p)
-    
-    p.setFont("Helvetica-Bold", 32)
+    p.setFont("Helvetica-Bold", 28)
     p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawCentredString(width/2, height/2 + 1*inch, "IAMSTECH LIBERIA")
-    
+    p.drawCentredString(width/2, height/2 + 2*inch, "IAMSTECH LIBERIA")
     p.setFont("Helvetica", 18)
     p.setFillColor(colors.HexColor('#ff6f00'))
-    p.drawCentredString(width/2, height/2 + 0.5*inch, "School Management System")
-    
+    p.drawCentredString(width/2, height/2 + 1.5*inch, "Platform User Guide & Educational Handbook")
     p.setFont("Helvetica-Bold", 14)
     p.setFillColor(colors.black)
-    p.drawCentredString(width/2, height/2 - 0.5*inch, "ADMINISTRATION & SYSTEM DEMO GUIDE")
+    p.drawCentredString(width/2, height/2 + 0.5*inch, "UNIVERSITY-GRADE ACADEMIC MANAGEMENT")
     
-    p.setFont("Helvetica", 10)
-    p.drawCentredString(width/2, height/2 - 1.5*inch, "Modernizing Education through Technology & Innovation")
+    # Author signature placeholder
+    p.line(width/2 - 1.5*inch, 2.5*inch, width/2 + 1.5*inch, 2.5*inch)
+    p.setFont("Helvetica-Oblique", 10)
+    p.drawCentredString(width/2, 2.35*inch, "Authorized System Administrator Signature")
     
-    # Verification Barcode on Cover
-    draw_barcode(p, width/2 - 1*inch, 1.5*inch, f"IAM-{uuid.uuid4().hex[:8].upper()}")
-    
+    qr_code = qr.QrCodeWidget('https://iamstech.edu.lr/verify-docs')
+    d = Drawing(1*inch, 1*inch, transform=[1*inch/45, 0, 0, 1*inch/45, 0, 0])
+    d.add(qr_code)
+    renderPDF.draw(d, p, width/2 - 0.5*inch, 1.2*inch)
     p.showPage()
 
     # --- PAGE 2: CORE FEATURES & AUTHENTICATION ---
     draw_header_footer(p)
     draw_watermark(p)
-    
-    y_pos = height - 1.5*inch
-    
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawString(0.5*inch, y_pos, "1. Institutional Branding & Verification")
-    y_pos -= 0.4*inch
-    
-    p.setFont("Helvetica", 11)
-    p.setFillColor(colors.black)
-    text_lines = [
-        "The IAMSTECH system utilizes multi-layered visual and digital branding to ensure document integrity:",
-        "• Institutional Logo: Present on all official headers to confirm institutional origin.",
-        "• Digital Watermarking: Faded background branding prevents unauthorized duplication.",
-        "• Barcode/QR Verification: Unique tracking IDs allow for real-time verification of generated reports.",
-        "• Secure Signatures: Digital audit trails for all administrative actions."
+    y = height - 1.5*inch
+    p.setFont("Helvetica-Bold", 16); p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y, "1. System Navigation & AI Assistance")
+    y -= 0.4*inch
+    p.setFont("Helvetica", 11); p.setFillColor(colors.black)
+    lines = [
+        "• AI Chatbot (Zoe): Accessible 24/7 on the bottom-right corner for navigation help, OTP recovery, and course info.",
+        "• Dashboard Ecosystem: Dedicated portals for Students, Instructors, Admins, and Business Office staff.",
+        "• Global Search: Rapidly find students, courses, or financial records using ID numbers or emails.",
+        "• Responsive Access: Full mobile-first architecture for education on the go."
     ]
-    for line in text_lines:
-        p.drawString(0.7*inch, y_pos, line)
-        y_pos -= 0.2*inch
+    for line in lines: p.drawString(0.7*inch, y, line); y -= 0.2*inch
     
-    y_pos -= 0.3*inch
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawString(0.5*inch, y_pos, "2. AI Chatbot & Navigation Efficiency")
-    y_pos -= 0.4*inch
-    
-    p.setFont("Helvetica", 11)
-    p.setFillColor(colors.black)
-    text_lines = [
-        "Our integrated AI Assistant acts as a 24/7 technical and academic advisor:",
-        "• Academic Guidance: Explains course requirements and institutional policies.",
-        "• Navigation Support: Directs users to dashboards, profiles, and resources.",
-        "• Error Recovery: Provides immediate help for OTP delivery and password resets.",
-        "• Real-time Alerts: Informs users of global system status and updates."
+    y -= 0.3*inch
+    p.setFont("Helvetica-Bold", 16); p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y, "2. Authentication & Account Security")
+    y -= 0.4*inch
+    p.setFont("Helvetica", 11); p.setFillColor(colors.black)
+    lines = [
+        "• Two-Step Verification: All password resets and sensitive actions require a 6-digit OTP sent to verified emails.",
+        "• Password Complexity: High-entropy hashing ensures all user credentials remain encrypted and secure.",
+        "• Forced Password Update: New accounts and those reset by admins must set a fresh password upon first login.",
+        "• Identity Verification: Every user is assigned a role-based institutional ID (STU_, TEA_, ADM_) with QR verification."
     ]
-    for line in text_lines:
-        p.drawString(0.7*inch, y_pos, line)
-        y_pos -= 0.2*inch
-
-    y_pos -= 0.3*inch
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawString(0.5*inch, y_pos, "3. Technical Support & SuperAdmin Integration")
-    y_pos -= 0.4*inch
-    
-    p.setFont("Helvetica", 11)
-    p.setFillColor(colors.black)
-    text_lines = [
-        "The SuperAdmin portal provides centralized control and rapid support escalation:",
-        "• WhatsApp Escalation: Direct link to technical support for registration hurdles.",
-        "• User Management: Full control over Student, Teacher, and Admin accounts.",
-        "• Audit Logging: Complete transparency of system modifications and logins.",
-        "• Database Resilience: Self-healing architecture with automated backups."
-    ]
-    for line in text_lines:
-        p.drawString(0.7*inch, y_pos, line)
-        y_pos -= 0.2*inch
-
+    for line in lines: p.drawString(0.7*inch, y, line); y -= 0.2*inch
     p.showPage()
 
-    # --- PAGE 3: ACADEMIC WORKFLOWS ---
+    # --- PAGE 3: ACADEMIC & FINANCIAL WORKFLOWS ---
     draw_header_footer(p)
     draw_watermark(p)
-    
-    y_pos = height - 1.5*inch
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawString(0.5*inch, y_pos, "4. Academic & Administrative Workflows")
-    y_pos -= 0.4*inch
-    
-    p.setFont("Helvetica", 11)
-    p.setFillColor(colors.black)
-    text_lines = [
-        "Integrated modules for a seamless educational experience:",
-        "• Course Management: Instructors can upload resources, assignments, and schedule meetings.",
-        "• Attendance Tracking: Real-time attendance monitoring for students and staff.",
-        "• Gradebook: Transparent performance tracking and progress reporting.",
-        "• Announcements: Role-based communication for courses and institutional updates."
+    y = height - 1.5*inch
+    p.setFont("Helvetica-Bold", 16); p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y, "3. Academic Workflows & Content Management")
+    y -= 0.4*inch
+    p.setFont("Helvetica", 11); p.setFillColor(colors.black)
+    lines = [
+        "• Course Materials: Instructors can upload lesson plans, PDFs, and multimedia resources for students.",
+        "• Attendance & Grading: Real-time tracking of student presence and academic performance.",
+        "• Announcement Engine: Targeted broadcasts for courses or institutional-wide alerts.",
+        "• Article System: Allows students and staff to publish and manage academic articles/news."
     ]
-    for line in text_lines:
-        p.drawString(0.7*inch, y_pos, line)
-        y_pos -= 0.2*inch
-
-    y_pos -= 0.3*inch
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.HexColor('#0d1b3e'))
-    p.drawString(0.5*inch, y_pos, "5. Security, Privacy & User Experience")
-    y_pos -= 0.4*inch
+    for line in lines: p.drawString(0.7*inch, y, line); y -= 0.2*inch
     
-    p.setFont("Helvetica", 11)
-    p.setFillColor(colors.black)
-    text_lines = [
-        "Built with modern standards for security and usability:",
-        "• Data Encryption: Secure hashing for passwords and sensitive user data.",
-        "• Role-Based Access (RBAC): Strict permission boundaries for all user types.",
-        "• Responsive Design: Optimized for Desktop, Tablet, and Mobile devices.",
-        "• Modern Aesthetics: Glassmorphism and premium design for a professional feel."
+    y -= 0.3*inch
+    p.setFont("Helvetica-Bold", 16); p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, y, "4. Business Office & Financial Management")
+    y -= 0.4*inch
+    p.setFont("Helvetica", 11); p.setFillColor(colors.black)
+    lines = [
+        "• Payment Recording: Authorized BOF staff enter receipt and slip numbers for tuition and fees.",
+        "• Student Financial Portal: Real-time synchronization of balances and payment history.",
+        "• Digital Receipts: Securely generated financial documents with barcode and watermark security.",
+        "• Financial Auditing: Comprehensive modification logs and daily summary reports for SuperAdmins."
     ]
-    for line in text_lines:
-        p.drawString(0.7*inch, y_pos, line)
-        y_pos -= 0.2*inch
-
-    # Final Verification Section
-    p.setStrokeColor(colors.HexColor('#ff6f00'))
+    for line in lines: p.drawString(0.7*inch, y, line); y -= 0.2*inch
+    
+    # Security Notice
+    p.setStrokeColor(colors.HexColor('#ff6f00')); p.setLineWidth(2)
     p.rect(0.5*inch, 1*inch, width-1*inch, 1.5*inch)
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(0.7*inch, 2.2*inch, "DOCUMENT VERIFICATION")
-    p.setFont("Helvetica", 9)
-    p.drawString(0.7*inch, 2.0*inch, "This document is a certified system demonstration generated by the IAMSTECH Management Portal.")
-    p.drawString(0.7*inch, 1.85*inch, "Scan the QR code or verify the Barcode ID at support.iamstech.edu.lr")
+    p.setFont("Helvetica-Bold", 12); p.drawString(0.7*inch, 2.2*inch, "INSTITUTIONAL SECURITY NOTICE")
+    p.setFont("Helvetica", 10); p.drawString(0.7*inch, 2.0*inch, "This document is a certified technical demo. Unauthorized reproduction or distribution is strictly prohibited.")
+    p.drawString(0.7*inch, 1.85*inch, "For technical support, contact the SuperAdmin via the WhatsApp Support Integration in your portal.")
     
-    try:
-        # Add a QR code representation
-        qr_code = qr.QrCodeWidget('https://iamstech.edu.lr/verify')
-        bounds = qr_code.getBounds()
-        qr_width = bounds[2] - bounds[0]
-        qr_height = bounds[3] - bounds[1]
-        d = Drawing(1*inch, 1*inch, transform=[1*inch/qr_width, 0, 0, 1*inch/qr_height, 0, 0])
-        d.add(qr_code)
-        renderPDF.draw(d, p, width-1.7*inch, 1.2*inch)
-    except: pass
-
     p.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f'IAMSTECH_System_Documentation_{datetime.utcnow().strftime("%Y%m%d")}.pdf', mimetype='application/pdf')
+    return send_file(buffer, as_attachment=True, download_name=f'IAMSTECH_User_Guide_{datetime.utcnow().strftime("%Y%m%d")}.pdf', mimetype='application/pdf')
 
 @app.route('/superadmin/system-reset', methods=['POST'])
 @login_required
@@ -2227,10 +2255,6 @@ def broadcast_alert():
 @login_required
 @admin_required
 def report_issue():
-    """Admin can report system issues or request assistance"""
-    if request.method == 'POST':
-        try:
-            report_type = request.form.get('report_type', 'assistance')
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
             severity = request.form.get('severity', 'medium')
@@ -2701,6 +2725,196 @@ def debug_sys():
     except Exception as e:
         return str(e), 500
 
+
+# --- Business Office Financial Module ---
+
+@app.route('/business-office/dashboard')
+@login_required
+@business_office_required
+def business_office_dashboard():
+    # Analytics for BOF
+    today = datetime.utcnow().date()
+    # Use safe_query or explicit error handling
+    try:
+        daily_total = db.session.query(db.func.sum(Payment.amount_paid)).filter(db.func.cast(Payment.payment_date, db.Date) == today).scalar() or 0
+        recent_payments = Payment.query.order_by(Payment.payment_date.desc()).limit(10).all()
+        pending_verifications = Payment.query.filter_by(status='Pending').count()
+    except Exception as e:
+        logger.error(f"BOF Dashboard stats error: {e}")
+        daily_total = 0
+        recent_payments = []
+        pending_verifications = 0
+    
+    return render_template('dashboards/business_office.html', 
+                           daily_total=daily_total, 
+                           recent_payments=recent_payments,
+                           pending_verifications=pending_verifications)
+
+@app.route('/business-office/record-payment', methods=['POST'])
+@login_required
+@business_office_required
+def record_payment():
+    student_email = request.form.get('student_email').strip().lower()
+    amount = float(request.form.get('amount', 0))
+    category = request.form.get('category')
+    receipt_num = request.form.get('receipt_number')
+    slip_num = request.form.get('slip_number')
+    notes = request.form.get('notes')
+    balance = float(request.form.get('balance', 0))
+    
+    student = User.query.filter(db.func.lower(User.email) == student_email).first()
+    if not student:
+        flash(f"Student with email {student_email} not found.", "danger")
+        return redirect(url_for('business_office_dashboard'))
+        
+    # Prevent duplicate slips
+    existing = Payment.query.filter_by(slip_number=slip_num).first()
+    if existing:
+        flash(f"Payment with Slip Number {slip_num} already exists.", "warning")
+        return redirect(url_for('business_office_dashboard'))
+
+    try:
+        new_payment = Payment(
+            student_id=student.id,
+            receipt_number=receipt_num or f"RCP-{uuid.uuid4().hex[:8].upper()}",
+            amount_paid=amount,
+            remaining_balance=balance,
+            category=category,
+            status='Approved',
+            slip_number=slip_num,
+            notes=notes,
+            processed_by=current_user.id
+        )
+        db.session.add(new_payment)
+        db.session.commit()
+        log_audit(f"Payment Recorded for {student.name}", target_id=new_payment.id, target_type='Payment')
+        flash(f"Payment of ${amount} recorded successfully for {student.name}.", "success")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Payment recording failed: {e}")
+        flash("An error occurred while recording the payment.", "danger")
+        
+    return redirect(url_for('business_office_dashboard'))
+
+@app.route('/download-receipt/<int:payment_id>')
+@login_required
+def download_receipt(payment_id):
+    payment = Payment.query.get_or_404(payment_id)
+    
+    # Security: Student can only download their own receipts
+    if current_user.role == 'Student' and payment.student_id != current_user.id:
+        flash("Unauthorized access to financial records.", "danger")
+        return redirect(url_for('dashboard'))
+        
+    # Staff/Admins can download any
+    if current_user.role not in ['BusinessOffice', 'Admin', 'SuperAdmin', 'Student']:
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for('dashboard'))
+
+    return generate_receipt_pdf(payment)
+
+def generate_receipt_pdf(payment):
+    """Generates a professional, institutionally branded receipt PDF."""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.graphics.barcode import code128
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics import renderPDF
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=(5.8*inch, 8.3*inch)) # A5 size for receipts
+    width, height = (5.8*inch, 8.3*inch)
+    
+    # Watermark
+    logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
+    if os.path.exists(logo_path):
+        try:
+            p.saveState()
+            p.setFillAlpha(0.05)
+            p.drawImage(logo_path, width/2 - 1.5*inch, height/2 - 1.5*inch, width=3*inch, preserveAspectRatio=True, mask='auto')
+            p.restoreState()
+        except: pass
+
+    # Header
+    p.setStrokeColor(colors.HexColor('#0d1b3e'))
+    p.setLineWidth(2)
+    p.line(0.2*inch, height-0.8*inch, width-0.2*inch, height-0.8*inch)
+    
+    p.setFont("Helvetica-Bold", 14)
+    p.setFillColor(colors.HexColor('#0d1b3e'))
+    p.drawString(0.5*inch, height-0.5*inch, "IAMSTECH LIBERIA")
+    p.setFont("Helvetica", 8)
+    p.drawString(0.5*inch, height-0.65*inch, "Official Financial Receipt - University Portal")
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.drawRightString(width-0.5*inch, height-0.5*inch, "OFFICIAL RECEIPT")
+    p.setFont("Helvetica", 8)
+    p.drawRightString(width-0.5*inch, height-0.65*inch, f"No: {payment.receipt_number}")
+
+    # Content
+    y = height - 1.5*inch
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(0.5*inch, y, "STUDENT INFORMATION")
+    p.line(0.5*inch, y-0.05*inch, 2*inch, y-0.05*inch)
+    y -= 0.3*inch
+    
+    p.setFont("Helvetica", 9)
+    p.drawString(0.5*inch, y, f"Name: {payment.student.name}")
+    p.drawString(3*inch, y, f"ID: {payment.student.student_id or 'N/A'}")
+    y -= 0.2*inch
+    p.drawString(0.5*inch, y, f"Email: {payment.student.email}")
+    
+    y -= 0.5*inch
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(0.5*inch, y, "PAYMENT DETAILS")
+    p.line(0.5*inch, y-0.05*inch, 1.8*inch, y-0.05*inch)
+    y -= 0.3*inch
+    
+    # Table-like structure
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(0.5*inch, y, "Description")
+    p.drawRightString(width-0.5*inch, y, "Amount")
+    p.line(0.5*inch, y-0.05*inch, width-0.5*inch, y-0.05*inch)
+    y -= 0.25*inch
+    
+    p.setFont("Helvetica", 9)
+    p.drawString(0.5*inch, y, f"Category: {payment.category}")
+    p.drawRightString(width-0.5*inch, y, f"${payment.amount_paid:,.2f}")
+    y -= 0.2*inch
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawString(0.5*inch, y, f"Slip/Ref No: {payment.slip_number}")
+    y -= 0.4*inch
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.drawRightString(width-1.5*inch, y, "TOTAL PAID:")
+    p.drawRightString(width-0.5*inch, y, f"${payment.amount_paid:,.2f}")
+    y -= 0.2*inch
+    p.setFont("Helvetica-Bold", 9)
+    p.setFillColor(colors.HexColor('#ff6f00'))
+    p.drawRightString(width-1.5*inch, y, "REMAINING BALANCE:")
+    p.drawRightString(width-0.5*inch, y, f"${payment.remaining_balance:,.2f}")
+    p.setFillColor(colors.black)
+    
+    # Footer & Barcode
+    y = 2*inch
+    barcode = code128.Code128(payment.receipt_number, barHeight=0.3*inch, barWidth=1.1)
+    barcode.drawOn(p, 0.5*inch, y)
+    p.setFont("Helvetica", 6)
+    p.drawString(0.5*inch, y-10, f"Verify at iamstech.edu.lr/verify?id={payment.receipt_number}")
+    
+    y -= 0.5*inch
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(3.5*inch, y, "Authorized Signature")
+    p.line(3.5*inch, y-0.05*inch, 5.3*inch, y-0.05*inch)
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(3.5*inch, y-0.2*inch, f"Issued by {current_user.name}")
+    p.drawString(3.5*inch, y-0.3*inch, f"Date: {payment.payment_date.strftime('%b %d, %Y')}")
+
+    p.save()
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f'Receipt_{payment.receipt_number}.pdf', mimetype='application/pdf')
 
 # --- Production Entry Point for Vercel ---
 def handler(event, context):

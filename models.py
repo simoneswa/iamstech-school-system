@@ -163,6 +163,7 @@ class SystemAuditLog(db.Model):
     target_type = db.Column(db.String(50)) # 'User', 'Course', etc.
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
     details = db.Column(db.Text)
 
     def __init__(self, **kwargs):
@@ -209,5 +210,30 @@ class GlobalAlert(db.Model):
     message = db.Column(db.String(500), nullable=False)
     type = db.Column(db.String(50), default='info') # info, success, warning, danger
     is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Payment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receipt_number = db.Column(db.String(50), unique=True, nullable=False)
+    amount_paid = db.Column(db.Float, nullable=False)
+    remaining_balance = db.Column(db.Float, default=0.0)
+    category = db.Column(db.String(50)) # tuition, registration, clearance, etc.
+    status = db.Column(db.String(20), default='Approved') # Approved, Pending, Rejected
+    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+    slip_number = db.Column(db.String(100), unique=True)
+    notes = db.Column(db.Text)
+    processed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    student = db.relationship('User', backref='payments', foreign_keys=[student_id])
+    staff = db.relationship('User', backref='payments_processed', foreign_keys=[processed_by])
+
+class SystemReport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    type = db.Column(db.String(50)) # financial, academic, user_growth
+    content = db.Column(db.Text)
+    file_path = db.Column(db.String(500))
+    generated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

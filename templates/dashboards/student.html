@@ -213,16 +213,43 @@
                 <div class="col-xl-4">
                     <article class="dash-card p-4 bg-white rounded-4 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Fees Summary</h5>
+                            <h5 class="fw-bold mb-0">Financial Status</h5>
+                            <span class="badge bg-soft-danger text-danger rounded-pill px-3">Balance Due</span>
                         </div>
-                        <div class="p-4 bg-light rounded-4 mb-3">
+                        <div class="p-4 bg-light rounded-4 mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="small text-muted">Outstanding</span>
-                                <span class="fw-bold">0.00 USD</span>
+                                <span class="small text-muted">Remaining Balance</span>
+                                <span class="fw-black text-danger fs-5">${{ "{:,.2f}".format(remaining_balance) }}</span>
                             </div>
-                            <div class="small text-muted">No fees due at this time. Contact finance if you need a statement.</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Total Paid to Date</span>
+                                <span class="fw-bold text-success">${{ "{:,.2f}".format(total_paid) }}</span>
+                            </div>
                         </div>
-                        <a href="#" class="btn btn-outline-primary w-100 rounded-pill">Request Fee Statement</a>
+                        
+                        <h6 class="fw-bold mb-3 small text-uppercase text-muted">Recent Payments</h6>
+                        <div class="payment-list mb-4">
+                            {% for p in payments[:3] %}
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2 border-bottom border-light">
+                                <div>
+                                    <div class="small fw-bold">{{ p.category }}</div>
+                                    <div class="x-small text-muted">{{ p.payment_date.strftime('%b %d, %Y') }}</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small fw-bold text-success">${{ "{:,.2f}".format(p.amount_paid) }}</div>
+                                    <a href="{{ url_for('download_receipt', payment_id=p.id) }}" class="x-small text-primary text-decoration-none">
+                                        <i class="fas fa-download me-1"></i>Receipt
+                                    </a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="x-small text-muted text-center py-2">No payment records found.</p>
+                            {% endfor %}
+                        </div>
+                        
+                        <button class="btn btn-primary w-100 rounded-pill shadow-sm py-2">
+                            <i class="fas fa-credit-card me-2"></i>Pay Online (Coming Soon)
+                        </button>
                     </article>
                 </div>
             </section>

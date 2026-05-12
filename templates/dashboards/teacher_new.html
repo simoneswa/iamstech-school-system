@@ -46,13 +46,23 @@
         <!-- Main Content -->
         <main class="flex-grow-1 p-4">
             <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-5">
-                <div>
-                    <h2 class="fw-black text-primary mb-1">Faculty Control Center</h2>
-                    <p class="text-muted small">Welcome, {{ current_user.name }}</p>
+            <div class="d-flex justify-content-between align-items-center mb-5 bg-white p-4 rounded-4 shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-4" style="width: 65px; height: 65px;">
+                        {{ current_user.name[0] }}
+                    </div>
+                    <div>
+                        <h3 class="fw-black text-primary mb-0">{{ current_user.name }}</h3>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-soft-primary text-primary rounded-pill">Faculty: {{ current_user.department or 'Academic Affairs' }}</span>
+                            <span class="small text-muted fw-bold">ID: {{ current_user.student_id or 'TEA_IAM-' ~ current_user.id }}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                    <i class="fas fa-chalkboard-user"></i>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('download_user_guide') }}" class="btn btn-outline-dark rounded-pill px-4 btn-sm shadow-sm">
+                        <i class="fas fa-book me-2"></i>System User Guide
+                    </a>
                 </div>
             </div>
 

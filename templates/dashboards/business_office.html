@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Office Dashboard - IAMSTECH{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-black text-primary mb-0">Business Office</h2>
+            <p class="text-muted">Financial Management & Revenue Tracking</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="fas fa-plus-circle me-2"></i>Record New Payment
+            </button>
+            <a href="{{ url_for('download_user_guide') }}" class="btn btn-outline-dark rounded-pill px-4">
+                <i class="fas fa-book me-2"></i>User Guide
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white p-4">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="small text-uppercase fw-bold opacity-75 mb-1">Today's Revenue</p>
+                        <h2 class="fw-black mb-0">${{ "{:,.2f}".format(daily_total) }}</h2>
+                    </div>
+                    <div class="bg-white bg-opacity-25 rounded-circle p-3">
+                        <i class="fas fa-dollar-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="small text-uppercase fw-bold text-muted mb-1">Pending Verifications</p>
+                        <h2 class="fw-black mb-0">{{ pending_verifications }}</h2>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="small text-uppercase fw-bold text-muted mb-1">Total Transactions</p>
+                        <h2 class="fw-black mb-0">{{ recent_payments|length }}</h2>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+                        <i class="fas fa-receipt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Payments Table -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Recent Transactions</h5>
+                    <button class="btn btn-sm btn-light rounded-pill">View All</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="px-4">Student</th>
+                                    <th>Receipt #</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th class="text-end px-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr>
+                                    <td class="px-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                {{ payment.student.name[0] }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ payment.student.name }}</div>
+                                                <div class="small text-muted">{{ payment.student.student_id }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark">{{ payment.receipt_number }}</span></td>
+                                    <td>{{ payment.category }}</td>
+                                    <td class="fw-bold text-success">${{ "{:,.2f}".format(payment.amount_paid) }}</td>
+                                    <td>{{ payment.payment_date.strftime('%b %d, %H:%M') }}</td>
+                                    <td class="text-end px-4">
+                                        <a href="{{ url_for('download_receipt', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                            <i class="fas fa-download me-1"></i>Receipt
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">No recent transactions found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Lookup -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">Student Financial Lookup</h5>
+                    <form onsubmit="lookupStudent(event)">
+                        <div class="input-group mb-3">
+                            <input type="text" id="lookupEmail" class="form-control rounded-start-pill" placeholder="Student Email or ID">
+                            <button class="btn btn-dark rounded-end-pill px-3" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="lookupResult" class="d-none">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div id="studentName" class="fw-bold"></div>
+                            <div id="studentID" class="small text-muted mb-2"></div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small text-muted">Outstanding Balance:</span>
+                                <span id="studentBalance" class="fw-bold text-danger"></span>
+                            </div>
+                            <button class="btn btn-sm btn-primary w-100 mt-2 rounded-pill" onclick="preparePayment()">Record Payment</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Reports -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">Financial Reports</h5>
+                    <div class="list-group list-group-flush">
+                        <button class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Daily Reconciliation</div>
+                            <i class="fas fa-chevron-right small text-muted"></i>
+                        </button>
+                        <button class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-chart-pie text-success me-2"></i>Monthly Revenue Report</div>
+                            <i class="fas fa-chevron-right small text-muted"></i>
+                        </button>
+                        <button class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-users-cog text-warning me-2"></i>Scholarship Disbursements</div>
+                            <i class="fas fa-chevron-right small text-muted"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">Record Student Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('record_payment') }}" method="POST">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">STUDENT EMAIL</label>
+                        <input type="email" name="student_email" id="modalStudentEmail" class="form-control rounded-3" placeholder="student@iamstech.edu.lr" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">AMOUNT PAID ($)</label>
+                            <input type="number" step="0.01" name="amount" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">CATEGORY</label>
+                            <select name="category" class="form-select rounded-3">
+                                <option value="Tuition">Tuition</option>
+                                <option value="Registration">Registration</option>
+                                <option value="Library Fee">Library Fee</option>
+                                <option value="ID Card Fee">ID Card Fee</option>
+                                <option value="Graduation Fee">Graduation Fee</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">SLIP / REFERENCE NUMBER</label>
+                        <input type="text" name="slip_number" class="form-control rounded-3" placeholder="e.g. BANK-123456" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">REMAINING BALANCE ($)</label>
+                        <input type="number" step="0.01" name="balance" class="form-control rounded-3" value="0.00">
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-bold text-muted">NOTES</label>
+                        <textarea name="notes" class="form-control rounded-3" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">Submit Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function lookupStudent(e) {
+        e.preventDefault();
+        const input = document.getElementById('lookupEmail').value;
+        // In a real app, this would be an AJAX call. Mocking for now.
+        if (input.includes('@')) {
+            document.getElementById('lookupResult').classList.remove('d-none');
+            document.getElementById('studentName').innerText = "Processing Lookup...";
+            // Simulate API
+            setTimeout(() => {
+                document.getElementById('studentName').innerText = "Student Found";
+                document.getElementById('studentID').innerText = input;
+                document.getElementById('studentBalance').innerText = "$450.00";
+            }, 500);
+        }
+    }
+
+    function preparePayment() {
+        const email = document.getElementById('lookupEmail').value;
+        document.getElementById('modalStudentEmail').value = email;
+        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        modal.show();
+    }
+</script>
+
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

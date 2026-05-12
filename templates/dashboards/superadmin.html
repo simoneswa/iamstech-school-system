@@ -54,6 +54,9 @@
             <a href="#" class="nav-link" data-section="audit">
                 <i class="fas fa-history"></i> <span>Activity Logs</span>
             </a>
+            <a href="#" class="nav-link" data-section="finance">
+                <i class="fas fa-money-bill-wave"></i> <span>Institutional Revenue</span>
+            </a>
             <a href="{{ url_for('my_eid') }}" class="nav-link text-info fw-bold">
                 <i class="fas fa-id-card"></i> <span>My Digital E-ID</span>
             </a>
@@ -170,14 +173,14 @@
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="premium-card h-100">
+                        <div class="premium-card h-100 bg-primary text-white">
                             <div class="stat-widget">
-                                <div class="stat-icon bg-info bg-opacity-10 text-info">
-                                    <i class="fas fa-bolt"></i>
+                                <div class="stat-icon bg-white bg-opacity-20 text-white">
+                                    <i class="fas fa-dollar-sign"></i>
                                 </div>
                                 <div>
-                                    <div class="h3 fw-bold mb-0">Live</div>
-                                    <div class="text-muted small">Deployment</div>
+                                    <div class="h3 fw-black mb-0">${{ "{:,.2f}".format(total_revenue) }}</div>
+                                    <div class="text-white-50 small uppercase fw-bold">Total Revenue</div>
                                 </div>
                             </div>
                         </div>
